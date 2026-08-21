@@ -3,6 +3,7 @@ import { AuthService } from '@/pages/auth/auth.service';
 import { PenaContextService } from '@/services/pena-context.service';
 import { PenaService } from '@/services/pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
+import { PageReloader } from '@/core/platform/page-reloader.service';
 import { Pena } from '@/interfaces/socio.interface';
 
 /**
@@ -19,6 +20,7 @@ export class ActivePenaService {
     private readonly penaService = inject(PenaService);
     private readonly penaContext = inject(PenaContextService);
     private readonly theme = inject(ThemeService);
+    private readonly reloader = inject(PageReloader);
 
     private readonly _pena = signal<Pena | null>(null);
     private readonly _options = signal<Pena[]>([]);
@@ -50,17 +52,32 @@ export class ActivePenaService {
         this.auth.currentPena.subscribe((pena) => this.apply(pena));
     }
 
-    /** Cambia la peña de trabajo del superadmin. */
+    /**
+     * Cambia la peña de trabajo del superadmin.
+     *
+     * Se persiste la elección ANTES de recargar: al volver a arrancar, la cabecera X-Pena-Id
+     * ya se envía con la peña nueva y las pantallas piden los datos de esa peña. Si el id no
+     * corresponde a ninguna peña conocida no se hace nada, para no dejar el contexto apuntando
+     * a algo inexistente.
+     */
     select(penaId: number | null): void {
-        this.penaContext.setSelectedPenaId(penaId);
+        const pena = penaId === null ? null : (this._options().find((candidate) => candidate.id === penaId) ?? null);
 
-        const pena = this._options().find((candidate) => candidate.id === penaId) ?? null;
+        if (penaId !== null && pena === null) {
+            return;
+        }
+
+        if (penaId === this.penaContext.getSelectedPenaId()) {
+            return; // Ya es la peña activa: no hay nada que cambiar ni que recargar.
+        }
+
+        this.penaContext.setSelectedPenaId(penaId);
         this.apply(pena);
 
         // Las páginas cargan sus datos en ngOnInit, así que un cambio de peña necesita que
         // vuelvan a pedirlos. Recargar es tosco pero garantiza que no quede ningún dato de la
         // peña anterior en pantalla; es una acción poco frecuente y solo del superadmin.
-        window.location.reload();
+        this.reloader.reload();
     }
 
     /**
