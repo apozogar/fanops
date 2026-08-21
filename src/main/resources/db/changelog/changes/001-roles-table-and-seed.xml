@@ -27,9 +27,19 @@
     </createTable>
   </changeSet>
 
+  <!--
+    Los tres seeds comprueban también que "roles" exista antes de consultarla: si alguien limpia
+    manualmente las tablas de la app pero no el histórico de Liquibase (databasechangelog), el
+    changeSet 001-1 se da por ya ejecutado y no vuelve a crear la tabla; sin este guard, el
+    sqlCheck de aquí abajo fallaría con "no existe la relación «roles»" y tumbaría el arranque.
+    Con el guard, sencillamente no hacen nada (mejor eso que impedir arrancar la aplicación).
+  -->
   <changeSet id="001-2-seed-role-superadmin" author="fanops">
     <preConditions onFail="MARK_RAN">
-      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_SUPERADMIN'</sqlCheck>
+      <and>
+        <tableExists tableName="roles"/>
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_SUPERADMIN'</sqlCheck>
+      </and>
     </preConditions>
     <insert tableName="roles">
       <column name="name" value="ROLE_SUPERADMIN"/>
@@ -38,7 +48,10 @@
 
   <changeSet id="001-3-seed-role-admin" author="fanops">
     <preConditions onFail="MARK_RAN">
-      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_ADMIN'</sqlCheck>
+      <and>
+        <tableExists tableName="roles"/>
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_ADMIN'</sqlCheck>
+      </and>
     </preConditions>
     <insert tableName="roles">
       <column name="name" value="ROLE_ADMIN"/>
@@ -47,7 +60,10 @@
 
   <changeSet id="001-4-seed-role-user" author="fanops">
     <preConditions onFail="MARK_RAN">
-      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_USER'</sqlCheck>
+      <and>
+        <tableExists tableName="roles"/>
+        <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_USER'</sqlCheck>
+      </and>
     </preConditions>
     <insert tableName="roles">
       <column name="name" value="ROLE_USER"/>
