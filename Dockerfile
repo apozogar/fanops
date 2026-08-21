@@ -49,7 +49,7 @@ RUN mvn package -DskipTests
 # FASE 3: IMAGEN FINAL DE PRODUCCIÓN
 # ------------------------------------
 # Usamos una imagen ligera de Java para ejecutar la aplicación.
-FROM openjdk:21-slim
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # NOTA: Asegúrate de que el puerto 8080 se configure en 'server.port=${PORT:8080}' en Spring Boot.
