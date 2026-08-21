@@ -31,6 +31,7 @@ Frontend (desde `frontend/`):
 - Entidades: IDs `UUID` con `@GeneratedValue`, enums persistidos como `STRING`, `@JsonIgnore`/`@JsonBackReference` para evitar recursión JSON.
 - Frontend: componentes standalone, rutas en `app.routes.ts` / `pages/*/pages.routes.ts`, consumo de API a través de servicios en `services/`, tipos en `interfaces/`.
 - **Nunca commitear secretos**: las credenciales (JWT, BD, SMTP, WhatsApp) van por variables de entorno definidas en `application.yml` con defaults de desarrollo.
+- No usar worktrees, trabajar en la rama actual.
 
 ## Reglas de dominio
 
