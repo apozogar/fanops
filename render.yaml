@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: fanops
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: frankfurt
+    plan: free
+    healthCheckPath: /management/health
+
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false   # jdbc:postgresql://ep-super-mode-af4qmaat-pooler.c-2.us-west-2.aws.neon.tech/fanops?sslmode=require&channel_binding=require
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false   # neondb_owner
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false   # contraseña de Neon
+      - key: SPRING_JPA_DDL_AUTO
+        value: update          # cambia a 'validate' cuando el esquema esté estable
+      - key: APP_JWT_SECRET
+        generateValue: true    # Render lo genera automáticamente
+      - key: PUBLIC_BASE_URL
+        value: https://fanops.onrender.com   # ajusta al dominio real
+      # --- SMTP (rellena los valores reales) ---
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      # --- Superadmin inicial (cámbialo tras el primer deploy) ---
+      - key: APP_SUPERADMIN_EMAIL
+        sync: false
+      - key: APP_SUPERADMIN_PASSWORD
+        sync: false
+      # --- WhatsApp (opcional) ---
+      - key: WHATSAPP_ENABLED
+        value: "false"
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        value: ""
+      - key: WHATSAPP_ACCESS_TOKEN
+        value: ""
+
