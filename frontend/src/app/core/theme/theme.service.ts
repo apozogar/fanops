@@ -108,24 +108,39 @@ export class ThemeService {
 
     private applyDarkClass(): void {
         document.documentElement.classList.toggle(DARK_CLASS, this.isDark());
+        this.syncBrowserThemeColor();
     }
 
-    /** Preferencia guardada; si no hay ninguna, se respeta la del sistema operativo. */
-    private readStoredDarkPreference(): boolean {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY_DARK);
+    /**
+     * Alinea el color de la barra del navegador en móvil con el tema activo. Sin esto, en un
+     * teléfono con el sistema en oscuro la barra saldría oscura sobre una app clara.
+     */
+    private syncBrowserThemeColor(): void {
+        const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
-            if (stored === '1') {
-                return true;
-            }
-
-            if (stored === '0') {
-                return false;
-            }
-        } catch {
-            // Ignorado: caemos en la preferencia del sistema.
+        if (!meta) {
+            return;
         }
 
-        return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+        // Se lee del token en lugar de fijar el color a mano para que no se desincronice
+        // si cambian las superficies en theme.scss.
+        const surface = getComputedStyle(document.documentElement).getPropertyValue('--fo-surface').trim();
+
+        if (surface) {
+            meta.setAttribute('content', surface);
+        }
+    }
+
+    /**
+     * Preferencia guardada por el usuario. Si no hay ninguna, se arranca en tema claro: es el
+     * defecto de la aplicación, deliberadamente por encima de la preferencia del sistema.
+     */
+    private readStoredDarkPreference(): boolean {
+        try {
+            return localStorage.getItem(STORAGE_KEY_DARK) === '1';
+        } catch {
+            // Modo privado o almacenamiento inaccesible: tema claro.
+            return false;
+        }
     }
 }
