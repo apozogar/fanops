@@ -2,13 +2,13 @@ import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
-import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
+import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
 @Component({
     selector: 'app-error',
-    imports: [ButtonModule, RippleModule, RouterModule, AppFloatingConfigurator, ButtonModule],
+    imports: [ButtonModule, RippleModule, RouterModule, ThemeToggleComponent, ButtonModule],
     standalone: true,
-    template: ` <app-floating-configurator />
+    template: ` <fo-theme-toggle [floating]="true" />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
             <div class="flex flex-col items-center justify-center">
                 <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, rgba(233, 30, 99, 0.4) 10%, rgba(33, 150, 243, 0) 30%)">

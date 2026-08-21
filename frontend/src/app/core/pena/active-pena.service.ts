@@ -1,0 +1,90 @@
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthService } from '@/pages/auth/auth.service';
+import { PenaContextService } from '@/services/pena-context.service';
+import { PenaService } from '@/services/pena.service';
+import { ThemeService } from '@/core/theme/theme.service';
+import { Pena } from '@/interfaces/socio.interface';
+import { ROLE_SUPERADMIN } from '@/shell/navigation';
+
+/**
+ * Peña "activa": aquella cuyos datos se están viendo.
+ *
+ * Para un usuario normal es su propia peña, que llega en el login. Para el superadmin, que no
+ * pertenece a ninguna, es la que haya elegido en el selector de la cabecera (y que viaja al
+ * backend como cabecera X-Pena-Id). Unifica ambos casos para que el shell no tenga que
+ * distinguirlos, y mantiene sincronizado el color de acento del tema.
+ */
+@Injectable({ providedIn: 'root' })
+export class ActivePenaService {
+    private readonly auth = inject(AuthService);
+    private readonly penaService = inject(PenaService);
+    private readonly penaContext = inject(PenaContextService);
+    private readonly theme = inject(ThemeService);
+
+    private readonly _pena = signal<Pena | null>(null);
+    private readonly _options = signal<Pena[]>([]);
+    private readonly _loading = signal<boolean>(false);
+
+    /** Peña activa, o null si aún no se conoce (o el superadmin no ha elegido ninguna). */
+    readonly pena = this._pena.asReadonly();
+
+    /** Peñas entre las que se puede cambiar. Solo se puebla para el superadmin. */
+    readonly options = this._options.asReadonly();
+
+    readonly loading = this._loading.asReadonly();
+
+    readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());
+
+    /** true cuando el superadmin todavía no ha seleccionado ninguna peña. */
+    readonly needsSelection = computed(() => this.isSuperAdmin() && this._pena() === null);
+
+    /**
+     * Arranca el seguimiento de la peña activa. Lo llama el shell una sola vez, ya con el
+     * usuario autenticado disponible.
+     */
+    init(): void {
+        if (this.auth.isSuperAdmin()) {
+            this.loadOptionsForSuperAdmin();
+            return;
+        }
+
+        this.auth.currentPena.subscribe((pena) => this.apply(pena));
+    }
+
+    /** Cambia la peña de trabajo del superadmin. */
+    select(penaId: number | null): void {
+        this.penaContext.setSelectedPenaId(penaId);
+
+        const pena = this._options().find((candidate) => candidate.id === penaId) ?? null;
+        this.apply(pena);
+
+        // Las páginas cargan sus datos en ngOnInit, así que un cambio de peña necesita que
+        // vuelvan a pedirlos. Recargar es tosco pero garantiza que no quede ningún dato de la
+        // peña anterior en pantalla; es una acción poco frecuente y solo del superadmin.
+        window.location.reload();
+    }
+
+    private loadOptionsForSuperAdmin(): void {
+        this._loading.set(true);
+
+        this.penaService.listAll().subscribe({
+            next: (response) => {
+                const penas = response.data ?? [];
+                this._options.set(penas);
+
+                const selectedId = this.penaContext.getSelectedPenaId();
+                this.apply(penas.find((pena) => pena.id === selectedId) ?? null);
+                this._loading.set(false);
+            },
+            error: () => {
+                this._options.set([]);
+                this._loading.set(false);
+            }
+        });
+    }
+
+    private apply(pena: Pena | null): void {
+        this._pena.set(pena);
+        this.theme.setAccent(pena?.color ?? null);
+    }
+}

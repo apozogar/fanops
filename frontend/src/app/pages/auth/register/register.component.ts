@@ -9,12 +9,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '@/pages/auth/auth.service';
-import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
+import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
 @Component({
     selector: 'app-register',
     standalone: true,
-    imports: [RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, AppFloatingConfigurator],
+    imports: [RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, ThemeToggleComponent],
     templateUrl: './register.component.html',
     styles: ``
 })

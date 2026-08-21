@@ -1,5 +1,10 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales de FanOps.
+   Orden importante: primero los tokens, luego Tailwind (que los expone como utilidades),
+   y al final los estilos base para que las utilidades ganen por especificidad.
+
+   theme y base son .scss (no .css) a propósito: sass no rastrea los ficheros .css incluidos
+   con @use como dependencias, así que al editarlos el dev server no recompilaba. */
+@use './theme';
 @use './tailwind.css';
-@use './layout/layout.scss';
+@use './base';
 @use 'primeicons/primeicons.css';
-@use './demo/demo.scss';

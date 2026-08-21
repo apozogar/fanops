@@ -6,7 +6,7 @@ import {CheckboxModule} from 'primeng/checkbox';
 import {InputTextModule} from 'primeng/inputtext';
 import {PasswordModule} from 'primeng/password';
 import {RippleModule} from 'primeng/ripple';
-import {AppFloatingConfigurator} from '@/layout/component/app.floatingconfigurator';
+import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 import {AuthService} from '../auth.service';
 import {CommonModule} from '@angular/common';
 import {Message} from "primeng/message";
@@ -14,7 +14,7 @@ import {Message} from "primeng/message";
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, AppFloatingConfigurator, Message],
+    imports: [CommonModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent, Message],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss']
 })

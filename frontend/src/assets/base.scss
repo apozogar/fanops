@@ -1,0 +1,180 @@
+/*
+ * Estilos base de FanOps. Solo selectores de elemento y un puñado de clases globales,
+ * para que cualquier utilidad de Tailwind siga ganando por especificidad.
+ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    /* Sin font-size fijo a propósito: respetamos el tamaño de fuente del sistema
+       (el layout anterior lo clavaba a 14px e ignoraba la accesibilidad). */
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--fo-text);
+    background-color: var(--fo-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* El shell gestiona su propio scroll; evitamos rebote horizontal en móvil. */
+    overflow-x: hidden;
+}
+
+/*
+ * Bloqueo de scroll mientras la hoja de cuenta está abierta, solo en móvil: allí es un panel
+ * modal a pantalla parcial y el fondo no debe desplazarse. En escritorio es un simple
+ * desplegable y la página debe seguir siendo desplazable.
+ *
+ * El límite se decide aquí y no en TypeScript a propósito: una media query siempre acierta,
+ * mientras que un breakpoint calculado en JS puede quedarse desincronizado al redimensionar.
+ */
+@media (max-width: 991px) {
+    body.fo-panel-open {
+        overflow: hidden;
+    }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--fo-text);
+}
+
+p {
+    margin: 0;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+button {
+    font: inherit;
+    color: inherit;
+}
+
+/* El layout de plantilla forzaba max-width:none, lo que rompía imágenes responsive. */
+img,
+svg,
+video,
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+:focus-visible {
+    outline: 2px solid var(--fo-accent);
+    outline-offset: 2px;
+}
+
+/* Barras de scroll discretas y coherentes con el tema. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fo-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: var(--fo-border-strong);
+    border: 3px solid transparent;
+    border-radius: var(--fo-radius-full);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/*
+ * .card — clase heredada que usan las páginas ya existentes (Socios, Eventos, Peñas,
+ * Cuotas, Inscripciones). Se mantiene el nombre para no tocar esas plantillas, pero
+ * reimplementada sobre los tokens nuevos, con borde y padding responsive.
+ */
+.card {
+    background: var(--fo-surface);
+    border: 1px solid var(--fo-border);
+    border-radius: var(--fo-radius-lg);
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--fo-shadow-sm);
+}
+
+.card:last-child {
+    margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+    .card {
+        padding: 1.5rem;
+    }
+}
+
+/*
+ * Contenedor para contenido ancho (tablas sobre todo) que debe poder desplazarse
+ * horizontalmente en móvil sin arrastrar toda la página.
+ */
+.fo-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/*
+ * Compatibilidad con variables del layout anterior. Las siguen usando los degradados
+ * en línea de las pantallas de auth y de notfound; se mapean a los tokens nuevos para
+ * no tener que editar esas plantillas.
+ */
+:root {
+    --primary-color: var(--fo-accent);
+    --primary-contrast-color: var(--fo-accent-fg);
+    --text-color: var(--fo-text);
+    --text-color-secondary: var(--fo-text-muted);
+    --surface-ground: var(--fo-bg);
+    --surface-card: var(--fo-surface);
+    --surface-border: var(--fo-border);
+    --surface-hover: var(--fo-surface-hover);
+    --surface-overlay: var(--fo-surface);
+    --content-border-radius: var(--fo-radius);
+    --maskbg: var(--fo-overlay-bg);
+    --transition-duration: 160ms;
+}
+
+/*
+ * PrimeNG: los widgets que conservamos (tabla, diálogo, datepicker, toast) heredan su
+ * paleta desde ThemeService. Aquí solo corregimos su posicionamiento respecto al shell.
+ */
+.p-toast.p-toast-top-right,
+.p-toast.p-toast-top-left,
+.p-toast.p-toast-top-center {
+    top: calc(var(--fo-header-h) + var(--fo-safe-top) + 1rem);
+}
+
+/* En móvil los toasts van a ancho completo y por encima de la barra de pestañas. */
+@media (max-width: 991px) {
+    .p-toast {
+        width: auto;
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
+}

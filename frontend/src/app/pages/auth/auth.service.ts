@@ -118,8 +118,16 @@ export class AuthService {
 
     /** true si el usuario autenticado es superadmin (gestiona todas las peñas, no una fija). */
     isSuperAdmin(): boolean {
-        const user = this.currentUserSubject.getValue();
-        return !!user?.authorities?.some(a => a.authority === 'ROLE_SUPERADMIN');
+        return this.hasAuthority('ROLE_SUPERADMIN');
+    }
+
+    hasAuthority(authority: string): boolean {
+        return !!this.getCurrentUser()?.authorities?.some(a => a.authority === authority);
+    }
+
+    /** Usuario autenticado actual (payload del JWT), o null si no hay sesión. */
+    getCurrentUser(): User | null {
+        return this.currentUserSubject.getValue();
     }
 
     getToken()

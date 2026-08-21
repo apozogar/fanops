@@ -1,14 +1,14 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
+import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
 @Component({
     selector: 'app-notfound',
     standalone: true,
-    imports: [RouterModule, AppFloatingConfigurator, ButtonModule],
+    imports: [RouterModule, ThemeToggleComponent, ButtonModule],
     template: `
-        <app-floating-configurator/>
+        <fo-theme-toggle [floating]="true" />
         <div class="flex items-center justify-center min-h-screen overflow-hidden">
             <div class="flex flex-col items-center justify-center">
                 <div

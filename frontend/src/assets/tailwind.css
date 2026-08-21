@@ -3,9 +3,50 @@
 @custom-variant dark (&:where(.app-dark, .app-dark *));
 
 @theme {
+    /* Breakpoints heredados del proyecto: no tocar, las páginas ya existentes
+       (md:table-cell, xl:col-span-3…) dependen de estos valores. */
     --breakpoint-sm: 576px;
     --breakpoint-md: 768px;
     --breakpoint-lg: 992px;
     --breakpoint-xl: 1200px;
     --breakpoint-2xl: 1920px;
+
+    /* Los tokens de theme.css expuestos como utilidades de Tailwind: al apuntar a
+       var(--fo-*), el cambio de tema claro/oscuro se resuelve en tiempo de ejecución
+       sin necesidad de variantes dark: en cada clase. */
+    --color-app: var(--fo-bg);
+    --color-surface: var(--fo-surface);
+    --color-surface-2: var(--fo-surface-2);
+    --color-surface-hover: var(--fo-surface-hover);
+
+    --color-line: var(--fo-border);
+    --color-line-strong: var(--fo-border-strong);
+
+    --color-ink: var(--fo-text);
+    --color-ink-muted: var(--fo-text-muted);
+    --color-ink-subtle: var(--fo-text-subtle);
+    --color-ink-inverse: var(--fo-text-inverse);
+
+    --color-accent: var(--fo-accent);
+    --color-accent-hover: var(--fo-accent-hover);
+    --color-accent-fg: var(--fo-accent-fg);
+    --color-accent-soft: var(--fo-accent-soft-bg);
+    --color-accent-soft-fg: var(--fo-accent-soft-fg);
+
+    --color-success: var(--fo-success);
+    --color-success-soft: var(--fo-success-soft-bg);
+    --color-success-soft-fg: var(--fo-success-soft-fg);
+    --color-warn: var(--fo-warn);
+    --color-warn-soft: var(--fo-warn-soft-bg);
+    --color-warn-soft-fg: var(--fo-warn-soft-fg);
+    --color-danger: var(--fo-danger);
+    --color-danger-soft: var(--fo-danger-soft-bg);
+    --color-danger-soft-fg: var(--fo-danger-soft-fg);
+    --color-info: var(--fo-info);
+    --color-info-soft: var(--fo-info-soft-bg);
+    --color-info-soft-fg: var(--fo-info-soft-fg);
+
+    --radius-token-sm: var(--fo-radius-sm);
+    --radius-token: var(--fo-radius);
+    --radius-token-lg: var(--fo-radius-lg);
 }

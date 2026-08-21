@@ -1,0 +1,151 @@
+/*
+ * Tokens de diseño de FanOps.
+ *
+ * Son la única fuente de verdad del aspecto de la aplicación y NO dependen de PrimeNG:
+ * los componentes propios (shell, ui/*) usan solo estos tokens, así que se pueden restilar
+ * sin tocar ni un componente. PrimeNG se alinea a ellos desde ThemeService, que replica
+ * la paleta de acento y la neutra en los tokens --p-* de su tema.
+ *
+ * La escala de acento (--fo-accent-*) se sobreescribe en caliente con el color de cada peña
+ * (ver ThemeService.setAccent). Los valores de aquí son el defecto: verde bético.
+ */
+
+:root {
+    /* ---- Escala neutra ---- */
+    --fo-neutral-50: #f8fafc;
+    --fo-neutral-100: #f1f5f9;
+    --fo-neutral-200: #e2e8f0;
+    --fo-neutral-300: #cbd5e1;
+    --fo-neutral-400: #94a3b8;
+    --fo-neutral-500: #64748b;
+    --fo-neutral-600: #475569;
+    --fo-neutral-700: #334155;
+    --fo-neutral-800: #1e293b;
+    --fo-neutral-900: #0f172a;
+    --fo-neutral-950: #020817;
+
+    /* ---- Escala de acento (defecto: verde bético #008835) ---- */
+    --fo-accent-50: #f2f9f5;
+    --fo-accent-100: #c2e2cf;
+    --fo-accent-200: #91cca8;
+    --fo-accent-300: #61b582;
+    --fo-accent-400: #309f5b;
+    --fo-accent-500: #008835;
+    --fo-accent-600: #00742d;
+    --fo-accent-700: #005f25;
+    --fo-accent-800: #004b1d;
+    --fo-accent-900: #003615;
+    --fo-accent-950: #00220d;
+
+    /* ---- Roles semánticos: tema claro ---- */
+    --fo-bg: #f4f6f9;
+    --fo-surface: #ffffff;
+    --fo-surface-2: var(--fo-neutral-50);
+    --fo-surface-hover: var(--fo-neutral-100);
+
+    --fo-border: var(--fo-neutral-200);
+    --fo-border-strong: var(--fo-neutral-300);
+
+    --fo-text: var(--fo-neutral-900);
+    --fo-text-muted: var(--fo-neutral-500);
+    --fo-text-subtle: var(--fo-neutral-400);
+    --fo-text-inverse: #ffffff;
+
+    --fo-accent: var(--fo-accent-600);
+    --fo-accent-hover: var(--fo-accent-700);
+    --fo-accent-fg: #ffffff;
+    /* Fondo/texto para estados "activo" suaves: item de menú seleccionado, badges… */
+    --fo-accent-soft-bg: var(--fo-accent-50);
+    --fo-accent-soft-fg: var(--fo-accent-700);
+
+    --fo-success: #15803d;
+    --fo-success-soft-bg: #dcfce7;
+    --fo-success-soft-fg: #166534;
+    --fo-warn: #b45309;
+    --fo-warn-soft-bg: #fef3c7;
+    --fo-warn-soft-fg: #92400e;
+    --fo-danger: #b91c1c;
+    --fo-danger-soft-bg: #fee2e2;
+    --fo-danger-soft-fg: #991b1b;
+    --fo-info: #1d4ed8;
+    --fo-info-soft-bg: #dbeafe;
+    --fo-info-soft-fg: #1e40af;
+
+    --fo-overlay-bg: rgb(15 23 42 / 45%);
+
+    /* ---- Formas y elevación ---- */
+    --fo-radius-sm: 0.375rem;
+    --fo-radius: 0.625rem;
+    --fo-radius-lg: 1rem;
+    --fo-radius-full: 9999px;
+
+    --fo-shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 6%);
+    --fo-shadow: 0 1px 3px 0 rgb(15 23 42 / 8%), 0 1px 2px -1px rgb(15 23 42 / 6%);
+    --fo-shadow-md: 0 4px 12px -2px rgb(15 23 42 / 10%), 0 2px 4px -2px rgb(15 23 42 / 6%);
+    --fo-shadow-lg: 0 12px 32px -8px rgb(15 23 42 / 18%);
+
+    /* ---- Métricas del shell ---- */
+    /* Alto del header. Más bajo en móvil para no comerse la pantalla. */
+    --fo-header-h: 3.5rem;
+    /* Alto de la barra de pestañas inferior (solo móvil), sin contar el safe-area. */
+    --fo-tabbar-h: 3.75rem;
+    --fo-sidebar-w: 16rem;
+    --fo-content-max-w: 90rem;
+
+    /* Safe areas de iOS (notch / barra de gestos). Requieren viewport-fit=cover. */
+    --fo-safe-top: env(safe-area-inset-top, 0px);
+    --fo-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --fo-safe-left: env(safe-area-inset-left, 0px);
+    --fo-safe-right: env(safe-area-inset-right, 0px);
+
+    --fo-transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 992px) {
+    :root {
+        --fo-header-h: 4rem;
+    }
+}
+
+/* ---- Roles semánticos: tema oscuro ---- */
+.app-dark {
+    --fo-bg: #080c14;
+    --fo-surface: #101827;
+    --fo-surface-2: #16202f;
+    --fo-surface-hover: #1c2839;
+
+    --fo-border: #253346;
+    --fo-border-strong: #35475e;
+
+    --fo-text: #e8eef7;
+    --fo-text-muted: var(--fo-neutral-400);
+    --fo-text-subtle: var(--fo-neutral-500);
+    --fo-text-inverse: var(--fo-neutral-900);
+
+    /* En oscuro el acento se aclara para mantener contraste sobre fondos oscuros. */
+    --fo-accent: var(--fo-accent-400);
+    --fo-accent-hover: var(--fo-accent-300);
+    --fo-accent-fg: #04140a;
+    --fo-accent-soft-bg: color-mix(in srgb, var(--fo-accent-400) 16%, transparent);
+    --fo-accent-soft-fg: var(--fo-accent-300);
+
+    --fo-success: #4ade80;
+    --fo-success-soft-bg: rgb(74 222 128 / 14%);
+    --fo-success-soft-fg: #86efac;
+    --fo-warn: #fbbf24;
+    --fo-warn-soft-bg: rgb(251 191 36 / 14%);
+    --fo-warn-soft-fg: #fcd34d;
+    --fo-danger: #f87171;
+    --fo-danger-soft-bg: rgb(248 113 113 / 14%);
+    --fo-danger-soft-fg: #fca5a5;
+    --fo-info: #60a5fa;
+    --fo-info-soft-bg: rgb(96 165 250 / 14%);
+    --fo-info-soft-fg: #93c5fd;
+
+    --fo-overlay-bg: rgb(2 8 23 / 65%);
+
+    --fo-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 40%);
+    --fo-shadow: 0 1px 3px 0 rgb(0 0 0 / 45%), 0 1px 2px -1px rgb(0 0 0 / 40%);
+    --fo-shadow-md: 0 4px 12px -2px rgb(0 0 0 / 50%), 0 2px 4px -2px rgb(0 0 0 / 40%);
+    --fo-shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 60%);
+}

@@ -1,0 +1,109 @@
+/**
+ * Modelo de navegación de la aplicación.
+ *
+ * Es la única fuente de verdad: el sidebar de escritorio, la barra de pestañas de móvil y el
+ * drawer se construyen todos a partir de aquí, así que añadir una sección se hace en un único
+ * sitio y no puede quedar descuadrada entre plataformas.
+ */
+
+export const ROLE_ADMIN = 'ROLE_ADMIN';
+export const ROLE_SUPERADMIN = 'ROLE_SUPERADMIN';
+
+export interface NavItem {
+    id: string;
+    /** Etiqueta completa, para el sidebar y el drawer. */
+    label: string;
+    /** Etiqueta corta para la barra de pestañas de móvil, donde el espacio es mínimo. */
+    shortLabel: string;
+    /** Clase de primeicons. */
+    icon: string;
+    route: string;
+}
+
+export interface NavSection {
+    label: string;
+    items: NavItem[];
+}
+
+const AREA_PERSONAL: NavSection = {
+    label: 'Área personal',
+    items: [
+        {
+            id: 'carnet',
+            label: 'Mi carnet',
+            shortLabel: 'Carnet',
+            icon: 'pi pi-id-card',
+            route: '/carnet-socio'
+        },
+        {
+            id: 'inscripciones',
+            label: 'Inscripción a eventos',
+            shortLabel: 'Inscribirme',
+            icon: 'pi pi-calendar-plus',
+            route: '/inscripciones'
+        }
+    ]
+};
+
+const GESTION: NavSection = {
+    label: 'Gestión',
+    items: [
+        {
+            id: 'socios',
+            label: 'Socios',
+            shortLabel: 'Socios',
+            icon: 'pi pi-users',
+            route: '/socios'
+        },
+        {
+            id: 'eventos',
+            label: 'Eventos',
+            shortLabel: 'Eventos',
+            icon: 'pi pi-calendar',
+            route: '/eventos'
+        }
+    ]
+};
+
+const SUPERADMIN: NavSection = {
+    label: 'Superadmin',
+    items: [
+        {
+            id: 'penas',
+            label: 'Gestión de peñas',
+            shortLabel: 'Peñas',
+            icon: 'pi pi-shield',
+            route: '/penas'
+        }
+    ]
+};
+
+/**
+ * Secciones visibles para un usuario según sus authorities.
+ *
+ * El superadmin solo ve la gestión de peñas: no tiene carnet ni socios propios, y las
+ * operaciones de escritura sobre socios siguen siendo exclusivas de ROLE_ADMIN.
+ */
+export function buildNavigation(authorities: readonly string[]): NavSection[] {
+    if (authorities.includes(ROLE_SUPERADMIN)) {
+        return [SUPERADMIN];
+    }
+
+    const sections = [AREA_PERSONAL];
+
+    if (authorities.includes(ROLE_ADMIN)) {
+        sections.push(GESTION);
+    }
+
+    return sections;
+}
+
+export function flattenNavigation(sections: readonly NavSection[]): NavItem[] {
+    return sections.flatMap((section) => section.items);
+}
+
+/**
+ * Máximo de pestañas que caben cómodamente en la barra inferior de móvil. Si hay más
+ * destinos, la barra muestra los primeros y deja el resto en el drawer.
+ */
+export const MAX_TAB_ITEMS = 5;
