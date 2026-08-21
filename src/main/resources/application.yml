@@ -68,6 +68,10 @@ app:
   superadmin:
     email: ${APP_SUPERADMIN_EMAIL:superadmin@fanops.local}
     password: ${APP_SUPERADMIN_PASSWORD:CambiaEstaClave123!}
+  # Vinculación de una cuenta nueva con fichas de socio que ya están en el listado de la peña:
+  # horas de validez del enlace de un solo uso que se envía al correo de la ficha.
+  vinculacion:
+    expiracion-horas: ${APP_VINCULACION_EXPIRACION_HORAS:48}
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:

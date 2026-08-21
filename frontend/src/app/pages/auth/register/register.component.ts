@@ -27,6 +27,11 @@ export class RegisterComponent implements OnInit {
     };
     confirmPassword = '';
     error: string | null = null;
+    /**
+     * true cuando el email ya figuraba en el listado de socios de la peña: no se ha creado ninguna
+     * ficha nueva y hay que confirmar la vinculación desde el enlace enviado a ese correo.
+     */
+    verificacionEnviada = false;
 
     constructor(
         private authService: AuthService,
@@ -51,7 +56,13 @@ export class RegisterComponent implements OnInit {
         }
 
         this.authService.loginAfterRegister(this.registerData).subscribe({
-            next: () => {
+            next: (resultado) => {
+                if (resultado.requiereVerificacion) {
+                    // Ese correo ya está en el listado de socios: la cuenta se crea al confirmar
+                    // el enlace que se acaba de enviar, no aquí.
+                    this.verificacionEnviada = true;
+                    return;
+                }
                 // Registro y login exitosos. Redirigimos a completar el perfil.
                 this.router.navigate(['/auth/complete-profile']);
             },

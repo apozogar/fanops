@@ -28,7 +28,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.commons.text.WordUtils;
 import org.apache.poi.ss.usermodel.Row;
@@ -143,8 +142,11 @@ public class SocioService {
     existente.setFechaAlta(socioData.getFechaAlta());
     existente.setObservaciones(socioData.getObservaciones());
 
-    // Actualizamos los roles del usuario asociado
-    existente.getUsuario().setRoles(socioData.getUsuario().getRoles());
+    // Los roles viven en la cuenta de usuario, así que solo se tocan si la ficha ya está
+    // vinculada a una: las fichas del listado que nadie ha reclamado todavía no tienen cuenta.
+    if (existente.getUsuario() != null && socioData.getUsuario() != null) {
+      existente.getUsuario().setRoles(socioData.getUsuario().getRoles());
+    }
 
     return socioRepository.save(existente);
   }
@@ -276,10 +278,6 @@ public class SocioService {
             .appendOptional(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
             .toFormatter();
 
-        // Obtenemos el rol de usuario una sola vez para reutilizarlo
-        RoleEntity userRole = roleRepository.findByName("ROLE_USER")
-            .orElseThrow(() -> new RuntimeException("Error: Rol ROLE_USER no encontrado."));
-
         // Saltamos la primera fila (cabecera)
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
           Row row = sheet.getRow(i);
@@ -297,23 +295,12 @@ public class SocioService {
           SocioEntity socio = new SocioEntity();
           String email = getCellValueAsString(row.getCell(COL_EMAIL));
 
-          if (StringUtils.isBlank(email)) {
-            // --- Lógica para crear o encontrar el Usuario ---
-            UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(email)
-                // Si el email está vacío, se creará un usuario con email nulo, lo que dará error.
-                .orElseGet(() -> {
-                  UsuarioEntity nuevoUsuario = new UsuarioEntity();
-                  nuevoUsuario.setEmail(email);
-                  // Asignamos una contraseña temporal. El usuario deberá usar "olvidé mi contraseña".
-                  nuevoUsuario.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-                  nuevoUsuario.setActivo(true);
-                  nuevoUsuario.setRoles(Set.of(userRole));
-                  nuevoUsuario.setPena(pena);
-                  return usuarioRepository.save(nuevoUsuario);
-                });
-            socio.setUsuario(usuario); // Asociamos el socio al usuario
-          }
-          // --- Fin de la lógica de Usuario ---
+          // Los socios importados se quedan a propósito sin cuenta de usuario: la cuenta la
+          // crea la propia persona al registrarse con ese email, y la ficha se le vincula solo
+          // cuando confirma el enlace que recibe por correo (ver VinculacionSocioService).
+          // Antes se intentaba crear el usuario aquí, pero la condición estaba invertida (solo
+          // entraba si el email venía en blanco) y acababa dando de alta usuarios con email
+          // vacío, que rompen la columna única de "usuarios".
 
           // Asignamos los valores de las celdas al objeto SocioEntity usando los índices 0-based
           socio.setNombre(WordUtils.capitalizeFully(nombreCompleto));

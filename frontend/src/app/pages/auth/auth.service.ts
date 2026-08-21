@@ -1,7 +1,9 @@
 import {Injectable, inject} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {BehaviorSubject, Observable, of, switchMap, tap} from 'rxjs';
+import {BehaviorSubject, Observable, map, of, switchMap, tap} from 'rxjs';
 import {RegisterRequest} from '@/models/register-request.model';
+import {ApiResponse} from '@/interfaces/api-response.interface';
+import {RegisterResponse, VinculacionInfo} from '@/interfaces/vinculacion.interface';
 import {Router} from '@angular/router';
 import {environment} from "../../../environments/environment";
 import {jwtDecode} from "jwt-decode";
@@ -38,58 +40,82 @@ export class AuthService {
 
     login(credentials: { email: string, password: string }): Observable<any> {
         return this.http.post<{ token: string }>(`${this.baseUrl}/login`, credentials).pipe(
+            switchMap(response => this.iniciarSesion(response))
+        );
+    }
+
+    register(registerData: RegisterRequest): Observable<ApiResponse<RegisterResponse>> {
+        return this.http.post<ApiResponse<RegisterResponse>>(`${this.baseUrl}/register`, registerData);
+    }
+
+    /**
+     * Registra y, si procede, deja la sesión iniciada. Cuando el email ya figuraba en el listado de
+     * socios de la peña el backend no crea nada: envía un correo con un enlace para confirmar la
+     * vinculación con la ficha existente, así que no hay sesión que iniciar todavía y se devuelve
+     * `requiereVerificacion` para que la pantalla lo indique.
+     */
+    loginAfterRegister(registerData: RegisterRequest): Observable<{ requiereVerificacion: boolean }> {
+        return this.register(registerData).pipe(
             switchMap(response => {
-                if (!response.token) {
-                    return of(response); // Continuar el flujo si no hay token
+                if (response?.data?.requiereVerificacion) {
+                    return of({requiereVerificacion: true});
                 }
-
-                localStorage.setItem('token', response.token);
-                this.decodeToken(response.token);
-
-                const user = this.currentUserSubject.getValue();
-                const clubId = (user as any)?.clubId;
-
-                if (!clubId) {
-                    return of(response); // No hay clubId, continuar
-                }
-
-                return this.penaService.get(clubId.toString()).pipe(
-                    tap(penaResponse => {
-                        const pena = penaResponse.data;
-                        this.currentPenaSubject.next(pena);
-                        // Solo los campos que usa el frontend: la respuesta del backend arrastra la
-                        // colección de socios y, con el logo en base64, no cabría en localStorage.
-                        localStorage.setItem('currentPena', JSON.stringify({
-                            id: pena.id,
-                            nombre: pena.nombre,
-                            logo: pena.logo,
-                            lema: pena.lema,
-                            color: pena.color
-                        } as Pena));
-                    }),
-                    switchMap(() => of(response)) // Devolver la respuesta original del login
+                return this.login({email: registerData.email, password: registerData.password}).pipe(
+                    map(() => ({requiereVerificacion: false}))
                 );
             })
         );
     }
 
-    register(registerData
-             :
-             RegisterRequest
-    ):
-        Observable<any> {
-        return this.http.post(`${this.baseUrl}/register`, registerData);
+    /** Datos de la ficha de socio a la que corresponde el token del enlace recibido por correo. */
+    getVinculacion(token: string): Observable<ApiResponse<VinculacionInfo>> {
+        return this.http.get<ApiResponse<VinculacionInfo>>(`${this.baseUrl}/vinculacion`, {params: {token}});
     }
 
-    loginAfterRegister(registerData
-                       :
-                       RegisterRequest
-    ):
-        Observable<any> {
-        return this.register(registerData).pipe(
-            switchMap(() => {
-                return this.login({email: registerData.email, password: registerData.password});
-            })
+    /**
+     * Confirma la vinculación: el backend crea la cuenta, le asocia las fichas de socio que ya
+     * existían y devuelve el JWT, con lo que la sesión queda iniciada como en un login normal.
+     */
+    confirmarVinculacion(token: string, password?: string): Observable<any> {
+        return this.http.post<{ token: string }>(`${this.baseUrl}/vinculacion/confirmar`, {token, password}).pipe(
+            switchMap(response => this.iniciarSesion(response))
+        );
+    }
+
+    /**
+     * Guarda el JWT recibido, decodifica el usuario y carga su peña. Lo comparten el login y la
+     * confirmación de vinculación, que acaban igual: con un token recién emitido por el backend.
+     */
+    private iniciarSesion(response: { token: string }): Observable<any> {
+        if (!response.token) {
+            return of(response); // Continuar el flujo si no hay token
+        }
+
+        localStorage.setItem('token', response.token);
+        this.decodeToken(response.token);
+
+        const user = this.currentUserSubject.getValue();
+        const clubId = (user as any)?.clubId;
+
+        if (!clubId) {
+            return of(response); // No hay clubId, continuar
+        }
+
+        return this.penaService.get(clubId.toString()).pipe(
+            tap(penaResponse => {
+                const pena = penaResponse.data;
+                this.currentPenaSubject.next(pena);
+                // Solo los campos que usa el frontend: la respuesta del backend arrastra la
+                // colección de socios y, con el logo en base64, no cabría en localStorage.
+                localStorage.setItem('currentPena', JSON.stringify({
+                    id: pena.id,
+                    nombre: pena.nombre,
+                    logo: pena.logo,
+                    lema: pena.lema,
+                    color: pena.color
+                } as Pena));
+            }),
+            switchMap(() => of(response)) // Devolver la respuesta original del login
         );
     }
 
