@@ -10,8 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -25,11 +23,8 @@ import org.springframework.web.client.RestClient;
 @Slf4j
 public class NotificacionService {
 
-  private final JavaMailSender mailSender;
+  private final EmailSender emailSender;
   private final RestClient.Builder restClientBuilder;
-
-  @Value("${mail.from.address}")
-  private String fromAddress;
 
   @Value("${app.public-base-url:http://localhost:4200}")
   private String publicBaseUrl;
@@ -89,14 +84,12 @@ public class NotificacionService {
   private void enviar(String email, String nombre, String asunto, String cuerpo,
       String telefono) {
     if (email != null && !email.isBlank()) {
+      // Aquí el fallo sí se registra y sigue, al contrario que en los correos de acceso: estos
+      // avisos salen dentro de operaciones que ya han cambiado datos (confirmar una plaza,
+      // promocionar la lista de espera) y no tendría sentido deshacer la plaza de un socio
+      // porque el proveedor de correo esté caído. Además se intenta también por WhatsApp.
       try {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(email);
-        message.setSubject(asunto);
-        message.setText(cuerpo);
-        mailSender.send(message);
-        log.info("Email enviado a {} (asunto: {})", email, asunto);
+        emailSender.enviar(email, nombre, asunto, cuerpo);
       } catch (Exception e) {
         log.error("Error enviando email a {} (asunto: {})", email, asunto, e);
       }

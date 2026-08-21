@@ -20,7 +20,20 @@ services:
         generateValue: true    # Render lo genera automáticamente
       - key: PUBLIC_BASE_URL
         value: https://fanops.onrender.com   # ajusta al dominio real
-      # --- SMTP (rellena los valores reales) ---
+      # --- Correo saliente ---
+      # El plan gratuito bloquea la salida a los puertos SMTP (25, 465 y 587), así que con
+      # 'plan: free' hay que enviar por la API HTTP de Brevo, que va por el 443. Si se sube el
+      # servicio a un plan de pago, se puede volver a SMTP poniendo APP_EMAIL_PROVEEDOR=smtp y
+      # rellenando las SMTP_*.
+      - key: APP_EMAIL_PROVEEDOR
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false   # Brevo > SMTP & API > API keys
+      - key: MAIL_FROM_ADDRESS
+        sync: false   # remitente verificado en Brevo (dominio con SPF y DKIM, o remitente único)
+      - key: MAIL_FROM_NAME
+        value: FanOps
+      # Solo se usan con APP_EMAIL_PROVEEDOR=smtp
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -28,8 +41,6 @@ services:
       - key: SMTP_USERNAME
         sync: false
       - key: SMTP_PASSWORD
-        sync: false
-      - key: MAIL_FROM_ADDRESS
         sync: false
       # --- Superadmin inicial (cámbialo tras el primer deploy) ---
       - key: APP_SUPERADMIN_EMAIL

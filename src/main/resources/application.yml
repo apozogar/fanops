@@ -51,6 +51,13 @@ management:
       base-path: /management # Mueve todos los endpoints a /management (ej: /management/health)
       exposure:
         include: health, info # Exponemos explícitamente los endpoints que queremos
+  health:
+    # El indicador del correo abre una conexión al host SMTP y lo cuenta como salud de la
+    # aplicación. En Render eso es contraproducente: con los puertos SMTP bloqueados daría DOWN
+    # y el health check del servicio (healthCheckPath) lo reiniciaría en bucle, aunque la
+    # aplicación esté perfectamente. Si el correo falla, se ve en el error del envío.
+    mail:
+      enabled: false
 
 # Configuraciones específicas de la aplicación
 app:
@@ -72,6 +79,18 @@ app:
   # horas de validez del enlace de un solo uso que se envía al correo de la ficha.
   vinculacion:
     expiracion-horas: ${APP_VINCULACION_EXPIRACION_HORAS:48}
+
+  # Transporte del correo saliente.
+  #   smtp  -> relay SMTP clásico (desarrollo con Mailtrap, o cualquier proveedor en un plan
+  #            de pago de Render).
+  #   brevo -> API HTTP de Brevo, que sale por el 443. Es la única opción en el plan gratuito
+  #            de Render, que bloquea los puertos SMTP (25, 465 y 587).
+  email:
+    proveedor: ${APP_EMAIL_PROVEEDOR:smtp}
+    remitente-nombre: ${MAIL_FROM_NAME:FanOps}
+    brevo:
+      url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
+      api-key: ${BREVO_API_KEY:}
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:

@@ -32,7 +32,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -59,15 +58,14 @@ class VinculacionSocioServiceTest {
   @Mock
   private PasswordEncoder passwordEncoder;
   @Mock
-  private JavaMailSender mailSender;
+  private EmailSender emailSender;
 
   private VinculacionSocioService service;
 
   @BeforeEach
   void setUp() {
     service = new VinculacionSocioService(vinculacionRepository, socioRepository, usuarioRepository,
-        roleRepository, passwordEncoder, mailSender);
-    ReflectionTestUtils.setField(service, "fromAddress", "noreply@fanops.test");
+        roleRepository, passwordEncoder, emailSender);
     ReflectionTestUtils.setField(service, "publicBaseUrl", "https://fanops.test");
     ReflectionTestUtils.setField(service, "horasValidez", 48L);
 

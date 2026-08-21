@@ -237,12 +237,14 @@ public class SocioService {
     long nuevosSocios = socioRepository.countByFechaAltaGreaterThanEqualAndPenaId(fechaDesde,
         penaId);
 
-    LocalDate fechaCorteJovenes = LocalDate.now().minusYears(pena.getEdadMayoria());
+    Integer edadMayoria = pena.getEdadMayoria() != null ? pena.getEdadMayoria() : 18;
+    LocalDate fechaCorteJovenes = LocalDate.now().minusYears(edadMayoria);
     long totalSociosJovenes = socioRepository.countByFechaNacimientoAfterAndPenaId(
         fechaCorteJovenes, penaId);
 
     // Calculamos la fecha de corte para ser jubilado
-    LocalDate fechaCorteJubilados = LocalDate.now().minusYears(pena.getEdadJubilacion());
+    Integer edadJubilacion = pena.getEdadJubilacion() != null ? pena.getEdadJubilacion() : 65;
+    LocalDate fechaCorteJubilados = LocalDate.now().minusYears(edadJubilacion);
     long totalSociosJubilados = socioRepository.countByFechaNacimientoBeforeOrEqualsAndPenaId(
         fechaCorteJubilados, penaId);
 
@@ -250,7 +252,7 @@ public class SocioService {
     int totalImpagados = cuotaRepository.countDistinctSociosByEstadoIn(estadosImpagados, penaId);
 
     return new SocioStatsDto(totalSocios, nuevosSocios, totalSociosJovenes, pena.getEdadMayoria(),
-        totalSociosJubilados, pena.getEdadJubilacion(), totalImpagados);
+        totalSociosJubilados, edadJubilacion, totalImpagados);
   }
 
   private Integer generarNumeroSocio() {

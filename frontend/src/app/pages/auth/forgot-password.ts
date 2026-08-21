@@ -66,7 +66,9 @@ export class ForgotPassword {
                 },
                 error: (err) => {
                     console.error(err);
-                    this.error = 'Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.';
+                    // El backend explica el motivo cuando lo sabe (por ejemplo, que el proveedor
+                    // de correo ha rechazado el envío), y es más útil que un mensaje genérico.
+                    this.error = err?.error?.message ?? 'Ha ocurrido un error. Por favor, inténtalo de nuevo más tarde.';
                 }
             });
         } else {

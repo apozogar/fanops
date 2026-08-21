@@ -24,8 +24,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,10 +54,7 @@ public class VinculacionSocioService {
   private final UsuarioRepository usuarioRepository;
   private final RoleRepository roleRepository;
   private final PasswordEncoder passwordEncoder;
-  private final JavaMailSender mailSender;
-
-  @Value("${mail.from.address}")
-  private String fromAddress;
+  private final EmailSender emailSender;
 
   @Value("${app.public-base-url:http://localhost:4200}")
   private String publicBaseUrl;
@@ -264,16 +259,11 @@ public class VinculacionSocioService {
         .append("Si no has solicitado el registro, ignora este correo: no se hará ningún cambio ")
         .append("en tu ficha.\n");
 
-    try {
-      SimpleMailMessage mensaje = new SimpleMailMessage();
-      mensaje.setFrom(fromAddress);
-      mensaje.setTo(email);
-      mensaje.setSubject("Vincula tu cuenta con tu ficha de socio");
-      mensaje.setText(cuerpo.toString());
-      mailSender.send(mensaje);
-    } catch (Exception e) {
-      log.error("Error al enviar el correo de vinculación de socio a {}", email, e);
-    }
+    // Si el correo no sale, no dejamos la invitación creada: al propagarse el error la
+    // transacción se deshace y quien lo ha pedido ve que ha fallado, en vez de quedarse
+    // esperando un mensaje que no va a llegar.
+    emailSender.enviar(email, principal.getNombre(), "Vincula tu cuenta con tu ficha de socio",
+        cuerpo.toString());
   }
 
   private String generarToken() {

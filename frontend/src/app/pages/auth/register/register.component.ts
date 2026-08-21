@@ -73,7 +73,9 @@ export class RegisterComponent implements OnInit {
                     // Conflict
                     this.error = 'El email ya está registrado.';
                 } else {
-                    this.error = 'Ocurrió un error durante el registro. Por favor, inténtalo de nuevo.';
+                    // Cuando el backend explica el motivo (por ejemplo, que no se ha podido
+                    // enviar el correo de vinculación) se muestra tal cual.
+                    this.error = err?.error?.message ?? 'Ocurrió un error durante el registro. Por favor, inténtalo de nuevo.';
                 }
                 console.error(err);
             }

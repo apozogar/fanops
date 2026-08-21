@@ -56,6 +56,21 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
+  /**
+   * El proveedor de correo no aceptó el envío. Se devuelve 503 y no 500 porque no es un fallo
+   * de la aplicación sino de un servicio externo, y porque quien ha pedido el enlace (registro,
+   * vinculación, recuperar contraseña) tiene que enterarse: antes esto se registraba en el log y
+   * se le decía que mirase su correo.
+   */
+  @ExceptionHandler(EmailNoEnviadoException.class)
+  public ResponseEntity<ApiResponse<String>> handleEmailNoEnviadoException(
+      EmailNoEnviadoException ex, WebRequest request) {
+    log.error("No se pudo enviar el correo", ex);
+    ApiResponse<String> response = new ApiResponse<>(false,
+        "No hemos podido enviar el correo. Vuelve a intentarlo en unos minutos.", null);
+    return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+
   // Manejador genérico para errores 500 Internal Server Error
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<String>> handleGlobalException(Exception ex,

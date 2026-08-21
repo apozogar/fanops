@@ -14,6 +14,7 @@ import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.security.JwtService;
+import com.softwells.fanops.service.EmailSender;
 import com.softwells.fanops.service.SocioService;
 import com.softwells.fanops.service.VinculacionSocioService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -50,10 +49,7 @@ public class AuthController {
   private final JwtService jwtService;
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
-  private final JavaMailSender mailSender;
-
-  @Value("${mail.from.address}")
-  private String fromAddress;
+  private final EmailSender emailSender;
 
   @Value("${app.public-base-url:http://localhost:4200}")
   private String publicBaseUrl;
@@ -148,18 +144,8 @@ public class AuthController {
       String resetLink =
           origenFrontend(servletRequest) + "/#/auth/reset-password?token=" + token;
 
-      try {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(usuario.getEmail());
-        message.setSubject("Solicitud de restablecimiento de contraseña");
-        message.setText(
-            "Para restablecer tu contraseña, haz clic en el siguiente enlace: " + resetLink);
-        mailSender.send(message);
-      } catch (Exception e) {
-        log.error("Error al enviar el correo de restablecimiento de contraseña a {}",
-            usuario.getEmail(), e);
-      }
+      emailSender.enviar(usuario.getEmail(), null, "Solicitud de restablecimiento de contraseña",
+          "Para restablecer tu contraseña, haz clic en el siguiente enlace: " + resetLink);
     },
         // Sin cuenta todavía: si el email figura en el listado de socios, lo que necesita no es
         // recuperar la contraseña sino vincular su ficha, así que se le envía esa invitación.

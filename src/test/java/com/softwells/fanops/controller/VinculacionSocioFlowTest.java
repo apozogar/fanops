@@ -2,6 +2,7 @@ package com.softwells.fanops.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,6 +17,7 @@ import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.repository.SocioRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.repository.VinculacionSocioRepository;
+import com.softwells.fanops.service.EmailSender;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -27,8 +29,6 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -45,9 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * Va en una transacción que se deshace al terminar, así que no deja rastro en la base de datos.
  */
-// El indicador de salud del correo de Actuator exige un JavaMailSender real, y aquí está
-// sustituido por un mock para capturar el enlace; sin desactivarlo no arranca el contexto.
-@SpringBootTest(properties = "management.health.mail.enabled=false")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class VinculacionSocioFlowTest {
@@ -70,7 +68,7 @@ class VinculacionSocioFlowTest {
 
   /** Se sustituye el envío real: el correo es de donde se saca el token del enlace. */
   @MockitoBean
-  private JavaMailSender mailSender;
+  private EmailSender emailSender;
 
   @Test
   @DisplayName("Registrarse con un email del listado no duplica la ficha y la vincula por token")
@@ -151,11 +149,12 @@ class VinculacionSocioFlowTest {
   }
 
   private String tokenDelCorreoEnviado() {
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender, atLeastOnce()).send(any(SimpleMailMessage.class));
-    verify(mailSender, atLeastOnce()).send(captor.capture());
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(emailSender, atLeastOnce())
+        .enviar(eq(EMAIL), any(), eq("Vincula tu cuenta con tu ficha de socio"),
+            captor.capture());
 
-    String cuerpo = captor.getValue().getText();
+    String cuerpo = captor.getValue();
     assertThat(cuerpo).isNotNull();
     // El enlace tiene que llevar el "/#/": el frontend enruta por hash y sin él la pantalla de
     // vinculación no se abre (se cae al login y se pierde el token).
