@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { EventoInscripcionDTO } from '@/interfaces/evento-inscripcion.dto';
+import { EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '@/interfaces/api-response.interface';
@@ -27,6 +27,13 @@ export class EventoService {
     return this.http.get<ApiResponse<Evento[]>>(`${this.apiUrl}/gestion`);
   }
 
+  /**
+   * Información pública de un evento (formulario de no socios, sin autenticación).
+   */
+  infoEventoPublico(uid: string): Observable<ApiResponse<EventoInscripcionDTO>> {
+    return this.http.get<ApiResponse<EventoInscripcionDTO>>(`${this.apiUrl}/${uid}/info-publica`);
+  }
+
   guardarEvento(evento: Partial<Evento>): Observable<ApiResponse<Evento>> {
     if (evento.uid) {
       return this.http.put<ApiResponse<Evento>>(`${this.apiUrl}/${evento.uid}`, evento);
@@ -39,11 +46,26 @@ export class EventoService {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${uid}`);
   }
 
-  inscribir(eventoId: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/${eventoId}/inscribir`, {});
+  inscribir(eventoId: string): Observable<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>> {
+    return this.http.post<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>>(`${this.apiUrl}/${eventoId}/inscribir`, {});
   }
 
   anularInscripcion(eventoId: string): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${eventoId}/anular`);
+  }
+
+  /**
+   * Inscripción pública para no socios (enlace compartido, sin autenticación).
+   */
+  inscribirPublico(eventoId: string, data: InscripcionPublicaRequest): Observable<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>> {
+    return this.http.post<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>>(`${this.apiUrl}/${eventoId}/inscripcion-publica`, data);
+  }
+
+  getInscripciones(eventoId: string): Observable<ApiResponse<InscripcionAdmin[]>> {
+    return this.http.get<ApiResponse<InscripcionAdmin[]>>(`${this.apiUrl}/${eventoId}/inscripciones`);
+  }
+
+  asignarPlazas(eventoId: string): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/asignar-plazas`, {});
   }
 }

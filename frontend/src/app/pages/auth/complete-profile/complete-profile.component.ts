@@ -1,32 +1,23 @@
-import {Component, OnInit} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {Router} from '@angular/router';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {MessageModule} from 'primeng/message';
-import {ProgressSpinnerModule} from 'primeng/progressspinner';
-import {DatePicker} from "primeng/datepicker";
-import {SocioService} from "@/services/SocioService";
-import {Socio} from "@/interfaces/socio.interface";
-import {UsuarioService} from "@/services/UsuarioService";
+import { Component, OnInit } from '@angular/core';
+
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { DatePicker } from 'primeng/datepicker';
+import { SocioService } from '@/services/SocioService';
+import { Socio } from '@/interfaces/socio.interface';
+import { UsuarioService } from '@/services/UsuarioService';
 
 @Component({
     selector: 'app-complete-profile',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        ButtonModule,
-        InputTextModule,
-        DatePicker,
-        MessageModule,
-        ProgressSpinnerModule
-    ],
-    templateUrl: './complete-profile.component.html',
+    imports: [FormsModule, ButtonModule, InputTextModule, DatePicker, MessageModule, ProgressSpinnerModule],
+    templateUrl: './complete-profile.component.html'
 })
 export class CompleteProfileComponent implements OnInit {
-
     socio: Socio | null = null;
     error: string | null = null;
 
@@ -34,8 +25,7 @@ export class CompleteProfileComponent implements OnInit {
         private socioService: SocioService,
         private usuarioService: UsuarioService,
         private router: Router
-    ) {
-    }
+    ) {}
 
     ngOnInit(): void {
         this.usuarioService.getMyPrincipalSocio().subscribe({

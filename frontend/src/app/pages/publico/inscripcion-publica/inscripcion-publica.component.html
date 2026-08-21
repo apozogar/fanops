@@ -1,0 +1,84 @@
+<p-toast></p-toast>
+
+<div class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-xl">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">FanOps</h1>
+            <p class="text-muted-color">Inscripción a eventos de la peña</p>
+        </div>
+
+        <div *ngIf="loading" class="flex justify-center py-16">
+            <p-progressSpinner></p-progressSpinner>
+        </div>
+
+        <p-card *ngIf="!loading && errorCarga">
+            <div class="text-center py-4">
+                <i class="pi pi-exclamation-triangle text-4xl text-danger mb-3"></i>
+                <p class="font-medium">No pudimos encontrar el evento.</p>
+                <p class="text-muted-color text-sm">Comprueba que el enlace es correcto.</p>
+            </div>
+        </p-card>
+
+        <p-card *ngIf="!loading && evento && enviado">
+            <div class="text-center py-4">
+                <i class="pi pi-check-circle text-4xl text-success mb-3"></i>
+                <h3 class="text-xl font-semibold mb-2">¡Te has apuntado!</h3>
+                <p>Tu solicitud para <strong>{{ evento.nombreEvento }}</strong> ha quedado en
+                    <strong>lista de espera</strong>.</p>
+                <p class="text-muted-color text-sm mt-2">Te avisaremos por email o WhatsApp cuando haya
+                    hueco.</p>
+            </div>
+        </p-card>
+
+        <p-card *ngIf="!loading && evento && !enviado">
+            <div class="flex flex-col gap-4">
+                <h3 class="text-xl font-semibold">{{ evento.nombreEvento }}</h3>
+                <div class="flex flex-col gap-2 text-sm">
+                    <div class="flex items-center gap-2">
+                        <i class="pi pi-calendar"></i>
+                        <span>{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <div *ngIf="evento.ubicacion" class="flex items-center gap-2">
+                        <i class="pi pi-map-marker"></i>
+                        <span>{{ evento.ubicacion }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="pi pi-users"></i>
+                        <span>{{ evento.plazasLibres < 0 ? 'Plazas ilimitadas' : evento.plazasLibres + ' plazas libres' }}</span>
+                    </div>
+                </div>
+
+                <p-tag *ngIf="evento.inscripcionCerrada" severity="danger" icon="pi pi-ban"
+                       value="Plazo de inscripción cerrado"></p-tag>
+                <p-tag *ngIf="!evento.inscripcionCerrada" severity="info" [value]="fechaLimiteTexto()"></p-tag>
+
+                <div *ngIf="!evento.inscripcionCerrada" class="flex flex-col gap-4 mt-2">
+                    <div>
+                        <label for="nombre" class="block font-semibold mb-1">Nombre y apellidos *</label>
+                        <input id="nombre" type="text" pInputText class="w-full"
+                               [(ngModel)]="nombre" placeholder="Tu nombre"/>
+                    </div>
+                    <div>
+                        <label for="email" class="block font-semibold mb-1">Email *</label>
+                        <input id="email" type="email" pInputText class="w-full"
+                               [(ngModel)]="email" placeholder="tu@email.com"/>
+                    </div>
+                    <div>
+                        <label for="telefono" class="block font-semibold mb-1">Teléfono (opcional)</label>
+                        <input id="telefono" type="tel" pInputText class="w-full"
+                               [(ngModel)]="telefono" placeholder="Para avisarte por WhatsApp"/>
+                    </div>
+                    <p-button label="Apuntarme en lista de espera" icon="pi pi-check"
+                              [disabled]="!formularioValido || enviando" styleClass="mt-2"
+                              (click)="inscribirse()"></p-button>
+                    <span class="text-xs text-muted-color">Al apuntarte aceptas que te avisemos por email o
+                        WhatsApp cuando haya hueco disponible.</span>
+                </div>
+            </div>
+        </p-card>
+
+        <div *ngIf="!loading" class="text-center mt-6">
+            <a routerLink="/" class="text-primary font-medium">← Volver a la página principal</a>
+        </div>
+    </div>
+</div>

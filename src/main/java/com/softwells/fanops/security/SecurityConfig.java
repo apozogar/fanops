@@ -42,6 +42,8 @@ public class SecurityConfig {
                 "/media/**",          // Permitir acceso a la carpeta de media (fuentes, etc.)
                 "/assets/**",         // Carpeta de assets del frontend
                 "/auth/**",
+                "/api/eventos/*/inscripcion-publica", // Inscripción pública de no socios
+                "/api/eventos/*/info-publica",        // Info pública del evento para el formulario
                 "/v2/api-docs",
                 "/management/**",     // Permitir acceso a los endpoints de Actuator
                 "/v3/api-docs",

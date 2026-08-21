@@ -2,9 +2,9 @@ import {Component, inject, OnInit, ViewChild} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
-import {Table, TableModule} from 'primeng/table'; // Import Table
-import {Socio} from '@/interfaces/socio.interface'; // Import Socio interface for participants
-import {Evento} from '@/interfaces/evento.interface'; // Import Evento interface
+import {Table, TableModule} from 'primeng/table';
+import {Evento} from '@/interfaces/evento.interface';
+import {InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
@@ -15,11 +15,11 @@ import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {CardModule} from 'primeng/card';
 import {TextareaModule} from 'primeng/textarea';
 import {DatePickerModule} from 'primeng/datepicker';
-import {IconFieldModule} from 'primeng/iconfield'; // Import IconFieldModule
-import {InputIconModule} from 'primeng/inputicon'; // Import InputIconModule
+import {IconFieldModule} from 'primeng/iconfield';
+import {InputIconModule} from 'primeng/inputicon';
+import {TagModule} from 'primeng/tag';
+import {AccordionModule} from 'primeng/accordion';
 import {EventoService} from '@/services/evento.service';
-import {Tooltip} from "primeng/tooltip";
-
 
 @Component({
     selector: 'app-eventos',
@@ -38,23 +38,25 @@ import {Tooltip} from "primeng/tooltip";
         CardModule,
         TextareaModule,
         DatePickerModule,
-        IconFieldModule, // Add IconFieldModule
+        IconFieldModule,
         InputIconModule,
-        Tooltip,
-        // Add InputIconModule
+        TagModule,
+        AccordionModule,
     ],
     templateUrl: './EventosComponent.html',
     styleUrls: ['./EventosComponent.scss'],
     providers: [MessageService, ConfirmationService]
 })
 
-export class EventosComponent implements OnInit { // Implement OnInit
-    eventos: Evento[] = []; // Use Evento interface
-    evento: Partial<Evento> = {}; // Use Partial<Evento> for form
+export class EventosComponent implements OnInit {
+    eventos: Evento[] = [];
+    evento: Partial<Evento> = {};
     eventoDialog: boolean = false;
-    displayParticipantesDialog: boolean = false; // New property for participants dialog
-    participantesEventoSeleccionado: Socio[] = []; // New property for selected event's participants
+    inscripcionesDialog: boolean = false;
+    inscripciones: InscripcionAdmin[] = [];
+    eventoSeleccionado: Evento | null = null;
     loading: boolean = false;
+    asignandoPlazas: boolean = false;
 
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
@@ -63,16 +65,15 @@ export class EventosComponent implements OnInit { // Implement OnInit
     public numEventos = 0;
     public numEventosPendientes = 0;
 
-
-    @ViewChild('dt') dt: Table | undefined; // Reference to the p-table for global filter
+    @ViewChild('dt') dt: Table | undefined;
 
     ngOnInit() {
-        // Aquí cargarías los eventos desde tu servicio
         this.cargarEventos();
     }
 
     cargarEventos() {
         this.loading = true;
+        this.numEventosPendientes = 0;
         this.eventoService.getEventosParaGestion().subscribe({
             next: (response) => {
                 if (response.success && response.data) {
@@ -80,7 +81,11 @@ export class EventosComponent implements OnInit { // Implement OnInit
                     this.numEventos = this.eventos.length;
                     this.eventos.forEach((p) => {
                         p.fechaEvento = new Date(p.fechaEvento);
-                        if (p.fechaEvento < new Date()) {
+                        if (p.fechaLimiteInscripcion) {
+                            p.fechaLimiteInscripcion = new Date(p.fechaLimiteInscripcion);
+                        }
+                        // Pendientes = próximos, con inscripción pendiente de cerrarse/asignarse
+                        if (p.fechaEvento >= new Date() && !p.inscripcionCerrada) {
                             this.numEventosPendientes += 1;
                         }
                     });
@@ -94,22 +99,88 @@ export class EventosComponent implements OnInit { // Implement OnInit
     }
 
     abrirNuevo() {
-        this.evento = {nombreEvento: ''}; // Initialize with required fields
+        this.evento = {nombreEvento: '', numeroPlazas: 0};
         this.eventoDialog = true;
     }
 
-    editarEvento(evento: Evento) { // Use Evento interface
-        this.evento = {...evento}; // Create a copy to avoid direct modification
+    editarEvento(evento: Evento) {
+        this.evento = {...evento};
         this.eventoDialog = true;
     }
 
-    mostrarParticipantes(evento: Evento) {
-        if (evento.participantes) {
-            this.participantesEventoSeleccionado = Array.from(evento.participantes); // Convert Set to Array for p-table
-        } else {
-            this.participantesEventoSeleccionado = [];
-        }
-        this.displayParticipantesDialog = true;
+    mostrarInscripciones(evento: Evento) {
+        if (!evento.uid) return;
+        this.eventoSeleccionado = evento;
+        this.inscripciones = [];
+        this.inscripcionesDialog = true;
+        this.eventoService.getInscripciones(evento.uid).subscribe({
+            next: (response) => {
+                if (response.success && response.data) {
+                    this.inscripciones = response.data;
+                }
+            },
+            error: (err) => this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: err.error?.message || 'No se pudieron cargar las inscripciones.'
+            })
+        });
+    }
+
+    get inscritos(): InscripcionAdmin[] {
+        return this.inscripciones.filter(i => i.estado === 'CONFIRMADA');
+    }
+
+    get enEspera(): InscripcionAdmin[] {
+        return this.inscripciones.filter(i => i.estado === 'EN_ESPERA');
+    }
+
+    plazasDisponibles(evento: Evento): boolean {
+        if (evento.numeroPlazas == null) return true; // sin límite de plazas
+        return (evento.numInscritos ?? 0) < evento.numeroPlazas;
+    }
+
+    copiarEnlacePublico(evento: Evento) {
+        if (!evento.uid) return;
+        const enlace = window.location.origin + '/#/inscripcion/' + evento.uid;
+        navigator.clipboard?.writeText(enlace).then(() => {
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Enlace copiado',
+                detail: 'Comparte este enlace para que no socios se apunten: ' + enlace
+            });
+        }).catch(() => {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Enlace',
+                detail: enlace
+            });
+        });
+    }
+
+    asignarPlazas() {
+        if (!this.eventoSeleccionado?.uid) return;
+        this.asignandoPlazas = true;
+        this.eventoService.asignarPlazas(this.eventoSeleccionado.uid).subscribe({
+            next: (resp) => {
+                this.asignandoPlazas = false;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Plazas asignadas',
+                    detail: resp.message || 'Plazas asignadas desde la lista de espera.'
+                });
+                this.mostrarInscripciones(this.eventoSeleccionado!);
+                this.cargarEventos();
+            },
+            error: (err) => {
+                this.asignandoPlazas = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudieron asignar las plazas.'
+                });
+            }
+        });
     }
 
     eliminarEvento(evento: Evento) {
@@ -126,13 +197,13 @@ export class EventosComponent implements OnInit { // Implement OnInit
                             summary: 'Éxito',
                             detail: 'Evento eliminado'
                         });
-                        this.cargarEventos(); // Recargar la lista
+                        this.cargarEventos();
                     },
                     error: (err) => {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: err.error.message || 'No se pudo eliminar el evento'
+                            detail: err.error?.message || 'No se pudo eliminar el evento'
                         });
                     }
                 });
@@ -140,7 +211,7 @@ export class EventosComponent implements OnInit { // Implement OnInit
         });
     }
 
-    guardarEvento() { // No need for 'any' here, as 'this.evento' is already typed
+    guardarEvento() {
         this.eventoService.guardarEvento(this.evento).subscribe({
             next: () => {
                 this.messageService.add({
@@ -149,13 +220,13 @@ export class EventosComponent implements OnInit { // Implement OnInit
                     detail: 'Evento guardado correctamente'
                 });
                 this.eventoDialog = false;
-                this.cargarEventos(); // Recargar la lista
+                this.cargarEventos();
             },
             error: (err) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err.error.message || 'No se pudo guardar el evento'
+                    detail: err.error?.message || 'No se pudo guardar el evento'
                 });
             }
         });

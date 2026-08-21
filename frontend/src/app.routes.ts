@@ -2,6 +2,7 @@ import {Routes} from '@angular/router';
 import {AppLayout} from '@//layout/component/app.layout';
 import {Notfound} from '@//pages/notfound/notfound';
 import {CarnetSocioComponent} from "@/pages/area-personal/carnetSocio/CarnetSocioComponent";
+import {InscripcionPublicaComponent} from "@/pages/publico/inscripcion-publica/inscripcion-publica.component";
 import {adminGuard} from '@/guards/admin.guard';
 import {authGuard} from '@/guards/auth.guard';
 import {
@@ -56,6 +57,10 @@ export const appRoutes: Routes = [
             () => import('@/pages/auth/auth.routes')
     }
     ,
+    {
+        path: 'inscripcion/:id',
+        component: InscripcionPublicaComponent
+    },
     {
         path: '**', redirectTo:
             '/notfound'

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,6 +18,9 @@ public interface CuotaRepository extends JpaRepository<CuotaEntity, UUID> {
   List<CuotaEntity> findBySocioUid(UUID uid);
 
   boolean existsBySocioAndEstado(SocioEntity socio, EstadoCuota estado);
+
+  boolean existsBySocioAndEstadoAndFechaEmisionGreaterThanEqual(SocioEntity socio,
+      EstadoCuota estado, LocalDate fecha);
 
   @Modifying
   @Query("UPDATE CuotaEntity c SET c.estado = 'PAGADA' WHERE c.estado = 'PENDIENTE'")

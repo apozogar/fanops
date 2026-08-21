@@ -1,80 +1,54 @@
-<p-dialog header="Gestión de Cobros" [(visible)]="visible" [modal]="true"
-          [style]="{ width: '70vw', 'max-width': '950px' }"
-          (onHide)="cerrarDialogo()">
+<p-dialog header="Gestión de Cobros" [(visible)]="visible" [modal]="true" [style]="{ width: '70vw', 'max-width': '950px' }" (onHide)="cerrarDialogo()">
     <p-toast></p-toast>
     <div class="grid">
         <!-- Columna Izquierda: Selectores -->
-        <div
-            class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
+        <div class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
             <div class="field">
                 <label for="tipoProceso">Tipo de Operación</label>
-                <p-select id="tipoProceso" [options]="tiposProceso"
-                          [(ngModel)]="tipoProceso" optionLabel="label"
-                          optionValue="value" class="w-full"></p-select>
+                <p-select id="tipoProceso" [options]="tiposProceso" [(ngModel)]="tipoProceso" optionLabel="label" optionValue="value" class="w-full"></p-select>
             </div>
             <div class="field">
                 <label for="conceptoRemesa">Concepto de la Remesa</label>
-                <input id="conceptoRemesa" type="text" pInputText [(ngModel)]="concepto"
-                       class="w-full"
-                       placeholder="Ej: Cuota Semestre 1 2024">
+                <input id="conceptoRemesa" type="text" pInputText [(ngModel)]="concepto" class="w-full" placeholder="Ej: Cuota Semestre 1 2024" />
             </div>
             <div class="field">
                 <label for="fechaCobro">Fecha de Cobro</label>
-                <p-datepicker id="fechaCobro" [(ngModel)]="fechaCobro" dateFormat="dd/mm/yy"
-                              [showIcon]="true" inputId="icondate" class="w-full"></p-datepicker>
+                <p-datepicker id="fechaCobro" [(ngModel)]="fechaCobro" dateFormat="dd/mm/yy" [showIcon]="true" inputId="icondate" class="w-full"></p-datepicker>
             </div>
         </div>
 
         <!-- Sección para Generar Remesa -->
-        <div
-            class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
+        <div class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
             <div class="flex items-center gap-3">
                 <i class="pi pi-download text-2xl text-primary"></i>
                 <span class="font-bold text-lg">1. Generar Remesa SEPA</span>
             </div>
-            <p class="text-muted-color">
-                Crea el fichero XML con las cuotas semestrales pendientes de cobro. Este es el
-                fichero que debes subir a
-                tu banca online (CaixaBankNow).
-            </p>
-            <p-button label="Generar y Descargar" icon="pi pi-file-export"
-                      (onClick)="generarYDescargarRemesa()"
-                      [loading]="loadingGenerar"></p-button>
+            <p class="text-muted-color">Crea el fichero XML con las cuotas semestrales pendientes de cobro. Este es el fichero que debes subir a tu banca online (CaixaBankNow).</p>
+            <p-button label="Generar y Descargar" icon="pi pi-file-export" (onClick)="generarYDescargarRemesa()" [loading]="loadingGenerar"></p-button>
         </div>
 
         <!-- Sección para Procesar Retorno -->
-        <div *ngIf="tipoProceso === 'sepa'" class="grid"
-             class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
-            <div class="flex items-center gap-3">
-                <i class="pi pi-upload text-2xl text-primary"></i>
-                <span class="font-bold text-lg">2. Procesar Fichero de Retorno</span>
+        @if (tipoProceso === 'sepa') {
+            <div class="grid" class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
+                <div class="flex items-center gap-3">
+                    <i class="pi pi-upload text-2xl text-primary"></i>
+                    <span class="font-bold text-lg">2. Procesar Fichero de Retorno</span>
+                </div>
+                <p class="text-muted-color">Sube aquí el fichero de devoluciones (Norma 19.15 o `camt.054`) que te descargas del banco para marcar automáticamente las cuotas como "Rechazadas".</p>
+                <p-fileUpload mode="basic" name="file" chooseLabel="Seleccionar y Subir Fichero" (onSelect)="subirFicheroRetorno($event)" [auto]="true" [customUpload]="true" accept=".xml,.txt" [disabled]="loadingSubir"></p-fileUpload>
             </div>
-            <p class="text-muted-color">
-                Sube aquí el fichero de devoluciones (Norma 19.15 o `camt.054`) que te descargas del
-                banco para marcar
-                automáticamente las cuotas como "Rechazadas".
-            </p>
-            <p-fileUpload mode="basic" name="file" chooseLabel="Seleccionar y Subir Fichero"
-                          (onSelect)="subirFicheroRetorno($event)" [auto]="true"
-                          [customUpload]="true"
-                          accept=".xml,.txt" [disabled]="loadingSubir"></p-fileUpload>
-        </div>
+        }
 
         <!-- Sección para Confirmar Pagos -->
-        <div *ngIf="tipoProceso === 'sepa'" class="grid"
-             class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
-            <div class="flex items-center gap-3">
-                <i class="pi pi-check-circle text-2xl text-primary"></i>
-                <span class="font-bold text-lg">3. Confirmar Pagos</span>
+        @if (tipoProceso === 'sepa') {
+            <div class="grid" class="flex flex-col gap-4 p-6 border rounded-lg border-surface-200 dark:border-surface-700">
+                <div class="flex items-center gap-3">
+                    <i class="pi pi-check-circle text-2xl text-primary"></i>
+                    <span class="font-bold text-lg">3. Confirmar Pagos</span>
+                </div>
+                <p class="text-muted-color"><b>Paso final:</b> Una vez procesadas las devoluciones, pulsa aquí para marcar todas las cuotas que siguen 'Pendientes' como 'Pagadas'.</p>
+                <p-button label="Confirmar Pagos Correctos" icon="pi pi-thumbs-up" (onClick)="confirmarPagosPendientes()" [loading]="loadingConfirmar" severity="success"></p-button>
             </div>
-            <p class="text-muted-color">
-                <b>Paso final:</b> Una vez procesadas las devoluciones, pulsa aquí para marcar todas
-                las cuotas que
-                siguen 'Pendientes' como 'Pagadas'.
-            </p>
-            <p-button label="Confirmar Pagos Correctos" icon="pi pi-thumbs-up"
-                      (onClick)="confirmarPagosPendientes()"
-                      [loading]="loadingConfirmar" severity="success"></p-button>
-        </div>
+        }
     </div>
 </p-dialog>

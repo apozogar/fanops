@@ -4,12 +4,16 @@ export interface Evento {
     uid?: string;
     nombreEvento: string;
     fechaEvento: Date;
+    fechaLimiteInscripcion?: Date;
     ubicacion?: string;
     descripcion?: string;
     numeroPlazas?: number;
     costeTotalEstimado?: number;
     costeTotalReal?: number;
-    participantes?: Set<Socio>; // Add this field
+    participantes?: Set<Socio>;
+    numInscritos?: number;
+    numEnEspera?: number;
+    plazasLibres?: number; // -1 = ilimitado
+    inscripcionCerrada?: boolean;
     isCurrentUserInscrito?: boolean;
-    // participaciones?: any[]; // No es necesario para el formulario de momento
 }

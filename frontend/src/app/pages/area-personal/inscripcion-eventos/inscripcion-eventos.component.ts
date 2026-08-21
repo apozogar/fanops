@@ -7,12 +7,12 @@ import {CardModule} from 'primeng/card';
 import {ButtonModule} from 'primeng/button';
 import {ToastModule} from 'primeng/toast';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
-import {ChangeDetection} from "@angular/cli/lib/config/workspace-schema";
+import {TagModule} from 'primeng/tag';
 
 @Component({
     selector: 'app-inscripcion-eventos',
     standalone: true,
-    imports: [CommonModule, CardModule, ButtonModule, ToastModule, ProgressSpinnerModule],
+    imports: [CommonModule, CardModule, ButtonModule, ToastModule, ProgressSpinnerModule, TagModule],
     templateUrl: './inscripcion-eventos.component.html',
     styleUrls: ['./inscripcion-eventos.component.scss'],
     providers: [MessageService]
@@ -23,9 +23,6 @@ export class InscripcionEventosComponent implements OnInit {
 
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
-
-    constructor() {
-    }
 
     ngOnInit(): void {
         this.eventoService.getEventosParaInscripcion().subscribe({
@@ -50,18 +47,19 @@ export class InscripcionEventosComponent implements OnInit {
         if (!evento.uid) return;
 
         this.eventoService.inscribir(evento.uid).subscribe({
-            next: () => {
-                evento.isCurrentUserInscrito = true; // Actualización optimista
+            next: (resp) => {
+                evento.isCurrentUserInscrito = true;
+                evento.estadoInscripcionActual = resp.data;
                 this.messageService.add({
-                    severity: 'success',
-                    summary: '¡Inscrito!',
-                    detail: `Te has inscrito correctamente a ${evento.nombreEvento}`
+                    severity: resp.data === 'EN_ESPERA' ? 'warn' : 'success',
+                    summary: resp.data === 'EN_ESPERA' ? 'Lista de espera' : '¡Inscrito!',
+                    detail: resp.message || `Te has inscrito a ${evento.nombreEvento}`
                 });
             },
             error: (err) => this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: err.error.message || 'No se pudo realizar la inscripción.'
+                detail: err.error?.message || 'No se pudo realizar la inscripción.'
             })
         });
     }
@@ -71,7 +69,8 @@ export class InscripcionEventosComponent implements OnInit {
 
         this.eventoService.anularInscripcion(evento.uid).subscribe({
             next: () => {
-                evento.isCurrentUserInscrito = false; // Actualización optimista
+                evento.isCurrentUserInscrito = false;
+                evento.estadoInscripcionActual = null;
                 this.messageService.add({
                     severity: 'info',
                     summary: 'Anulado',
@@ -81,8 +80,19 @@ export class InscripcionEventosComponent implements OnInit {
             error: (err) => this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: err.error.message || 'No se pudo anular la inscripción.'
+                detail: err.error?.message || 'No se pudo anular la inscripción.'
             })
         });
+    }
+
+    plazasTexto(evento: EventoInscripcionDTO): string {
+        if (evento.plazasLibres < 0) {
+            return 'Plazas ilimitadas';
+        }
+        return `${evento.plazasLibres} plazas libres de ${evento.plazasOcupadas + evento.plazasLibres}`;
+    }
+
+    enEspera(evento: EventoInscripcionDTO): boolean {
+        return evento.isCurrentUserInscrito && evento.estadoInscripcionActual === 'EN_ESPERA';
     }
 }

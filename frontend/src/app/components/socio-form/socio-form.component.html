@@ -1,96 +1,66 @@
 <form #socioForm="ngForm" (ngSubmit)="onSave()">
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        <!-- Nombre -->
+        <div>
+            <label for="nombre" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Nombre Completo*</label>
+            <input pInputText id="nombre" type="text" placeholder="Nombre completo del socio" class="w-full" [(ngModel)]="socio.nombre" name="nombre" required />
+            @if (socioForm.controls['nombre']?.invalid && socioForm.controls['nombre']?.dirty) {
+                <small class="p-error">El nombre es obligatorio.</small>
+            }
+        </div>
 
-    <!-- Nombre -->
-    <div>
-      <label for="nombre" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Nombre Completo*</label>
-      <input pInputText id="nombre" type="text" placeholder="Nombre completo del socio"
-             class="w-full"
-             [(ngModel)]="socio.nombre" name="nombre" required/>
-      <small *ngIf="socioForm.controls['nombre']?.invalid && socioForm.controls['nombre']?.dirty" class="p-error">El nombre es obligatorio.</small>
+        <!-- DNI -->
+        <div>
+            <label for="dni" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">DNI</label>
+            <input pInputText id="dni" type="text" placeholder="DNI del socio" class="w-full" [(ngModel)]="socio.dni" name="dni" />
+        </div>
+
+        <!-- Fecha de Nacimiento -->
+        <div>
+            <label for="fechaNacimiento" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Fecha de Nacimiento</label>
+            <p-datepicker [(ngModel)]="socio.fechaNacimiento" [showIcon]="true" name="fechaNacimiento" class="w-full" [dateFormat]="'dd/mm/yy'"></p-datepicker>
+        </div>
+
+        <!-- Teléfono -->
+        <div>
+            <label for="telefono" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Teléfono</label>
+            <input pInputText id="telefono" type="text" placeholder="Teléfono de contacto" class="w-full" [(ngModel)]="socio.telefono" name="telefono" />
+        </div>
+
+        <!-- Dirección -->
+        <div class="md:col-span-2">
+            <label for="direccion" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Dirección</label>
+            <input pInputText id="direccion" type="text" placeholder="Calle, número, piso..." class="w-full" [(ngModel)]="socio.direccion" name="direccion" />
+        </div>
+
+        <!-- Población -->
+        <div>
+            <label for="poblacion" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Población</label>
+            <input pInputText id="poblacion" type="text" placeholder="Población" class="w-full" [(ngModel)]="socio.poblacion" name="poblacion" />
+        </div>
+
+        <!-- Provincia -->
+        <div>
+            <label for="provincia" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Provincia</label>
+            <input pInputText id="provincia" type="text" placeholder="Provincia" class="w-full" [(ngModel)]="socio.provincia" name="provincia" />
+        </div>
+
+        <!-- Código Postal -->
+        <div>
+            <label for="codigoPostal" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Código Postal</label>
+            <input pInputText id="codigoPostal" type="text" placeholder="C.P." class="w-full" [(ngModel)]="socio.codigoPostal" name="codigoPostal" />
+        </div>
+
+        <!-- Número de Cuenta -->
+        <div class="md:col-span-2">
+            <label for="numeroCuenta" class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Número de Cuenta (IBAN)</label>
+            <input pInputText id="numeroCuenta" type="text" placeholder="ES00 0000 0000 0000 0000 0000" class="w-full" [(ngModel)]="socio.numeroCuenta" name="numeroCuenta" />
+            <small class="text-muted-color">Dejar en blanco para usar la cuenta del socio principal.</small>
+        </div>
     </div>
 
-    <!-- DNI -->
-    <div>
-      <label for="dni"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">DNI</label>
-      <input pInputText id="dni" type="text" placeholder="DNI del socio"
-             class="w-full"
-             [(ngModel)]="socio.dni" name="dni"/>
+    <!-- Botones de acción que se proyectarán desde el componente padre -->
+    <div class="form-actions-footer mt-8">
+        <ng-content select="[footer]"></ng-content>
     </div>
-
-    <!-- Fecha de Nacimiento -->
-    <div>
-      <label for="fechaNacimiento"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Fecha de Nacimiento</label>
-      <p-datepicker [(ngModel)]="socio.fechaNacimiento" [showIcon]="true"
-                    name="fechaNacimiento" class="w-full"
-                    [dateFormat]="'dd/mm/yy'"></p-datepicker>
-    </div>
-
-    <!-- Teléfono -->
-    <div>
-      <label for="telefono"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Teléfono</label>
-      <input pInputText id="telefono" type="text"
-             placeholder="Teléfono de contacto" class="w-full"
-             [(ngModel)]="socio.telefono" name="telefono"/>
-    </div>
-
-    <!-- Dirección -->
-    <div class="md:col-span-2">
-      <label for="direccion"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Dirección</label>
-      <input pInputText id="direccion" type="text"
-             placeholder="Calle, número, piso..."
-             class="w-full" [(ngModel)]="socio.direccion"
-             name="direccion"/>
-    </div>
-
-    <!-- Población -->
-    <div>
-      <label for="poblacion"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Población</label>
-      <input pInputText id="poblacion" type="text"
-             placeholder="Población" class="w-full"
-             [(ngModel)]="socio.poblacion" name="poblacion"/>
-    </div>
-
-    <!-- Provincia -->
-    <div>
-      <label for="provincia"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Provincia</label>
-      <input pInputText id="provincia" type="text"
-             placeholder="Provincia" class="w-full"
-             [(ngModel)]="socio.provincia" name="provincia"/>
-    </div>
-
-    <!-- Código Postal -->
-    <div>
-      <label for="codigoPostal"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Código
-        Postal</label>
-      <input pInputText id="codigoPostal" type="text" placeholder="C.P."
-             class="w-full"
-             [(ngModel)]="socio.codigoPostal" name="codigoPostal"/>
-    </div>
-
-    <!-- Número de Cuenta -->
-    <div class="md:col-span-2">
-      <label for="numeroCuenta"
-             class="block text-surface-900 dark:text-surface-0 font-medium mb-2">Número de Cuenta (IBAN)</label>
-      <input pInputText id="numeroCuenta" type="text"
-             placeholder="ES00 0000 0000 0000 0000 0000"
-             class="w-full" [(ngModel)]="socio.numeroCuenta"
-             name="numeroCuenta"/>
-      <small class="text-muted-color">Dejar en blanco para usar la cuenta del socio principal.</small>
-    </div>
-
-  </div>
-
-  <!-- Botones de acción que se proyectarán desde el componente padre -->
-  <div class="form-actions-footer mt-8">
-      <ng-content select="[footer]"></ng-content>
-  </div>
-
 </form>

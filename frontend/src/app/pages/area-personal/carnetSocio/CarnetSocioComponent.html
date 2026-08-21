@@ -6,23 +6,20 @@
             <h3>Mis Carnets de Socio</h3>
         </div>
         <div class="header-icons">
-            <i pTooltip="Añadir Nuevo Socio" class="pi pi-plus add-icon"
-               (click)="abrirDialogoNuevoSocio()"></i>
+            <i pTooltip="Añadir Nuevo Socio" class="pi pi-plus add-icon" (click)="abrirDialogoNuevoSocio()"></i>
         </div>
     </div>
 
     <!-- Alternativa con Carrusel -->
-    <p-carousel [value]="socios" [numVisible]="1" [numScroll]="1" [circular]="false"
-                styleClass="full-width-carousel"
-                [showNavigators]="socios.length > 1" [showIndicators]="socios.length > 1">
+    <p-carousel [value]="socios" [numVisible]="1" [numScroll]="1" [circular]="false" styleClass="full-width-carousel" [showNavigators]="socios.length > 1" [showIndicators]="socios.length > 1">
         <ng-template let-socio pTemplate="item">
             <div class="carnet-slide">
                 <p-card class="carnet-card">
                     <!-- Cuerpo del carnet con la información del socio -->
                     <div class="carnet-body">
-                        <img *ngIf="penaInfo?.logo" [src]="penaInfo?.logo"
-                             alt="Logo de la Peña"
-                             class="profile-pic"/>
+                        @if (penaInfo?.logo) {
+                        <img [src]="penaInfo?.logo" alt="Logo de la Peña" class="profile-pic" />
+                        }
                         <div class="socio-info">
                             <div class="info-row">
                                 <span class="label">Nº Socio:</span>
@@ -61,20 +58,17 @@
 </div>
 
 <!-- Dialogo para añadir nuevo socio -->
-<p-dialog header="Añadir Nuevo Socio" [(visible)]="displayNuevoSocioDialog" [modal]="true"
-          [style]="{width: '50vw', 'min-width': '450px', 'max-width': '700px'}"
-          (onHide)="cerrarDialogoNuevoSocio()">
-    <app-socio-form [socio]="nuevoSocio" (save)="guardarNuevoSocio($event)"
-                    *ngIf="socioFormComponent">
+<p-dialog header="Añadir Nuevo Socio" [(visible)]="displayNuevoSocioDialog" [modal]="true" [style]="{width: '50vw', 'min-width': '450px', 'max-width': '700px'}" (onHide)="cerrarDialogoNuevoSocio()">
+    @if (socioFormComponent) {
+    <app-socio-form [socio]="nuevoSocio" (save)="guardarNuevoSocio($event)">
         <!-- Proyectamos los botones de acción en el footer del formulario -->
         <div footer class="flex justify-end gap-2">
-            <p-button icon="pi pi-times" (click)="cerrarDialogoNuevoSocio()" label="Cancelar"
-                      styleClass="p-button-text"></p-button>
+            <p-button icon="pi pi-times" (click)="cerrarDialogoNuevoSocio()" label="Cancelar" styleClass="p-button-text"></p-button>
             <!-- El botón de guardar ahora está dentro del componente del formulario para que el (ngSubmit) funcione -->
-            <button pButton icon="pi pi-check" type="submit" label="Guardar"
-                    [disabled]="socioFormComponent.isFormInvalid()"></button>
+            <button pButton icon="pi pi-check" type="submit" label="Guardar" [disabled]="socioFormComponent.isFormInvalid()"></button>
         </div>
     </app-socio-form>
+    }
 </p-dialog>
 
 <!-- Toast para notificaciones -->

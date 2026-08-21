@@ -2,8 +2,12 @@ package com.softwells.fanops.controller;
 
 import com.softwells.fanops.controller.dto.ApiResponse;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
+import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
+import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
+import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.service.EventoService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +44,17 @@ public class EventoController {
     return ResponseEntity.ok(new ApiResponse<>(true, "Eventos para gestión recuperados", eventos));
   }
 
+  /**
+   * Información pública de un evento para el formulario de inscripción de no socios
+   * (sustituye al Google Form). Accesible sin autenticación.
+   */
+  @GetMapping("/{id}/info-publica")
+  @PreAuthorize("permitAll()")
+  public ResponseEntity<ApiResponse<EventoInscripcionDTO>> infoPublica(@PathVariable UUID id) {
+    return ResponseEntity.ok(new ApiResponse<>(true, "Evento recuperado",
+        eventoService.infoPublica(id)));
+  }
+
   @PostMapping
   public ResponseEntity<ApiResponse<EventoEntity>> createEvento(
       @RequestBody EventoEntity evento) {
@@ -64,9 +79,24 @@ public class EventoController {
 
   @PostMapping("/{id}/inscribir")
   @PreAuthorize("isAuthenticated()")
-  public ResponseEntity<ApiResponse<Void>> inscribir(@PathVariable UUID id) {
-    eventoService.inscribirSocio(id);
-    return ResponseEntity.ok(new ApiResponse<>(true, "Inscripción realizada correctamente", null));
+  public ResponseEntity<ApiResponse<EstadoInscripcion>> inscribir(@PathVariable UUID id) {
+    EstadoInscripcion estado = eventoService.inscribirSocio(id);
+    String mensaje = estado == EstadoInscripcion.CONFIRMADA
+        ? "Inscripción confirmada. ¡Nos vemos allí!"
+        : "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.";
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, estado));
+  }
+
+  /**
+   * Inscripción pública de un no socio. Accesible sin autenticación desde el enlace compartido.
+   */
+  @PostMapping("/{id}/inscripcion-publica")
+  @PreAuthorize("permitAll()")
+  public ResponseEntity<ApiResponse<EstadoInscripcion>> inscribirPublico(@PathVariable UUID id,
+      @Valid @RequestBody InscripcionPublicaRequest request) {
+    EstadoInscripcion estado = eventoService.inscribirPublico(id, request);
+    return ResponseEntity.ok(new ApiResponse<>(true,
+        "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.", estado));
   }
 
   @DeleteMapping("/{id}/anular")
@@ -74,5 +104,22 @@ public class EventoController {
   public ResponseEntity<ApiResponse<Void>> anularInscripcion(@PathVariable UUID id) {
     eventoService.anularInscripcionSocio(id);
     return ResponseEntity.ok(new ApiResponse<>(true, "Inscripción anulada correctamente", null));
+  }
+
+  @GetMapping("/{id}/inscripciones")
+  public ResponseEntity<ApiResponse<List<InscripcionAdminDTO>>> getInscripciones(
+      @PathVariable UUID id) {
+    return ResponseEntity.ok(new ApiResponse<>(true, "Inscripciones recuperadas",
+        eventoService.getInscripciones(id)));
+  }
+
+  /**
+   * Asigna las plazas libres a la lista de espera. Se usa tras cerrar el plazo de inscripción.
+   */
+  @PostMapping("/{id}/asignar-plazas")
+  public ResponseEntity<ApiResponse<Integer>> asignarPlazas(@PathVariable UUID id) {
+    int promocionadas = eventoService.asignarPlazas(id);
+    return ResponseEntity.ok(new ApiResponse<>(true,
+        promocionadas + " persona(s) promocionadas a plaza confirmada", promocionadas));
   }
 }

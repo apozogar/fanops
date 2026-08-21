@@ -7,12 +7,11 @@ import { PasswordModule } from 'primeng/password';
 import { RippleModule } from 'primeng/ripple';
 import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
 import { AuthService } from './auth.service';
-import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-reset-password',
     standalone: true,
-    imports: [CommonModule, ButtonModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, AppFloatingConfigurator],
+    imports: [ButtonModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, AppFloatingConfigurator],
     template: `
         <app-floating-configurator />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
@@ -24,24 +23,27 @@ import { CommonModule } from '@angular/common';
                             <span class="text-muted-color font-medium">Introduce tu nueva contraseña</span>
                         </div>
 
-                        <div *ngIf="!submitted">
-                            <label for="password" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Nueva Contraseña</label>
-                            <p-password id="password" [(ngModel)]="password" placeholder="Nueva Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
+                        @if (!submitted) {
+                            <div>
+                                <label for="password" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Nueva Contraseña</label>
+                                <p-password id="password" [(ngModel)]="password" placeholder="Nueva Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
+                                <label for="confirmPassword" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Contraseña</label>
+                                <p-password id="confirmPassword" [(ngModel)]="confirmPassword" placeholder="Confirmar Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
+                                @if (error) {
+                                    <div class="p-error text-center mb-4">{{ error }}</div>
+                                }
+                                <p-button label="Restablecer" styleClass="w-full" (click)="resetPassword()"></p-button>
+                            </div>
+                        }
 
-                            <label for="confirmPassword" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Contraseña</label>
-                            <p-password id="confirmPassword" [(ngModel)]="confirmPassword" placeholder="Confirmar Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
-
-                            <div *ngIf="error" class="p-error text-center mb-4">{{ error }}</div>
-
-                            <p-button label="Restablecer" styleClass="w-full" (click)="resetPassword()"></p-button>
-                        </div>
-
-                        <div *ngIf="submitted" class="text-center">
-                            <i class="pi pi-check-circle text-primary" style="font-size: 3rem"></i>
-                            <h2 class="mt-4">¡Contraseña actualizada!</h2>
-                            <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
-                            <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4" routerLink="/auth/login"></p-button>
-                        </div>
+                        @if (submitted) {
+                            <div class="text-center">
+                                <i class="pi pi-check-circle text-primary" style="font-size: 3rem"></i>
+                                <h2 class="mt-4">¡Contraseña actualizada!</h2>
+                                <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
+                                <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4" routerLink="/auth/login"></p-button>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -60,7 +62,7 @@ export class ResetPassword implements OnInit {
     private router = inject(Router);
 
     ngOnInit(): void {
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             this.token = params['token'];
             if (!this.token) {
                 this.error = 'Token no válido o caducado.';
@@ -79,16 +81,15 @@ export class ResetPassword implements OnInit {
             return;
         }
         if (this.token) {
-            this.authService.resetPassword(this.token, this.password)
-                .subscribe({
-                    next: () => {
-                        this.submitted = true;
-                    },
-                    error: (err) => {
-                        console.error(err);
-                        this.error = 'El enlace ha caducado o no es válido. Por favor, solicita uno nuevo.';
-                    }
-                });
+            this.authService.resetPassword(this.token, this.password).subscribe({
+                next: () => {
+                    this.submitted = true;
+                },
+                error: (err) => {
+                    console.error(err);
+                    this.error = 'El enlace ha caducado o no es válido. Por favor, solicita uno nuevo.';
+                }
+            });
         } else {
             this.error = 'Token no válido o caducado.';
         }

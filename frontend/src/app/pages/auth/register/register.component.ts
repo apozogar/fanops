@@ -1,35 +1,24 @@
-import {Component, OnInit} from '@angular/core';
-import {Router, RouterLink} from '@angular/router';
-import {RegisterRequest} from '@/models/register-request.model';
-import {FormsModule} from '@angular/forms';
-import {CommonModule} from '@angular/common';
-import {ButtonModule} from 'primeng/button';
-import {CheckboxModule} from 'primeng/checkbox';
-import {InputTextModule} from 'primeng/inputtext';
-import {PasswordModule} from 'primeng/password';
-import {MessageModule} from 'primeng/message';
-import {AuthService} from "@/pages/auth/auth.service";
-import {AppFloatingConfigurator} from "@/layout/component/app.floatingconfigurator";
+import { Component, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { RegisterRequest } from '@/models/register-request.model';
+import { FormsModule } from '@angular/forms';
+
+import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { MessageModule } from 'primeng/message';
+import { AuthService } from '@/pages/auth/auth.service';
+import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigurator';
 
 @Component({
     selector: 'app-register',
     standalone: true,
-    imports: [
-        CommonModule,
-        RouterLink,
-        FormsModule,
-        ButtonModule,
-        CheckboxModule,
-        InputTextModule,
-        PasswordModule,
-        MessageModule,
-        AppFloatingConfigurator
-    ],
+    imports: [RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, AppFloatingConfigurator],
     templateUrl: './register.component.html',
     styles: ``
 })
 export class RegisterComponent implements OnInit {
-
     registerData: RegisterRequest = {
         nombre: '',
         email: '',
@@ -38,8 +27,10 @@ export class RegisterComponent implements OnInit {
     confirmPassword = '';
     error: string | null = null;
 
-    constructor(private authService: AuthService, private router: Router) {
-    }
+    constructor(
+        private authService: AuthService,
+        private router: Router
+    ) {}
 
     ngOnInit(): void {
         localStorage.removeItem('token');
@@ -65,7 +56,8 @@ export class RegisterComponent implements OnInit {
             },
             error: (err) => {
                 // Manejo de errores del backend
-                if (err.status === 409) { // Conflict
+                if (err.status === 409) {
+                    // Conflict
                     this.error = 'El email ya está registrado.';
                 } else {
                     this.error = 'Ocurrió un error durante el registro. Por favor, inténtalo de nuevo.';

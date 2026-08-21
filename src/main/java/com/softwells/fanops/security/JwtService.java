@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -26,7 +27,7 @@ public class JwtService {
   private String secretKey;
 
   @Value("${app.security.jwt.expiration}")
-  private String expiration;
+  private long expiration;
 
   public String extractUsername(String token) {
     return extractClaim(token, Claims::getSubject);
@@ -53,6 +54,7 @@ public class JwtService {
       UsuarioEntity usuario = (UsuarioEntity) userDetails;
       Optional<Long> clubId = usuario.getSocios().stream()
           .map(SocioEntity::getPena)
+          .filter(Objects::nonNull)
           .findFirst()
           .map(PenaEntity::getId);
       clubId.ifPresent(id -> extraClaims.put("clubId", id));
@@ -62,7 +64,7 @@ public class JwtService {
         .setClaims(extraClaims)
         .setSubject(userDetails.getUsername())
         .setIssuedAt(new Date(System.currentTimeMillis()))
-        .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24 hours
+        .setExpiration(new Date(System.currentTimeMillis() + expiration))
         .signWith(getSignInKey())
         .compact();
   }

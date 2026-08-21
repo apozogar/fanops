@@ -1,22 +1,20 @@
-import {Component, EventEmitter, Input, Output} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from "@angular/forms";
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {FileUploadModule} from 'primeng/fileupload';
-import {ToastModule} from 'primeng/toast';
-import {MessageService} from 'primeng/api';
-import {SocioService} from '@/services/SocioService';
-import {Select} from "primeng/select";
-import {InputTextModule} from "primeng/inputtext";
-import {DatePickerModule} from "primeng/datepicker";
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+
+import { FormsModule } from '@angular/forms';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { FileUploadModule } from 'primeng/fileupload';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { SocioService } from '@/services/SocioService';
+import { Select } from 'primeng/select';
+import { InputTextModule } from 'primeng/inputtext';
+import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
     selector: 'app-gestion-cobros',
     standalone: true,
-    imports: [
-        CommonModule, DialogModule, ButtonModule, FileUploadModule, ToastModule, Select, FormsModule, InputTextModule, DatePickerModule
-    ],
+    imports: [DialogModule, ButtonModule, FileUploadModule, ToastModule, Select, FormsModule, InputTextModule, DatePickerModule],
     templateUrl: './gestion-cobros.component.html',
     providers: [MessageService] // Proveedor local para no interferir con otros toasts
 })
@@ -31,21 +29,26 @@ export class GestionCobrosComponent {
     concepto: string = '';
     fechaCobro: Date = new Date();
     // Opciones para el formato de la remesa
-    formatosRemesa = [{label: 'XML (SEPA)', value: 'xml'}, {label: 'Excel', value: 'excel'}];
+    formatosRemesa = [
+        { label: 'XML (SEPA)', value: 'xml' },
+        { label: 'Excel', value: 'excel' }
+    ];
     formatoSeleccionado: 'xml' | 'excel' = 'xml';
 
     // Opciones para el tipo de proceso a realizar
-    tiposProceso = [{label: 'Proceso Completo SEPA', value: 'sepa'}, {
-        label: 'Generar solo Excel',
-        value: 'excel'
-    }];
+    tiposProceso = [
+        { label: 'Proceso Completo SEPA', value: 'sepa' },
+        {
+            label: 'Generar solo Excel',
+            value: 'excel'
+        }
+    ];
     tipoProceso: 'sepa' | 'excel' = 'sepa';
 
     constructor(
         private socioService: SocioService,
         private messageService: MessageService
-    ) {
-    }
+    ) {}
 
     generarYDescargarRemesa() {
         this.loadingGenerar = true;
@@ -65,9 +68,7 @@ export class GestionCobrosComponent {
         // Si el tipo de proceso es 'excel', forzamos el formato a 'excel'.
         const formatoFinal = this.tipoProceso === 'excel' ? 'excel' : this.formatoSeleccionado;
 
-        const peticion = formatoFinal === 'xml'
-            ? this.socioService.generarRemesaMensual(this.concepto, fechaCobroStr)
-            : this.socioService.generarRemesaExcel(this.concepto, fechaCobroStr);
+        const peticion = formatoFinal === 'xml' ? this.socioService.generarRemesaMensual(this.concepto, fechaCobroStr) : this.socioService.generarRemesaExcel(this.concepto, fechaCobroStr);
 
         peticion.subscribe({
             next: (response) => {
@@ -96,7 +97,7 @@ export class GestionCobrosComponent {
             },
             error: (err) => {
                 const detail = err.error?.message || 'No se pudo generar la remesa.';
-                this.messageService.add({severity: 'error', summary: 'Error', detail: detail});
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: detail });
                 this.loadingGenerar = false;
             }
         });
@@ -152,7 +153,7 @@ export class GestionCobrosComponent {
     }
 
     private descargarFichero(data: BlobPart, nombreFichero: string, tipo: string) {
-        const blob = data instanceof Blob ? data : new Blob([data], {type: tipo});
+        const blob = data instanceof Blob ? data : new Blob([data], { type: tipo });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

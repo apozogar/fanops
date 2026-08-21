@@ -4,13 +4,9 @@
             <div class="flex justify-between mb-4">
                 <div>
                     <span class="block text-muted-color font-medium mb-4">Socios</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                        {{ estadistica?.totalSocios }}
-                    </div>
+                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSocios }}</div>
                 </div>
-                <div
-                    class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border"
-                    style="width: 2.5rem; height: 2.5rem">
+                <div class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
                     <i class="pi pi-users text-cyan-500 text-xl!"></i>
                 </div>
             </div>
@@ -23,13 +19,9 @@
             <div class="flex justify-between mb-4">
                 <div>
                     <span class="block text-muted-color font-medium mb-4">Socios Jóvenes</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                        {{ estadistica?.totalSociosJovenes }}
-                    </div>
+                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJovenes }}</div>
                 </div>
-                <div
-                    class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border"
-                    style="width: 2.5rem; height: 2.5rem">
+                <div class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
                     <i class="pi pi-user text-orange-500 text-xl!"></i>
                 </div>
             </div>
@@ -43,13 +35,9 @@
             <div class="flex justify-between mb-4">
                 <div>
                     <span class="block text-muted-color font-medium mb-4">Socios Jubilados</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                        {{ estadistica?.totalSociosJubilados }}
-                    </div>
+                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJubilados }}</div>
                 </div>
-                <div
-                    class="flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border"
-                    style="width: 2.5rem; height: 2.5rem">
+                <div class="flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
                     <i class="pi pi-id-card text-purple-500 text-xl!"></i>
                 </div>
             </div>
@@ -63,13 +51,9 @@
             <div class="flex justify-between mb-4">
                 <div>
                     <span class="block text-muted-color font-medium mb-4">Socios con Impagos</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                        {{ estadistica?.totalImpagados }}
-                    </div>
+                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalImpagados }}</div>
                 </div>
-                <div
-                    class="flex items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border"
-                    style="width: 2.5rem; height: 2.5rem">
+                <div class="flex items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
                     <i class="pi pi-exclamation-triangle text-red-500 text-xl!"></i>
                 </div>
             </div>
@@ -77,38 +61,30 @@
             <span class="text-muted-color"> o vencidas</span>
         </div>
     </div>
-
 </div>
 
-<br/>
+<br />
 
 <div class="card">
-    <p-toast/>
+    <p-toast />
     <p-toolbar styleClass="mb-6">
         <ng-template #start>
             <div class="flex flex-wrap gap-2">
-                <button pButton pRipple icon="pi pi-refresh" class="p-button-secondary"
-                        (click)="cargarSocios()"
-                        pTooltip="Refrescar" tooltipPosition="top">
-                </button>
-                <button pButton pRipple icon="pi pi-plus" class="p-button-success"
-                        (click)="abrirNuevo()">
+                <button pButton pRipple icon="pi pi-refresh" class="p-button-secondary" (click)="cargarSocios()" pTooltip="Refrescar" tooltipPosition="top"></button>
+                <button pButton pRipple icon="pi pi-plus" class="p-button-success" (click)="abrirNuevo()">
                     <span class="hidden md:inline ml-2">Nuevo Socio</span>
                 </button>
-                <button pButton pRipple icon="pi pi-filter-fill" class="p-button-warning"
-                        (click)="cargarSocios('impagados')">
+                <button pButton pRipple icon="pi pi-filter-fill" class="p-button-warning" (click)="cargarSocios('impagados')">
                     <span class="hidden md:inline ml-2">Ver Impagados</span>
                 </button>
                 <!-- Indicador de filtro activo -->
-                <div *ngIf="filtroActivo" class="flex items-center gap-2">
+                @if (filtroActivo) {
+                <div class="flex items-center gap-2">
                     <i class="pi pi-info-circle text-blue-500"></i>
-                    <span class="font-medium text-blue-700 dark:text-blue-300">
-                        Filtrando: <b>{{ filtroActivo | titlecase }}</b>
-                    </span>
-                    <button pButton pRipple icon="pi pi-times"
-                            class="p-button-text p-button-secondary" (click)="limpiarFiltros()"
-                            pTooltip="Limpiar filtro"></button>
+                    <span class="font-medium text-blue-700 dark:text-blue-300"> Filtrando: <b>{{ filtroActivo | titlecase }}</b> </span>
+                    <button pButton pRipple icon="pi pi-times" class="p-button-text p-button-secondary" (click)="limpiarFiltros()" pTooltip="Limpiar filtro"></button>
                 </div>
+                }
             </div>
         </ng-template>
 
@@ -118,38 +94,40 @@
                     <p-inputicon>
                         <i class="pi pi-search"></i>
                     </p-inputicon>
-                    <input pInputText type="text"
-                           (input)="dt.filterGlobal($event.target.value, 'contains')"
-                           placeholder="Buscar..."/>
+                    <input pInputText type="text" (input)="dt.filterGlobal($event.target.value, 'contains')" placeholder="Buscar..." />
                 </p-iconfield>
-                <button pButton pRipple icon="pi pi-credit-card" severity="info"
-                        (click)="cobrosDialog = true">
+                <button pButton pRipple icon="pi pi-credit-card" severity="info" (click)="cobrosDialog = true">
                     <span class="hidden md:inline ml-2">Gestión de Cobros</span>
                 </button>
-                <input type="file" #fileUpload style="display: none" (change)="onFileSelect($event)"
-                       accept=".xlsx, .xls"/>
-                <button pButton pRipple icon="pi pi-upload" severity="secondary"
-                        (click)="fileUpload.click()">
+                <input type="file" #fileUpload style="display: none" (change)="onFileSelect($event)" accept=".xlsx, .xls" />
+                <button pButton pRipple icon="pi pi-upload" severity="secondary" (click)="fileUpload.click()">
                     <span class="hidden md:inline ml-2">Importar</span>
                 </button>
             </div>
         </ng-template>
     </p-toolbar>
 
-    <p-table #dt [value]="socios" [rows]="10" [paginator]="true" [loading]="loading"
-             [rowHover]="true" dataKey="uid"
-             [globalFilterFields]="['numeroSocio', 'nombre', 'telefono', 'email']"
-             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} socios"
-             [showCurrentPageReport]="true" class="mt-4">
+    <p-table
+        #dt
+        [value]="socios"
+        [rows]="10"
+        [paginator]="true"
+        [loading]="loading"
+        [rowHover]="true"
+        dataKey="uid"
+        [globalFilterFields]="['numeroSocio', 'nombre', 'telefono', 'email']"
+        currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} socios"
+        [showCurrentPageReport]="true"
+        class="mt-4"
+    >
         <ng-template pTemplate="header">
             <tr>
-                <th scope="col" class="hidden md:table-cell" style="width: 100px;">Núm. Socio
-                </th>
+                <th scope="col" class="hidden md:table-cell" style="width: 100px">Núm. Socio</th>
                 <th scope="col">Nombre</th>
                 <th scope="col" class="hidden md:table-cell">Teléfono</th>
                 <th scope="col" class="hidden md:table-cell">Email</th>
                 <th scope="col" class="hidden md:table-cell">Estado</th>
-                <th scope="col" style="min-width: 130px;">Acciones</th>
+                <th scope="col" style="min-width: 130px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-socio>
@@ -159,22 +137,42 @@
                 <td class="hidden md:table-cell">{{ socio.telefono }}</td>
                 <td class="hidden md:table-cell">{{ socio.email }}</td>
                 <td class="hidden md:table-cell">
-                    <p-tag [severity]="socio.activo ? 'success' : 'danger'"
-                           [value]="socio.activo ? 'Activo' : 'Inactivo'"/>
+                    <p-tag [severity]="socio.activo ? 'success' : 'danger'" [value]="socio.activo ? 'Activo' : 'Inactivo'" />
                 </td>
-                <td style="min-width: 130px;">
-                    <button pButton pRipple icon="pi pi-euro" [rounded]="true" [outlined]="true"
-                            class="p-button-sm md:p-button-normal p-button-rounded p-button-info mr-2"
-                            (click)="mostrarCuotas(socio)" pTooltip="Ver Cuotas"
-                            tooltipPosition="top"></button>
-                    <button pButton pRipple icon="pi pi-pencil" [rounded]="true" [outlined]="true"
-                            class="p-button-sm md:p-button-normal p-button-rounded p-button-success mr-2"
-                            (click)="editarSocio(socio)" pTooltip="Editar Socio"
-                            tooltipPosition="top"></button>
-                    <button pButton pRipple icon="pi pi-trash" [rounded]="true" [outlined]="true"
-                            class="p-button-sm md:p-button-normal p-button-rounded p-button-danger"
-                            (click)="eliminarSocio(socio)" pTooltip="Eliminar Socio"
-                            tooltipPosition="top"></button>
+                <td style="min-width: 130px">
+                    <button
+                        pButton
+                        pRipple
+                        icon="pi pi-euro"
+                        [rounded]="true"
+                        [outlined]="true"
+                        class="p-button-sm md:p-button-normal p-button-rounded p-button-info mr-2"
+                        (click)="mostrarCuotas(socio)"
+                        pTooltip="Ver Cuotas"
+                        tooltipPosition="top"
+                    ></button>
+                    <button
+                        pButton
+                        pRipple
+                        icon="pi pi-pencil"
+                        [rounded]="true"
+                        [outlined]="true"
+                        class="p-button-sm md:p-button-normal p-button-rounded p-button-success mr-2"
+                        (click)="editarSocio(socio)"
+                        pTooltip="Editar Socio"
+                        tooltipPosition="top"
+                    ></button>
+                    <button
+                        pButton
+                        pRipple
+                        icon="pi pi-trash"
+                        [rounded]="true"
+                        [outlined]="true"
+                        class="p-button-sm md:p-button-normal p-button-rounded p-button-danger"
+                        (click)="eliminarSocio(socio)"
+                        pTooltip="Eliminar Socio"
+                        tooltipPosition="top"
+                    ></button>
                 </td>
             </tr>
         </ng-template>
@@ -183,8 +181,7 @@
 
 <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-<p-dialog [(visible)]="socioDialog" [style]="{ width: '650px' }" header="Detalles del Socio"
-          [modal]="true">
+<p-dialog [(visible)]="socioDialog" [style]="{ width: '650px' }" header="Detalles del Socio" [modal]="true">
     <ng-template #content>
         <div class="flex flex-col gap-6 w-full">
             <!-- Información Básica -->
@@ -192,38 +189,31 @@
                 <span class="font-semibold text-lg">Información Básica</span>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
-                        <label for="numeroSocio" class="block font-semibold mb-2">Número de
-                            Socio*</label>
-                        <input type="text" pInputText id="numeroSocio"
-                               [(ngModel)]="socio.numeroSocio"
-                               class="w-full" required/>
-                        <small class="text-red-500" *ngIf="submitted && !socio.numeroSocio">Número
-                            de socio es
-                            requerido.</small>
+                        <label for="numeroSocio" class="block font-semibold mb-2">Número de Socio*</label>
+                        <input type="text" pInputText id="numeroSocio" [(ngModel)]="socio.numeroSocio" class="w-full" required />
+                        @if (submitted && !socio.numeroSocio) {
+                        <small class="text-red-500">Número de socio es requerido.</small>
+                        }
                     </div>
                     <div class="flex-auto">
                         <label for="nombre" class="block font-semibold mb-2">Nombre*</label>
-                        <input type="text" pInputText id="nombre" [(ngModel)]="socio.nombre"
-                               class="w-full"
-                               required/>
-                        <small class="text-red-500" *ngIf="submitted && !socio.nombre">Nombre es
-                            requerido.</small>
+                        <input type="text" pInputText id="nombre" [(ngModel)]="socio.nombre" class="w-full" required />
+                        @if (submitted && !socio.nombre) {
+                        <small class="text-red-500">Nombre es requerido.</small>
+                        }
                     </div>
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
                         <label for="dni" class="block font-semibold mb-2">DNI*</label>
-                        <input type="text" pInputText id="dni" [(ngModel)]="socio.dni"
-                               class="w-full" required/>
-                        <small class="text-red-500" *ngIf="submitted && !socio.dni">DNI es
-                            requerido.</small>
+                        <input type="text" pInputText id="dni" [(ngModel)]="socio.dni" class="w-full" required />
+                        @if (submitted && !socio.dni) {
+                        <small class="text-red-500">DNI es requerido.</small>
+                        }
                     </div>
                     <div class="flex-auto">
-                        <label for="fechaNacimiento" class="block font-semibold mb-2">Fecha
-                            Nacimiento*</label>
-                        <p-datepicker id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento"
-                                      class="w-full" [dateFormat]="'yy-mm-dd'"
-                                      required></p-datepicker>
+                        <label for="fechaNacimiento" class="block font-semibold mb-2">Fecha Nacimiento*</label>
+                        <p-datepicker id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
                     </div>
                 </div>
             </div>
@@ -234,13 +224,11 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
                         <label for="email" class="block font-semibold mb-2">Email</label>
-                        <input type="email" pInputText id="email" [(ngModel)]="socio.email"
-                               class="w-full"/>
+                        <input type="email" pInputText id="email" [(ngModel)]="socio.email" class="w-full" />
                     </div>
                     <div class="flex-auto">
                         <label for="telefono" class="block font-semibold mb-2">Teléfono</label>
-                        <input type="tel" pInputText id="telefono" [(ngModel)]="socio.telefono"
-                               class="w-full"/>
+                        <input type="tel" pInputText id="telefono" [(ngModel)]="socio.telefono" class="w-full" />
                     </div>
                 </div>
             </div>
@@ -250,26 +238,20 @@
                 <span class="font-semibold text-lg">Dirección</span>
                 <div class="flex-auto">
                     <label for="direccion" class="block font-semibold mb-2">Dirección</label>
-                    <input type="text" pInputText id="direccion" [(ngModel)]="socio.direccion"
-                           class="w-full"/>
+                    <input type="text" pInputText id="direccion" [(ngModel)]="socio.direccion" class="w-full" />
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
                         <label for="poblacion" class="block font-semibold mb-2">Población</label>
-                        <input type="text" pInputText id="poblacion" [(ngModel)]="socio.poblacion"
-                               class="w-full"/>
+                        <input type="text" pInputText id="poblacion" [(ngModel)]="socio.poblacion" class="w-full" />
                     </div>
                     <div class="flex-auto">
                         <label for="provincia" class="block font-semibold mb-2">Provincia</label>
-                        <input type="text" pInputText id="provincia" [(ngModel)]="socio.provincia"
-                               class="w-full"/>
+                        <input type="text" pInputText id="provincia" [(ngModel)]="socio.provincia" class="w-full" />
                     </div>
                     <div class="flex-auto">
-                        <label for="codigoPostal" class="block font-semibold mb-2">Código
-                            Postal</label>
-                        <input type="text" pInputText id="codigoPostal"
-                               [(ngModel)]="socio.codigoPostal"
-                               class="w-full"/>
+                        <label for="codigoPostal" class="block font-semibold mb-2">Código Postal</label>
+                        <input type="text" pInputText id="codigoPostal" [(ngModel)]="socio.codigoPostal" class="w-full" />
                     </div>
                 </div>
             </div>
@@ -281,46 +263,34 @@
                     <div class="flex-auto">
                         <div class="flex flex-col gap-3">
                             <div class="flex items-center gap-2">
-                                <p-checkbox [(ngModel)]="socio.activo" [binary]="true"
-                                            inputId="activo"></p-checkbox>
+                                <p-checkbox [(ngModel)]="socio.activo" [binary]="true" inputId="activo"></p-checkbox>
                                 <label for="activo" class="font-semibold">Activo</label>
                             </div>
                             <div class="flex items-center gap-2">
-                                <p-checkbox [(ngModel)]="socio.abonadoBetis" [binary]="true"
-                                            inputId="abonadoBetis"></p-checkbox>
-                                <label for="abonadoBetis" class="font-semibold">Abonado
-                                    Betis</label>
+                                <p-checkbox [(ngModel)]="socio.abonadoBetis" [binary]="true" inputId="abonadoBetis"></p-checkbox>
+                                <label for="abonadoBetis" class="font-semibold">Abonado Betis</label>
                             </div>
                             <div class="flex items-center gap-2">
-                                <p-checkbox [(ngModel)]="socio.accionistaBetis" [binary]="true"
-                                            inputId="accionistaBetis"></p-checkbox>
-                                <label for="accionistaBetis" class="font-semibold">Accionista
-                                    Betis</label>
+                                <p-checkbox [(ngModel)]="socio.accionistaBetis" [binary]="true" inputId="accionistaBetis"></p-checkbox>
+                                <label for="accionistaBetis" class="font-semibold">Accionista Betis</label>
                             </div>
                             <div class="flex items-center gap-2">
-                                <p-checkbox [(ngModel)]="socio.exentoPago" [binary]="true"
-                                            inputId="exentoPago"></p-checkbox>
+                                <p-checkbox [(ngModel)]="socio.exentoPago" [binary]="true" inputId="exentoPago"></p-checkbox>
                                 <label for="exentoPago" class="font-semibold">Exento Pago</label>
                             </div>
                             <div class="flex items-center gap-2">
-                                <p-checkbox [(ngModel)]="isAdmin" [binary]="true"
-                                            inputId="isAdmin"></p-checkbox>
+                                <p-checkbox [(ngModel)]="isAdmin" [binary]="true" inputId="isAdmin"></p-checkbox>
                                 <label for="isAdmin" class="font-semibold">Es Administrador</label>
                             </div>
                         </div>
                     </div>
                     <div class="flex-auto">
-                        <label for="numeroCuenta" class="block font-semibold mb-2">Número de
-                            Cuenta</label>
-                        <input type="text" pInputText id="numeroCuenta"
-                               [(ngModel)]="socio.numeroCuenta"
-                               class="w-full"/>
+                        <label for="numeroCuenta" class="block font-semibold mb-2">Número de Cuenta</label>
+                        <input type="text" pInputText id="numeroCuenta" [(ngModel)]="socio.numeroCuenta" class="w-full" />
                     </div>
                     <div class="flex-auto">
                         <label for="fechaAlta" class="block font-semibold mb-2">Fecha Alta*</label>
-                        <p-datepicker [(ngModel)]="socio.fechaAlta" class="w-full"
-                                      [dateFormat]="'yy-mm-dd'"
-                                      required></p-datepicker>
+                        <p-datepicker [(ngModel)]="socio.fechaAlta" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
                     </div>
                 </div>
             </div>
@@ -328,22 +298,19 @@
             <!-- Observaciones -->
             <div class="flex-auto">
                 <label for="observaciones" class="block font-semibold mb-2">Observaciones</label>
-                <textarea pTextarea id="observaciones" [(ngModel)]="socio.observaciones" rows="4"
-                          class="w-full"></textarea>
+                <textarea pTextarea id="observaciones" [(ngModel)]="socio.observaciones" rows="4" class="w-full"></textarea>
             </div>
         </div>
     </ng-template>
 
     <ng-template #footer>
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="socioDialog = false"
-                  [text]="true"></p-button>
+        <p-button label="Cancelar" icon="pi pi-times" (onClick)="socioDialog = false" [text]="true"></p-button>
         <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarSocio()"></p-button>
     </ng-template>
 </p-dialog>
 
 <!-- Modal para mostrar las cuotas -->
-<p-dialog [(visible)]="cuotasDialog" [style]="{ width: '750px' }" header="Historial de Cuotas"
-          [modal]="true">
+<p-dialog [(visible)]="cuotasDialog" [style]="{ width: '750px' }" header="Historial de Cuotas" [modal]="true">
     <ng-template pTemplate="content">
         <app-cuotas-socio-table [cuotas]="cuotasSocio"></app-cuotas-socio-table>
     </ng-template>

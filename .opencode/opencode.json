@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "command": {
+    "backend": {
+      "description": "Compila el backend Spring Boot",
+      "prompt": "Compila el backend con: .\\mvnw.cmd -q compile"
+    },
+    "backend-test": {
+      "description": "Ejecuta los tests del backend",
+      "prompt": "Ejecuta los tests de Maven: .\\mvnw.cmd test"
+    },
+    "frontend": {
+      "description": "Construye el frontend Angular en producción",
+      "prompt": "Ejecuta el build de producción del frontend desde frontend/: npm run build -- --configuration=production"
+    },
+    "frontend-lint": {
+      "description": "Lint del frontend Angular",
+      "prompt": "Ejecuta el eslint del frontend desde frontend/: npx eslint \"src/**/*.ts\""
+    }
+  }
+}

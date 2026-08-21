@@ -3,15 +3,15 @@ spring:
     name: fanops
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/pblb
-    username: postgres
-    password: toor
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fanops}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:toor}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update  # Genera/actualiza las tablas automáticamente
+      ddl-auto: ${SPRING_JPA_DDL_AUTO:update}  # 'update' para dev; en producción usa 'validate' o migraciones
     properties:
       hibernate:
         jdbc:
@@ -22,10 +22,10 @@ spring:
     enabled: false  # Deshabilitamos liquibase por ahora ya que usaremos hibernate para generar la estructura
 
   mail:
-    host: sandbox.smtp.mailtrap.io
-    port: 587
-    username: ffc01dec03cf95
-    password: f7d9848479d07f
+    host: ${SMTP_HOST:sandbox.smtp.mailtrap.io}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:ffc01dec03cf95}
+    password: ${SMTP_PASSWORD:f7d9848479d07f}
     properties:
       mail:
         smtp:
@@ -47,16 +47,28 @@ management:
     web:
       base-path: /management # Mueve todos los endpoints a /management (ej: /management/health)
       exposure:
-        include: health, info, prometheus # Exponemos explícitamente los endpoints que queremos
+        include: health, info # Exponemos explícitamente los endpoints que queremos
 
 # Configuraciones específicas de la aplicación
 app:
   security:
     jwt:
-      secret: eW91ci1zdXBlci1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1hbmQtc2VjdXJlLWFuZC1hdC1sZWFzdC0yNTYtYml0cw==
-      expiration: 1209600000  # 14 dias en milisegundos
+      # OBLIGATORIO: configura APP_JWT_SECRET en producción (base64, mínimo 32 bytes).
+      secret: ${APP_JWT_SECRET:eW91ci1zdXBlci1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1hbmQtc2VjdXJlLWFuZC1hdC1sZWFzdC0yNTYtYml0cw==}
+      expiration: ${APP_JWT_EXPIRATION:1209600000}  # 14 dias en milisegundos
+  # Base URL pública de la aplicación (para enlaces en emails/WhatsApp).
+  # En Fly.io se puede inyectar con FLY_APP_URL.
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:4200}
 
-# Dirección de correo para el remitente
+# Dirección de correo para el remitente (email real del dominio en producción)
 mail:
   from:
-    address: ${spring.mail.username}
+    address: ${MAIL_FROM_ADDRESS:noreply@fanops.local}
+
+# Notificaciones por WhatsApp (Meta Business Cloud API)
+whatsapp:
+  # Si está desactivado o faltan credenciales, las notificaciones se envían solo por email
+  enabled: ${WHATSAPP_ENABLED:false}
+  api-version: ${WHATSAPP_API_VERSION:v21.0}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+  access-token: ${WHATSAPP_ACCESS_TOKEN:}

@@ -1,13 +1,13 @@
-import {booleanAttribute, Component, Input, OnInit, OnDestroy} from '@angular/core';
-import {MenuItem} from 'primeng/api';
-import {Router, RouterModule} from '@angular/router';
-import {CommonModule} from '@angular/common';
-import {StyleClassModule} from 'primeng/styleclass';
-import {AppConfigurator} from './app.configurator';
-import {LayoutService} from '../service/layout.service';
-import {AuthService} from "../../pages/auth/auth.service";
-import {Pena} from "@/interfaces/socio.interface";
-import {Subscription} from "rxjs";
+import { booleanAttribute, Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { MenuItem } from 'primeng/api';
+import { Router, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { StyleClassModule } from 'primeng/styleclass';
+import { AppConfigurator } from './app.configurator';
+import { LayoutService } from '../service/layout.service';
+import { AuthService } from '../../pages/auth/auth.service';
+import { Pena } from '@/interfaces/socio.interface';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-topbar',
@@ -25,52 +25,48 @@ import {Subscription} from "rxjs";
             margin-right: 0.5rem;
         }
     `,
-    template: `
-        <div class="layout-topbar">
-            <div class="layout-topbar-logo-container">
-                <button class="layout-menu-button layout-topbar-action"
-                        (click)="layoutService.onMenuToggle()">
-                    <i class="pi pi-bars"></i>
+    template: ` <div class="layout-topbar">
+        <div class="layout-topbar-logo-container">
+            <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
+                <i class="pi pi-bars"></i>
+            </button>
+            <a class="layout-topbar-logo" routerLink="/">
+                <!-- Se muestra la imagen de la peña si está disponible, de lo contrario, una imagen por defecto -->
+                @if (imageUrl) {
+                    <img [src]="imageUrl" alt="Logo de la Peña" class="logo-pequeno" />
+                }
+                @if (!imageUrl) {
+                    <img src="assets/layout/images/logo-dark.svg" alt="Logo por defecto" class="logo-pequeno" />
+                }
+                <!-- Ajusta la ruta de tu logo por defecto -->
+                <span>{{ nombre }}</span>
+            </a>
+        </div>
+
+        <div class="layout-topbar-actions">
+            <div class="layout-config-menu">
+                <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
+                    <i [ngClass]="{ 'pi ': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
                 </button>
-                <a class="layout-topbar-logo" routerLink="/">
-                    <!-- Se muestra la imagen de la peña si está disponible, de lo contrario, una imagen por defecto -->
-                    <img *ngIf="imageUrl" [src]="imageUrl" alt="Logo de la Peña"
-                         class="logo-pequeno"/>
-                    <img *ngIf="!imageUrl" src="assets/layout/images/logo-dark.svg"
-                         alt="Logo por defecto" class="logo-pequeno"/>
-                    <!-- Ajusta la ruta de tu logo por defecto -->
-                    <span>{{ nombre }}</span>
-                </a>
+                <div class="relative">
+                    <app-configurator />
+                </div>
             </div>
 
-            <div class="layout-topbar-actions">
-                <div class="layout-config-menu">
-                    <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
-                        <i [ngClass]="{ 'pi ': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
+            <button class="layout-topbar-menu-button layout-topbar-action" pStyleClass="@next" enterFromClass="hidden" enterActiveClass="animate-scalein" leaveToClass="hidden" leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true">
+                <i class="pi pi-ellipsis-v"></i>
+            </button>
+
+            <div class="layout-topbar-menu hidden lg:block">
+                <div class="layout-topbar-menu-content">
+                    <button type="button" class="layout-topbar-action" (click)="logout()">
+                        <i class="pi pi-sign-out"></i>
+                        <span>Cerrar Sesión</span>
                     </button>
-                    <div class="relative">
-                        <app-configurator/>
-                    </div>
-                </div>
-
-                <button class="layout-topbar-menu-button layout-topbar-action" pStyleClass="@next"
-                        enterFromClass="hidden" enterActiveClass="animate-scalein"
-                        leaveToClass="hidden" leaveActiveClass="animate-fadeout"
-                        [hideOnOutsideClick]="true">
-                    <i class="pi pi-ellipsis-v"></i>
-                </button>
-
-                <div class="layout-topbar-menu hidden lg:block">
-                    <div class="layout-topbar-menu-content">
-                        <button type="button" class="layout-topbar-action"
-                                (click)="logout()">
-                            <i class="pi pi-sign-out"></i>
-                            <span>Cerrar Sesión</span>
-                        </button>
-                    </div>
                 </div>
             </div>
-        </div>`
+        </div>
+    </div>`
 })
 export class AppTopbar implements OnInit, OnDestroy {
     items!: MenuItem[];

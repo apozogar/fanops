@@ -2,39 +2,73 @@
 
 <div class="card">
     <h2>Próximos Eventos</h2>
-    <p>Explora los próximos eventos y apúntate.</p>
+    <p>Explora los próximos eventos y apúntate. Los socios con la cuota al día tienen prioridad.</p>
 
-    <div *ngIf="loading" class="flex justify-center items-center h-64">
-        <p-progressSpinner></p-progressSpinner>
-    </div>
+    @if (loading) {
+        <div class="flex justify-center items-center h-64">
+            <p-progressSpinner></p-progressSpinner>
+        </div>
+    }
 
-    <div *ngIf="!loading && eventos.length === 0" class="text-center p-4">
-        <p>No hay eventos programados por el momento.</p>
-    </div>
+    @if (!loading && eventos.length === 0) {
+        <div class="text-center p-4">
+            <p>No hay eventos programados por el momento.</p>
+        </div>
+    }
 
-    <div *ngIf="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-        <p-card *ngFor="let evento of eventos" [header]="evento.nombreEvento">
-            <div class="flex flex-col gap-2 mb-4">
-                <div class="flex items-center gap-2">
-                    <i class="pi pi-calendar"></i>
-                    <span>{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</span>
-                </div>
-                <div *ngIf="evento.ubicacion" class="flex items-center gap-2">
-                    <i class="pi pi-map-marker"></i>
-                    <span>{{ evento.ubicacion }}</span>
-                </div>
-            </div>
-            <ng-template pTemplate="footer">
-                <ng-container *ngIf="!evento.isCurrentUserInscrito; else yaInscrito">
-                    <p-button label="Inscribir" icon="pi pi-check"
-                              (click)="inscribir(evento)"></p-button>
-                </ng-container>
-                <ng-template #yaInscrito>
-                    <p-button label="Quitar inscripción" icon="pi pi-times"
-                              styleClass="p-button-danger p-button-outlined"
-                              (click)="anularInscripcion(evento)"></p-button>
-                </ng-template>
-            </ng-template>
-        </p-card>
-    </div>
+    @if (!loading) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            @for (evento of eventos; track evento) {
+                <p-card [header]="evento.nombreEvento">
+                    <div class="flex flex-col gap-2 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="pi pi-calendar"></i>
+                            <span>{{ evento.fechaEvento | date: 'dd/MM/yyyy' }}</span>
+                        </div>
+                        @if (evento.fechaLimiteInscripcion) {
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-clock"></i>
+                                <span>Inscripción hasta el {{ evento.fechaLimiteInscripcion | date: 'dd/MM/yyyy HH:mm' }}</span>
+                            </div>
+                        }
+                        @if (evento.ubicacion) {
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-map-marker"></i>
+                                <span>{{ evento.ubicacion }}</span>
+                            </div>
+                        }
+                        <div class="flex items-center gap-2" [class.text-danger]="evento.plazasLibres === 0">
+                            <i class="pi pi-users"></i>
+                            <span>{{ plazasTexto(evento) }}</span>
+                        </div>
+                        @if (evento.enListaEspera > 0) {
+                            <div class="flex items-center gap-2 text-warning">
+                                <i class="pi pi-hourglass"></i>
+                                <span>{{ evento.enListaEspera }} en lista de espera</span>
+                            </div>
+                        }
+                        @if (evento.inscripcionCerrada) {
+                            <div class="flex items-center gap-2 text-danger">
+                                <i class="pi pi-ban"></i>
+                                <span>Plazo de inscripción cerrado</span>
+                            </div>
+                        }
+                    </div>
+                    <ng-template pTemplate="footer">
+                        @if (!evento.isCurrentUserInscrito) {
+                            <p-button label="Inscribir" icon="pi pi-check" [disabled]="evento.inscripcionCerrada" (click)="inscribir(evento)"></p-button>
+                        } @else {
+                            @if (enEspera(evento)) {
+                                <p-tag severity="warn" icon="pi pi-hourglass" value="En lista de espera" styleClass="mr-2"></p-tag>
+                                <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-danger p-button-outlined" (click)="anularInscripcion(evento)"></p-button>
+                            } @else {
+                                <p-tag severity="success" icon="pi pi-check" value="Plaza confirmada" styleClass="mr-2"></p-tag>
+                                <p-button label="Quitar inscripción" icon="pi pi-times" styleClass="p-button-danger p-button-outlined" (click)="anularInscripcion(evento)"></p-button>
+                            }
+                        }
+                    </ng-template>
+                </p-card>
+            }
+        </div>
+    }
 </div>

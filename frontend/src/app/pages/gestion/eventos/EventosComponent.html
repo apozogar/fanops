@@ -14,10 +14,9 @@
                     <i class="pi pi-calendar text-cyan-500 text-xl!"></i>
                 </div>
             </div>
-            <span class="text-primary font-medium">{{ numEventosPendientes }} pendientes </span>
+            <span class="text-primary font-medium">{{ numEventosPendientes }} pendientes</span>
         </div>
     </div>
-
 </div>
 
 <br/>
@@ -41,10 +40,6 @@
                        placeholder="Búsqueda por palabra"/>
             </p-iconfield>
         </ng-template>
-
-        <ng-template #end>
-            <!-- Aquí podrías añadir botones adicionales si los necesitas, como en SociosComponent -->
-        </ng-template>
     </p-toolbar>
 
     <p-table #dt [value]="eventos" [rows]="10" [paginator]="true" [loading]="loading"
@@ -55,9 +50,11 @@
             <tr>
                 <th>Nombre</th>
                 <th>Fecha</th>
+                <th>Fin inscripción</th>
                 <th>Ubicación</th>
                 <th>Coste Estimado</th>
-                <th>Num. Inscritos</th>
+                <th>Confirmados</th>
+                <th>En espera</th>
                 <th>Acciones</th>
             </tr>
         </ng-template>
@@ -65,13 +62,36 @@
             <tr [pSelectableRow]="evento">
                 <td>{{ evento.nombreEvento }}</td>
                 <td>{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</td>
+                <td>
+                    <ng-container *ngIf="evento.fechaLimiteInscripcion; else sinPlazo">
+                        <span>{{ evento.fechaLimiteInscripcion | date:'dd/MM/yyyy HH:mm' }}</span>
+                        <p-tag *ngIf="evento.inscripcionCerrada" severity="danger" value="Cerrado"
+                               class="ml-1"></p-tag>
+                    </ng-container>
+                    <ng-template #sinPlazo>
+                        <span class="text-muted-color">—</span>
+                    </ng-template>
+                </td>
                 <td>{{ evento.ubicacion }}</td>
                 <td>{{ evento.costeTotalEstimado | currency:'EUR' }}</td>
-                <td>{{ evento.participantes.length }}</td>
+                <td>
+                    <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
+                           [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—')"></p-tag>
+                </td>
+                <td>
+                    <p-tag *ngIf="evento.numEnEspera > 0" severity="warn"
+                           [value]="evento.numEnEspera"></p-tag>
+                    <span *ngIf="!evento.numEnEspera" class="text-muted-color">0</span>
+                </td>
                 <td>
                     <button pButton pRipple icon="pi pi-users"
                             class="p-button-rounded p-button-info mr-2"
-                            (click)="mostrarParticipantes(evento)" pTooltip="Ver Inscritos"
+                            (click)="mostrarInscripciones(evento)" pTooltip="Ver Inscritos"
+                            tooltipPosition="top"></button>
+                    <button pButton pRipple icon="pi pi-share-alt"
+                            class="p-button-rounded p-button-secondary mr-2"
+                            (click)="copiarEnlacePublico(evento)"
+                            pTooltip="Copiar enlace público (no socios)"
                             tooltipPosition="top"></button>
                     <button pButton pRipple icon="pi pi-pencil"
                             class="p-button-rounded p-button-success mr-2"
@@ -99,7 +119,6 @@
                         <input type="text" pInputText id="nombreEvento"
                                [(ngModel)]="evento.nombreEvento"
                                class="w-full" required/>
-                        <!-- Aquí podrías añadir validación si es necesario, similar a SociosComponent -->
                     </div>
                     <div class="flex-auto">
                         <label for="fechaEvento" class="block font-semibold mb-2">Fecha del
@@ -111,9 +130,13 @@
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
-                        <label for="ubicacion" class="block font-semibold mb-2">Ubicación</label>
-                        <input type="text" pInputText id="ubicacion" [(ngModel)]="evento.ubicacion"
-                               class="w-full"/>
+                        <label for="fechaLimiteInscripcion" class="block font-semibold mb-2">Fin de
+                            inscripción (plazo)</label>
+                        <p-datepicker id="fechaLimiteInscripcion" [(ngModel)]="evento.fechaLimiteInscripcion"
+                                      class="w-full" [dateFormat]="'dd/mm/yy'" [showTime]="true"
+                                      [showIcon]="true" [hourFormat]="'24'"></p-datepicker>
+                        <span class="text-xs text-muted-color">Déjalo vacío si no hay plazo. Fuera de plazo
+                            no se admiten inscripciones.</span>
                     </div>
                     <div class="flex-auto">
                         <label for="numeroPlazas" class="block font-semibold mb-2">Número de
@@ -165,40 +188,90 @@
 
 <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-<!-- Diálogo para mostrar el listado de inscritos -->
-<p-dialog [(visible)]="displayParticipantesDialog" [style]="{ width: '750px' }"
-          header="Listado de Inscritos"
-          [modal]="true" (onHide)="participantesEventoSeleccionado = []">
-    <ng-template pTemplate="content">
-        <p-table [value]="participantesEventoSeleccionado" [rows]="5" [paginator]="true"
-                 [rowHover]="true" dataKey="uid">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Nº Socio</th>
-                    <th>Nombre</th>
-                    <th>DNI</th>
-                    <th>Email</th>
-                    <th>Teléfono</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-participante>
-                <tr>
-                    <td>{{ participante.numeroSocio }}</td>
-                    <td>{{ participante.nombre }}</td>
-                    <td>{{ participante.dni }}</td>
-                    <td>{{ participante.email }}</td>
-                    <td>{{ participante.telefono }}</td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="empty">
-                <tr>
-                    <td colspan="5">No hay socios inscritos en este evento.</td>
-                </tr>
-            </ng-template>
-        </p-table>
+<!-- Diálogo con el listado de inscripciones (confirmados + lista de espera) -->
+<p-dialog [(visible)]="inscripcionesDialog" [style]="{ width: '850px' }"
+          header="Inscripciones"
+          [modal]="true" (onHide)="inscripciones = []">
+    <ng-template #content>
+        <div *ngIf="eventoSeleccionado" class="mb-4">
+            <span class="font-semibold">{{ eventoSeleccionado.nombreEvento }}</span>
+            <p-button label="Asignar plazas de espera" icon="pi pi-user-plus"
+                      class="ml-4" [loading]="asignandoPlazas"
+                      [disabled]="enEspera.length === 0"
+                      (click)="asignarPlazas()"></p-button>
+        </div>
+
+        <p-accordion value="0">
+            <p-accordion-panel value="0">
+                <p-accordion-header>Confirmados ({{ inscritos.length }})</p-accordion-header>
+                <p-accordion-content>
+                    <p-table [value]="inscritos" [rows]="10" [paginator]="true" [rowHover]="true"
+                             dataKey="uid">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Nº Socio</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Inscripción</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-inscripcion>
+                            <tr>
+                                <td>{{ inscripcion.numeroSocio ?? '—' }}</td>
+                                <td>
+                                    {{ inscripcion.nombre }}
+                                    <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
+                                           value="Socio" class="ml-1"></p-tag>
+                                </td>
+                                <td>{{ inscripcion.email }}</td>
+                                <td>{{ inscripcion.telefono }}</td>
+                                <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="empty">
+                            <tr><td colspan="5">No hay inscritos confirmados.</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="1">
+                <p-accordion-header>Lista de espera ({{ enEspera.length }})</p-accordion-header>
+                <p-accordion-content>
+                    <p-table [value]="enEspera" [rows]="10" [paginator]="true" [rowHover]="true"
+                             dataKey="uid">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Nº Socio</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Alta en espera</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-inscripcion>
+                            <tr>
+                                <td>{{ inscripcion.numeroSocio ?? '—' }}</td>
+                                <td>
+                                    {{ inscripcion.nombre }}
+                                    <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
+                                           value="Socio" class="ml-1"></p-tag>
+                                </td>
+                                <td>{{ inscripcion.email }}</td>
+                                <td>{{ inscripcion.telefono }}</td>
+                                <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="empty">
+                            <tr><td colspan="5">No hay nadie en lista de espera.</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-accordion-content>
+            </p-accordion-panel>
+        </p-accordion>
     </ng-template>
-    <ng-template pTemplate="footer">
+    <ng-template #footer>
         <p-button label="Cerrar" icon="pi pi-times"
-                  (onClick)="displayParticipantesDialog = false"></p-button>
+                  (onClick)="inscripcionesDialog = false"></p-button>
     </ng-template>
 </p-dialog>
