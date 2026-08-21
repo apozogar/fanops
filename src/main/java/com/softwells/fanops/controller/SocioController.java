@@ -65,7 +65,7 @@ public class SocioController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPERADMIN')")
+  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
   @Transactional(readOnly = true)
   public ResponseEntity<ApiResponse<List<SocioEntity>>> obtenerTodos(
       @RequestParam(required = false) String filtro) {
@@ -79,7 +79,7 @@ public class SocioController {
   }
 
   @GetMapping("/{id}/cuotas")
-  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPERADMIN')")
+  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
   public ResponseEntity<ApiResponse<List<CuotaEntity>>> obtenerCuotasDeSocio(
       @PathVariable UUID id) {
     return ResponseEntity.ok(new ApiResponse<>(true, "Cuotas del socio",
@@ -87,7 +87,7 @@ public class SocioController {
   }
 
   @GetMapping("/estadisticas")
-  @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPERADMIN')")
+  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
   public ResponseEntity<ApiResponse<SocioStatsDto>> obtenerEstadisticas() {
     LocalDate fechaDesde = LocalDate.now().minusMonths(1);
     SocioStatsDto estadisticas = socioService.obtenerEstadisticas(fechaDesde);

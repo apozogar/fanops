@@ -6,8 +6,7 @@
  * sitio y no puede quedar descuadrada entre plataformas.
  */
 
-export const ROLE_ADMIN = 'ROLE_ADMIN';
-export const ROLE_SUPERADMIN = 'ROLE_SUPERADMIN';
+import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 
 export interface NavItem {
     id: string;
@@ -81,12 +80,17 @@ const SUPERADMIN: NavSection = {
 /**
  * Secciones visibles para un usuario según sus authorities.
  *
- * El superadmin solo ve la gestión de peñas: no tiene carnet ni socios propios, y las
- * operaciones de escritura sobre socios siguen siendo exclusivas de ROLE_ADMIN.
+ * El superadmin ve la gestión de peñas y también la gestión (socios y eventos) de la peña que
+ * tenga seleccionada, porque para eso existe el selector de la cabecera. Lo que no ve es el
+ * área personal: no tiene carnet ni ficha de socio propia, así que esas pantallas no le
+ * aplican.
+ *
+ * La jerarquía de roles del backend (SUPERADMIN implies ADMIN) es la que le concede permiso
+ * real sobre esos endpoints; aquí solo se decide qué se le enseña.
  */
 export function buildNavigation(authorities: readonly string[]): NavSection[] {
     if (authorities.includes(ROLE_SUPERADMIN)) {
-        return [SUPERADMIN];
+        return [SUPERADMIN, GESTION];
     }
 
     const sections = [AREA_PERSONAL];

@@ -43,6 +43,19 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
   }
 
+  /**
+   * Estado no válido para atender la petición. El caso típico es un superadmin que todavía no
+   * ha seleccionado peña: sin este manejador caía en el genérico y devolvía un 500 con "Ha
+   * ocurrido un error inesperado", ocultando una causa que el usuario sí puede resolver.
+   */
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<ApiResponse<String>> handleIllegalStateException(IllegalStateException ex,
+      WebRequest request) {
+    log.warn("Estado no válido para la petición: {}", ex.getMessage());
+    ApiResponse<String> response = new ApiResponse<>(false, ex.getMessage(), null);
+    return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+  }
+
   // Manejador genérico para errores 500 Internal Server Error
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiResponse<String>> handleGlobalException(Exception ex,

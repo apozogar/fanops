@@ -5,6 +5,7 @@ import { ActivePenaService } from '@/core/pena/active-pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
 import { PenaSwitcherComponent } from './pena-switcher.component';
 import { NavItem } from './navigation';
+import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 
 /**
  * Panel de cuenta: datos del usuario, cambio de tema, selector de peña y cierre de sesión.
@@ -130,11 +131,11 @@ export class ShellAccountPanelComponent {
     protected roleLabel(): string {
         const authorities = this.auth.getCurrentUser()?.authorities?.map((a) => a.authority) ?? [];
 
-        if (authorities.includes('ROLE_SUPERADMIN')) {
+        if (authorities.includes(ROLE_SUPERADMIN)) {
             return 'Superadministrador';
         }
 
-        if (authorities.includes('ROLE_ADMIN')) {
+        if (authorities.includes(ROLE_ADMIN)) {
             return 'Administrador de la peña';
         }
 

@@ -31,10 +31,13 @@ export class AuthInterceptor implements HttpInterceptor {
         // 2. Manejar la solicitud y usar catchError en el stream de respuesta
         return next.handle(requestToHandle).pipe(
             catchError((error: HttpErrorResponse) => {
-                // Verificar si el error es 401 (No autorizado) o 403 (Prohibido)
-                if (error.status === 401 || error.status === 403) {
-                    console.error('Token expirado o no autorizado. Cerrando sesión...');
-                    // 🚨 Llama a tu método de logout aquí
+                // Solo un 401 cierra la sesión: significa que el token falta, ha caducado o no
+                // es válido. Un 403 es "estás identificado pero esta acción no te corresponde",
+                // que debe mostrarse como error de la operación sin echar al usuario. Antes
+                // ambos cerraban sesión, así que cualquier pantalla que tocara un endpoint sin
+                // permiso expulsaba al login.
+                if (error.status === 401) {
+                    console.error('Sesión no válida o caducada. Cerrando sesión...');
                     this.authService.logout();
                 }
 

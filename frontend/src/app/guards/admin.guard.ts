@@ -3,7 +3,13 @@ import {CanActivateFn, Router} from '@angular/router';
 import {map} from 'rxjs/operators';
 import {MessageService} from 'primeng/api';
 import {AuthService} from "@/pages/auth/auth.service";
+import {ROLE_ADMIN, ROLE_SUPERADMIN} from "@/core/auth/roles";
 
+/**
+ * Permite el paso a quien puede gestionar la peña activa: administradores de la peña y también
+ * el superadmin, que gestiona la que tenga seleccionada en la cabecera. Antes solo aceptaba
+ * ROLE_ADMIN, así que rebotaba al superadmin fuera de la gestión de socios.
+ */
 export const adminGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
@@ -11,22 +17,22 @@ export const adminGuard: CanActivateFn = (route, state) => {
 
     return authService.currentUser.pipe(
         map(user => {
-            const isAdmin = user?.authorities?.some(auth => auth.authority === 'ROLE_ADMIN');
+            const authorities = user?.authorities?.map(auth => auth.authority) ?? [];
+            const puedeGestionar = authorities.includes(ROLE_ADMIN) || authorities.includes(ROLE_SUPERADMIN);
 
-            if (isAdmin) {
+            if (puedeGestionar) {
                 return true;
-            } else {
-                // Opcional: Muestra una notificación al usuario
-                messageService.add({
-                    severity: 'warn',
-                    summary: 'Acceso Denegado',
-                    detail: 'No tienes permisos para acceder a esta sección.'
-                });
-
-                // Redirige al usuario a una página permitida, como su carnet de socio
-                router.navigate(['/carnet-socio']);
-                return false;
             }
+
+            messageService.add({
+                severity: 'warn',
+                summary: 'Acceso Denegado',
+                detail: 'No tienes permisos para acceder a esta sección.'
+            });
+
+            // Un socio sin permisos de gestión va a su propio carnet.
+            router.navigate(['/carnet-socio']);
+            return false;
         })
     );
 };

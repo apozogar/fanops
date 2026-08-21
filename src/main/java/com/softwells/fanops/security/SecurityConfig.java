@@ -9,6 +9,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -64,6 +68,39 @@ public class SecurityConfig {
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
     return http.build();
+  }
+
+  /**
+   * Jerarquía de roles: un superadmin puede hacer todo lo que puede un admin, y un admin todo
+   * lo que puede un usuario.
+   *
+   * Es lo que permite al superadmin gestionar la peña que tiene seleccionada sin duplicar cada
+   * anotación con hasAnyAuthority('ROLE_ADMIN','ROLE_SUPERADMIN'): todos los hasRole('ADMIN') /
+   * hasAuthority('ROLE_ADMIN') que ya existen le aceptan automáticamente, incluidos los que es
+   * fácil pasar por alto (roles, cobros, eventos).
+   *
+   * Sigue siendo seguro porque el alcance no lo da el rol sino la peña de trabajo: todas las
+   * consultas se filtran por la peña que resuelve UsuarioService, que para el superadmin es la
+   * que haya elegido en el selector de la cabecera.
+   */
+  @Bean
+  public static RoleHierarchy roleHierarchy() {
+    return RoleHierarchyImpl.withDefaultRolePrefix()
+        .role("SUPERADMIN").implies("ADMIN")
+        .role("ADMIN").implies("USER")
+        .build();
+  }
+
+  /**
+   * Registra la jerarquía en la seguridad a nivel de método. Sin esto solo aplicaría a las
+   * reglas de HttpSecurity y no a las anotaciones @PreAuthorize, que es justamente donde vive
+   * toda la autorización de esta aplicación.
+   */
+  @Bean
+  public static MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+    DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+    handler.setRoleHierarchy(roleHierarchy);
+    return handler;
   }
 
   @Bean

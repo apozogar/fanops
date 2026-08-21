@@ -9,6 +9,7 @@ import {User} from "@/interfaces/user";
 import {PenaService} from "@/services/pena.service";
 import {PenaContextService} from "@/services/pena-context.service";
 import {Pena} from "@/interfaces/socio.interface";
+import {ROLE_ADMIN, ROLE_SUPERADMIN} from "@/core/auth/roles";
 
 @Injectable({
     providedIn: 'root'
@@ -118,7 +119,16 @@ export class AuthService {
 
     /** true si el usuario autenticado es superadmin (gestiona todas las peñas, no una fija). */
     isSuperAdmin(): boolean {
-        return this.hasAuthority('ROLE_SUPERADMIN');
+        return this.hasAuthority(ROLE_SUPERADMIN);
+    }
+
+    /**
+     * true si puede gestionar la peña activa. Incluye al superadmin, en coherencia con la
+     * jerarquía de roles del backend (SUPERADMIN implies ADMIN): gestiona la peña que tenga
+     * seleccionada en el selector de la cabecera.
+     */
+    isAdmin(): boolean {
+        return this.hasAuthority(ROLE_ADMIN) || this.isSuperAdmin();
     }
 
     hasAuthority(authority: string): boolean {

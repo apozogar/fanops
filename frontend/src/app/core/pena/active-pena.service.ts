@@ -4,7 +4,6 @@ import { PenaContextService } from '@/services/pena-context.service';
 import { PenaService } from '@/services/pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
 import { Pena } from '@/interfaces/socio.interface';
-import { ROLE_SUPERADMIN } from '@/shell/navigation';
 
 /**
  * Peña "activa": aquella cuyos datos se están viendo.
@@ -73,7 +72,18 @@ export class ActivePenaService {
                 this._options.set(penas);
 
                 const selectedId = this.penaContext.getSelectedPenaId();
-                this.apply(penas.find((pena) => pena.id === selectedId) ?? null);
+                let pena = penas.find((candidate) => candidate.id === selectedId) ?? null;
+
+                // Sin selección previa se activa la primera peña, para que las pantallas de
+                // gestión funcionen desde el primer momento en vez de fallar con "selecciona
+                // una peña". Se persiste la elección pero NO se recarga: estamos en el
+                // arranque, y llamar a select() aquí provocaría un bucle de recargas.
+                if (!pena && penas.length > 0) {
+                    pena = penas[0];
+                    this.penaContext.setSelectedPenaId(pena.id);
+                }
+
+                this.apply(pena);
                 this._loading.set(false);
             },
             error: () => {
