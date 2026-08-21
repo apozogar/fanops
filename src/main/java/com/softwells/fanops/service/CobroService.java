@@ -7,8 +7,6 @@ import com.softwells.fanops.model.CuotaEntity;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
-import com.softwells.fanops.repository.PenaRepository;
-import jakarta.persistence.EntityNotFoundException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,15 +33,17 @@ import org.springframework.web.multipart.MultipartFile;
 public class CobroService {
 
   private final CuotaRepository cuotaRepository;
-  private final PenaRepository penaRepository;
   private final CuotaService cuotaService;
   private final SepaService sepaService;
   private final BicLookupService bicLookupService;
   private final RetornoSepaService retornoService;
+  private final UsuarioService usuarioService;
 
   public String generarRemesaMensual(String concepto, LocalDate fechaCobro) {
-    // 2. Obtener las cuotas pendientes de pago
-    List<CuotaEntity> cuotasPendientes = cuotaRepository.findByEstado(EstadoCuota.PENDIENTE);
+    // 2. Obtener las cuotas pendientes de pago de la peña de trabajo
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    List<CuotaEntity> cuotasPendientes =
+        cuotaRepository.findByEstadoAndSocio_Pena_Id(EstadoCuota.PENDIENTE, penaId);
 
     if (cuotasPendientes.isEmpty()) {
       cuotasPendientes = cuotaService.generarCuotas(concepto);
@@ -54,13 +54,12 @@ public class CobroService {
 
 
   public ByteArrayInputStream generarRemesaExcel(String concepto, LocalDate fechaCobro) {
-    // 1. Obtener la información de la peña (para el BIC, etc.)
-    PenaEntity pena = penaRepository.findById(1L)
-        .orElseThrow(
-            () -> new EntityNotFoundException("No se encontró la información de la peña."));
+    // 1. Obtener la información de la peña de trabajo del usuario autenticado (para el BIC, etc.)
+    PenaEntity pena = usuarioService.obtenerPenaDelUsuarioAutenticado();
 
-    // 2. Obtener las cuotas pendientes de pago
-    List<CuotaEntity> cuotasPendientes = cuotaRepository.findByEstado(EstadoCuota.PENDIENTE);
+    // 2. Obtener las cuotas pendientes de pago de esa peña
+    List<CuotaEntity> cuotasPendientes =
+        cuotaRepository.findByEstadoAndSocio_Pena_Id(EstadoCuota.PENDIENTE, pena.getId());
 
     if (cuotasPendientes.isEmpty()) {
       cuotasPendientes = cuotaService.generarCuotas(concepto);
@@ -161,8 +160,8 @@ public class CobroService {
   }
 
   public String confirmarPagosPendientes() {
-
-    int actualizadas = cuotaRepository.actualizarPendientesAPagadas();
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    int actualizadas = cuotaRepository.actualizarPendientesAPagadas(penaId);
 
     log.info("Confirmados {} pagos. Las cuotas pendientes han sido marcadas como PAGADAS.",
         actualizadas);

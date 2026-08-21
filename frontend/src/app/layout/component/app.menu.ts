@@ -3,7 +3,6 @@ import { Component, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AppMenuitem } from './app.menuitem';
-import { map } from 'rxjs/operators';
 import { AuthService } from '@/pages/auth/auth.service';
 
 @Component({
@@ -27,8 +26,28 @@ export class AppMenu implements OnInit {
     constructor(private authService: AuthService) {}
 
     ngOnInit() {
-        this.authService.currentUser.pipe(map((user) => user?.authorities?.some((auth) => auth.authority === 'ROLE_ADMIN') ?? false)).subscribe((isAdmin: boolean) => {
+        this.authService.currentUser.subscribe((user) => {
+            const authorities = user?.authorities?.map((auth) => auth.authority) ?? [];
+            const isAdmin = authorities.includes('ROLE_ADMIN');
+            const isSuperAdmin = authorities.includes('ROLE_SUPERADMIN');
+
             this.model = [];
+
+            if (isSuperAdmin) {
+                // El superadmin no tiene carnet ni socios propios: solo gestiona peñas.
+                this.model.push({
+                    label: 'Superadmin',
+                    items: [
+                        {
+                            label: 'Gestión de Peñas',
+                            icon: 'pi pi-shield',
+                            routerLink: ['/penas']
+                        }
+                    ]
+                });
+                return;
+            }
+
             this.model.push({
                 label: 'Area personal',
                 items: [

@@ -9,6 +9,7 @@ import {
 import {Observable, throwError} from 'rxjs';
 import {catchError} from 'rxjs/operators';
 import {AuthService} from "@/pages/auth/auth.service";
+import {PenaContextService} from "@/services/pena-context.service";
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -41,5 +42,29 @@ export class AuthInterceptor implements HttpInterceptor {
                 return throwError(() => error);
             })
         );
+    }
+}
+
+/**
+ * Añade la cabecera X-Pena-Id con la peña que el superadmin ha elegido en el selector de la
+ * cabecera. Para un usuario normal no hay nada seleccionado (su peña sale del backend a partir
+ * de su propio usuario) y la cabecera simplemente no se envía.
+ */
+@Injectable()
+export class PenaContextInterceptor implements HttpInterceptor {
+
+    constructor(private penaContextService: PenaContextService) {
+    }
+
+    intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+        const penaId = this.penaContextService.getSelectedPenaId();
+
+        if (penaId !== null) {
+            request = request.clone({
+                headers: request.headers.set('X-Pena-Id', String(penaId))
+            });
+        }
+
+        return next.handle(request);
     }
 }

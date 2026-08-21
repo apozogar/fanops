@@ -12,7 +12,6 @@ import com.softwells.fanops.model.RoleEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
-import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.repository.RoleRepository;
 import com.softwells.fanops.repository.SocioRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
@@ -70,12 +69,16 @@ public class SocioService {
   private final PasswordEncoder passwordEncoder;
   private final UsuarioRepository usuarioRepository;
   private final RoleRepository roleRepository;
-  private final PenaRepository penaRepository;
+  private final PenaService penaService;
+  private final UsuarioService usuarioService;
 
   public SocioEntity crear(SocioEntity socio) {
     if (socioRepository.existsByDni(socio.getDni())) {
       throw new IllegalArgumentException("Ya existe un socio con ese DNI");
     }
+    // El socio se da de alta en la peña de trabajo de quien lo está creando (admin de su peña,
+    // o la peña que el superadmin tenga seleccionada en ese momento).
+    socio.setPena(usuarioService.obtenerPenaDelUsuarioAutenticado());
     return socioRepository.save(socio);
   }
 
@@ -96,6 +99,10 @@ public class SocioService {
         .orElseGet(() -> roleRepository.save(new RoleEntity("ROLE_USER")));
     nuevoUsuario.setRoles(Set.of(userRole));
 
+    // El auto-registro público no permite elegir peña todavía: se asigna la peña por defecto.
+    PenaEntity penaPorDefecto = penaService.getDefaultPena();
+    nuevoUsuario.setPena(penaPorDefecto);
+
     UsuarioEntity usuario = usuarioRepository.save(nuevoUsuario);
 
     // 3. Crea la nueva ficha de SocioEntity.
@@ -109,6 +116,7 @@ public class SocioService {
     nuevoSocio.setExentoPago(false);
     nuevoSocio.setNumeroSocio(generarNumeroSocio());
     nuevoSocio.setUsuario(usuario);
+    nuevoSocio.setPena(penaPorDefecto);
     return socioRepository.save(nuevoSocio);
   }
 
@@ -194,11 +202,13 @@ public class SocioService {
   }
 
   public List<SocioEntity> obtenerTodos() {
-    return socioRepository.findAll();
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    return socioRepository.findByPenaId(penaId);
   }
 
   public List<SocioEntity> obtenerSociosActivos() {
-    return socioRepository.findByActivo(true);
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    return socioRepository.findByActivoAndPenaId(true, penaId);
   }
 
   @Transactional(readOnly = true)
@@ -208,25 +218,25 @@ public class SocioService {
 
   // En tu clase SocioService
   public SocioStatsDto obtenerEstadisticas(LocalDate fechaDesde) {
-    // Suponiendo que tienes un SocioRepository inyectado
-    long totalSocios = socioRepository.count();
-    long nuevosSocios = socioRepository.countByFechaAltaGreaterThanEqual(fechaDesde);
+    // Obtenemos la peña de trabajo del usuario autenticado y acotamos todo a esa peña
+    PenaEntity pena = usuarioService.obtenerPenaDelUsuarioAutenticado();
+    Long penaId = pena.getId();
 
-    // Obtenemos la configuración de la peña para la edad de mayoría
-    PenaEntity pena = penaRepository.findById(1L)
-        .orElseThrow(
-            () -> new IllegalStateException("No se encontraron los datos de la peña con ID 1"));
+    long totalSocios = socioRepository.countByPenaId(penaId);
+    long nuevosSocios = socioRepository.countByFechaAltaGreaterThanEqualAndPenaId(fechaDesde,
+        penaId);
 
     LocalDate fechaCorteJovenes = LocalDate.now().minusYears(pena.getEdadMayoria());
-    long totalSociosJovenes = socioRepository.countByFechaNacimientoAfter(fechaCorteJovenes);
+    long totalSociosJovenes = socioRepository.countByFechaNacimientoAfterAndPenaId(
+        fechaCorteJovenes, penaId);
 
     // Calculamos la fecha de corte para ser jubilado
     LocalDate fechaCorteJubilados = LocalDate.now().minusYears(pena.getEdadJubilacion());
-    long totalSociosJubilados = socioRepository.countByFechaNacimientoBeforeOrFechaNacimientoEquals(
-        fechaCorteJubilados, fechaCorteJubilados);
+    long totalSociosJubilados = socioRepository.countByFechaNacimientoBeforeOrEqualsAndPenaId(
+        fechaCorteJubilados, penaId);
 
     List<EstadoCuota> estadosImpagados = List.of(EstadoCuota.RECHAZADA, EstadoCuota.VENCIDA);
-    int totalImpagados = cuotaRepository.countDistinctSociosByEstadoIn(estadosImpagados);
+    int totalImpagados = cuotaRepository.countDistinctSociosByEstadoIn(estadosImpagados, penaId);
 
     return new SocioStatsDto(totalSocios, nuevosSocios, totalSociosJovenes, pena.getEdadMayoria(),
         totalSociosJubilados, pena.getEdadJubilacion(), totalImpagados);
@@ -244,6 +254,10 @@ public class SocioService {
       int sheetNum = workbook.getNumberOfSheets();
 
       List<SocioEntity> socios = new ArrayList<>();
+
+      // Peña de trabajo de quien hace la importación: todos los socios importados se dan de
+      // alta en esa peña.
+      PenaEntity pena = usuarioService.obtenerPenaDelUsuarioAutenticado();
 
       // Obtenemos el número de socio máximo actual para empezar a incrementar desde ahí
       int numSocio = socioRepository.findMaxNumeroSocio().orElse(0) + 1;
@@ -294,6 +308,7 @@ public class SocioService {
                   nuevoUsuario.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                   nuevoUsuario.setActivo(true);
                   nuevoUsuario.setRoles(Set.of(userRole));
+                  nuevoUsuario.setPena(pena);
                   return usuarioRepository.save(nuevoUsuario);
                 });
             socio.setUsuario(usuario); // Asociamos el socio al usuario
@@ -336,6 +351,7 @@ public class SocioService {
           socio.setActivo(true); // Por defecto, los nuevos socios están activos
           socio.setNumeroSocio(numSocio++);
           socio.setFechaAlta(LocalDate.now());
+          socio.setPena(pena);
 
           socios.add(socio);
         }
@@ -376,10 +392,8 @@ public class SocioService {
     String userEmail = Objects.requireNonNull(
         SecurityContextHolder.getContext().getAuthentication()).getName();
 
-    // 1. Obtener la información de la peña
-    PenaEntity penaInfo = penaRepository.findById(1L) // Asumiendo que el ID es 1
-        .orElseThrow(
-            () -> new EntityNotFoundException("No se encontró la información de la peña."));
+    // 1. Obtener la información de la peña de trabajo del usuario autenticado
+    PenaEntity penaInfo = usuarioService.obtenerPenaDelUsuarioAutenticado();
 
     // 2. Obtener todos los socios del usuario y mapearlos a DTOs
     List<SocioDto> sociosDto = socioRepository.findByUsuarioEmail(userEmail).stream()
@@ -420,8 +434,9 @@ public class SocioService {
       nuevoSocio.setNumeroCuenta(nuevoSocioData.getNumeroCuenta());
     }
 
-    // 4. Asignar el usuario al nuevo socio
+    // 4. Asignar el usuario y su peña al nuevo socio
     nuevoSocio.setUsuario(usuario);
+    nuevoSocio.setPena(usuario.getPena());
     nuevoSocio.setActivo(true); // Por defecto, el nuevo socio se crea como activo
 
     // 5. Guardar el nuevo socio en la base de datos
@@ -430,6 +445,7 @@ public class SocioService {
 
   public List<SocioEntity> obtenerSociosConImpagos() {
     List<EstadoCuota> estadosImpagados = List.of(EstadoCuota.RECHAZADA, EstadoCuota.VENCIDA);
-    return socioRepository.findSociosConCuotasEnEstados(estadosImpagados);
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    return socioRepository.findSociosConCuotasEnEstadosAndPenaId(estadosImpagados, penaId);
   }
 }

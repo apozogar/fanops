@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!--
+    Añade a "usuarios" la peña de trabajo del usuario (sustituye al id=1 hardcodeado que había
+    en varios servicios). Un usuario pertenece como mucho a una peña.
+
+    Entornos ya desplegados: la tabla "usuarios" ya existe → se añade la columna, la FK, y se
+    hace un backfill apuntando todos los usuarios existentes a la primera peña que haya en BD
+    (hoy solo puede haber una, así que el comportamiento no cambia para nadie).
+
+    Entornos nuevos (BD vacía): la tabla "usuarios" todavía no existe cuando corre Liquibase, así
+    que este changeSet se marca como ejecutado sin hacer nada; Hibernate crea la tabla completa,
+    columna pena_id incluida, a partir de UsuarioEntity.
+  -->
+  <changeSet id="002-1-add-pena-to-usuarios" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="usuarios"/>
+      <not>
+        <columnExists tableName="usuarios" columnName="pena_id"/>
+      </not>
+    </preConditions>
+    <addColumn tableName="usuarios">
+      <column name="pena_id" type="BIGINT"/>
+    </addColumn>
+    <addForeignKeyConstraint
+        baseTableName="usuarios" baseColumnNames="pena_id"
+        constraintName="fk_usuarios_pena"
+        referencedTableName="pena" referencedColumnNames="id"/>
+    <sql>
+      UPDATE usuarios SET pena_id = (SELECT id FROM pena ORDER BY id LIMIT 1)
+      WHERE pena_id IS NULL AND EXISTS (SELECT 1 FROM pena)
+    </sql>
+  </changeSet>
+
+</databaseChangeLog>

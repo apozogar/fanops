@@ -23,11 +23,14 @@ public interface CuotaRepository extends JpaRepository<CuotaEntity, UUID> {
       EstadoCuota estado, LocalDate fecha);
 
   @Modifying
-  @Query("UPDATE CuotaEntity c SET c.estado = 'PAGADA' WHERE c.estado = 'PENDIENTE'")
-  int actualizarPendientesAPagadas();
+  @Query("UPDATE CuotaEntity c SET c.estado = 'PAGADA' "
+      + "WHERE c.estado = 'PENDIENTE' AND c.socio.pena.id = :penaId")
+  int actualizarPendientesAPagadas(@Param("penaId") Long penaId);
 
-  @Query("SELECT COUNT(DISTINCT c.socio.id) FROM CuotaEntity c WHERE c.estado IN :estados")
-  int countDistinctSociosByEstadoIn(@Param("estados") List<EstadoCuota> estados);
+  @Query("SELECT COUNT(DISTINCT c.socio.id) FROM CuotaEntity c "
+      + "WHERE c.estado IN :estados AND c.socio.pena.id = :penaId")
+  int countDistinctSociosByEstadoIn(@Param("estados") List<EstadoCuota> estados,
+      @Param("penaId") Long penaId);
 
-  List<CuotaEntity> findByEstado(EstadoCuota estado);
+  List<CuotaEntity> findByEstadoAndSocio_Pena_Id(EstadoCuota estado, Long penaId);
 }

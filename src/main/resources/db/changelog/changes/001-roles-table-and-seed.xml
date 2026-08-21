@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!--
+    Entornos ya desplegados: la tabla "roles" ya existe (creada por Hibernate), así que este
+    changeSet se marca como ejecutado sin tocar nada gracias a la precondición.
+    Entornos nuevos (BD vacía): Liquibase se ejecuta antes que Hibernate, así que crea la tabla
+    aquí con la misma forma que espera RoleEntity; Hibernate luego solo la valida.
+  -->
+  <changeSet id="001-1-create-roles-table-if-missing" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="roles"/>
+      </not>
+    </preConditions>
+    <createTable tableName="roles">
+      <column name="id" type="INT" autoIncrement="true">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints unique="true" nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="001-2-seed-role-superadmin" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_SUPERADMIN'</sqlCheck>
+    </preConditions>
+    <insert tableName="roles">
+      <column name="name" value="ROLE_SUPERADMIN"/>
+    </insert>
+  </changeSet>
+
+  <changeSet id="001-3-seed-role-admin" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_ADMIN'</sqlCheck>
+    </preConditions>
+    <insert tableName="roles">
+      <column name="name" value="ROLE_ADMIN"/>
+    </insert>
+  </changeSet>
+
+  <changeSet id="001-4-seed-role-user" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE name = 'ROLE_USER'</sqlCheck>
+    </preConditions>
+    <insert tableName="roles">
+      <column name="name" value="ROLE_USER"/>
+    </insert>
+  </changeSet>
+
+</databaseChangeLog>

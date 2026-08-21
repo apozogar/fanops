@@ -7,6 +7,7 @@ import {environment} from "../../../environments/environment";
 import {jwtDecode} from "jwt-decode";
 import {User} from "@/interfaces/user";
 import {PenaService} from "@/services/pena.service";
+import {PenaContextService} from "@/services/pena-context.service";
 import {Pena} from "@/interfaces/socio.interface";
 
 @Injectable({
@@ -17,6 +18,7 @@ export class AuthService {
     private http = inject(HttpClient);
     private router = inject(Router);
     private penaService = inject(PenaService);
+    private penaContextService = inject(PenaContextService);
 
     private baseUrl = environment.apiUrl + '/auth';
 
@@ -109,7 +111,15 @@ export class AuthService {
         localStorage.removeItem('token');
         localStorage.removeItem('currentPena');
         this.currentUserSubject.next(null);
+        this.currentPenaSubject.next(null);
+        this.penaContextService.clear();
         this.router.navigate(['/auth/login']);
+    }
+
+    /** true si el usuario autenticado es superadmin (gestiona todas las peñas, no una fija). */
+    isSuperAdmin(): boolean {
+        const user = this.currentUserSubject.getValue();
+        return !!user?.authorities?.some(a => a.authority === 'ROLE_SUPERADMIN');
     }
 
     getToken()

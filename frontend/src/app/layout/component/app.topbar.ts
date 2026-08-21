@@ -2,17 +2,21 @@ import { booleanAttribute, Component, Input, OnInit, OnDestroy } from '@angular/
 import { MenuItem } from 'primeng/api';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
+import { Select } from 'primeng/select';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
 import { AuthService } from '../../pages/auth/auth.service';
+import { PenaService } from '@/services/pena.service';
+import { PenaContextService } from '@/services/pena-context.service';
 import { Pena } from '@/interfaces/socio.interface';
 import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, AppConfigurator],
+    imports: [RouterModule, CommonModule, FormsModule, StyleClassModule, Select, AppConfigurator],
     styles: `
         /* topbar.component.css */
         .layout-topbar {
@@ -41,6 +45,18 @@ import { Subscription } from 'rxjs';
                 <!-- Ajusta la ruta de tu logo por defecto -->
                 <span>{{ nombre }}</span>
             </a>
+            <!-- Selector de peña: solo visible para el superadmin, que no pertenece a una peña -->
+            @if (isSuperAdmin) {
+                <p-select
+                    [options]="penasDisponibles"
+                    [(ngModel)]="penaSeleccionadaId"
+                    (ngModelChange)="onPenaChange($event)"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    placeholder="Selecciona una peña"
+                    styleClass="ml-3 w-15rem"
+                />
+            }
         </div>
 
         <div class="layout-topbar-actions">
@@ -72,17 +88,29 @@ export class AppTopbar implements OnInit, OnDestroy {
     items!: MenuItem[];
     nombre: string = 'Peña Bética Luis Bellver - Gilena';
     imageUrl: string | undefined;
+    isSuperAdmin = false;
+    penasDisponibles: Pena[] = [];
+    penaSeleccionadaId: number | null = null;
     private penaSubscription: Subscription | undefined;
 
     constructor(
         public layoutService: LayoutService,
         private authService: AuthService,
+        private penaService: PenaService,
+        private penaContextService: PenaContextService,
         private router: Router
     ) {
         // La suscripción se ha movido a ngOnInit
     }
 
     ngOnInit(): void {
+        this.isSuperAdmin = this.authService.isSuperAdmin();
+
+        if (this.isSuperAdmin) {
+            this.cargarPenasDisponibles();
+            return;
+        }
+
         this.penaSubscription = this.authService.currentPena.subscribe((pena: Pena | null) => {
             if (pena) {
                 this.nombre = pena.nombre;
@@ -97,6 +125,32 @@ export class AppTopbar implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.penaSubscription?.unsubscribe(); // Desuscribirse para evitar fugas de memoria
+    }
+
+    private cargarPenasDisponibles(): void {
+        this.penaService.listAll().subscribe({
+            next: (response) => {
+                this.penasDisponibles = response.data ?? [];
+                this.penaSeleccionadaId = this.penaContextService.getSelectedPenaId();
+                this.actualizarNombreYLogo(this.penaSeleccionadaId);
+            },
+            error: () => {
+                this.penasDisponibles = [];
+            }
+        });
+    }
+
+    onPenaChange(penaId: number | null): void {
+        this.penaContextService.setSelectedPenaId(penaId);
+        // Recargamos para que todas las vistas vuelvan a pedir sus datos ya acotados a la
+        // peña recién seleccionada (viaja como cabecera X-Pena-Id en cada petición).
+        window.location.reload();
+    }
+
+    private actualizarNombreYLogo(penaId: number | null): void {
+        const pena = this.penasDisponibles.find((p) => p.id === penaId);
+        this.nombre = pena?.nombre ?? 'Panel de superadmin';
+        this.imageUrl = pena?.logo;
     }
 
     toggleDarkMode() {

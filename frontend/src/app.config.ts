@@ -15,7 +15,7 @@ import Aura from '@primeuix/themes/aura';
 import {providePrimeNG} from 'primeng/config';
 import {appRoutes} from './app.routes';
 import {ConfirmationService, MessageService} from "primeng/api";
-import {AuthInterceptor} from "@/config/HttpInterceptors";
+import {AuthInterceptor, PenaContextInterceptor} from "@/config/HttpInterceptors";
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -32,6 +32,11 @@ export const appConfig: ApplicationConfig = {
         {
             provide: HTTP_INTERCEPTORS,
             useClass: AuthInterceptor,
+            multi: true
+        },
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: PenaContextInterceptor,
             multi: true
         }
     ]

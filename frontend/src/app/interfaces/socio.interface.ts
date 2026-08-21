@@ -3,10 +3,22 @@ import {Cuota} from "@/interfaces/cuota.interface";
 export interface Pena {
     id: number;
     nombre: string;
-    logo: string;
-    lema: string;
-    color: string;
+    logo?: string;
+    lema?: string;
+    color?: string;
+    iniciadorId?: string;
+    direccion1?: string;
+    direccion2?: string;
+    cuentaIban?: string;
+    cuentaBic?: string;
+    cuotaAdulto?: number;
+    cuotaMenor?: number;
+    edadMayoria?: number;
+    edadJubilacion?: number;
 }
+
+/** Datos editables al crear/actualizar una peña (sin id, lo pone el backend). */
+export type PenaRequest = Omit<Pena, 'id'>;
 
 export interface Socio {
     uid?: string;

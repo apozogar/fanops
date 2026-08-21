@@ -5,6 +5,7 @@ import {CarnetSocioComponent} from "@/pages/area-personal/carnetSocio/CarnetSoci
 import {InscripcionPublicaComponent} from "@/pages/publico/inscripcion-publica/inscripcion-publica.component";
 import {adminGuard} from '@/guards/admin.guard';
 import {authGuard} from '@/guards/auth.guard';
+import {superAdminGuard} from '@/guards/superadmin.guard';
 import {
     InscripcionEventosComponent
 } from "@/pages/area-personal/inscripcion-eventos/inscripcion-eventos.component";
@@ -26,6 +27,12 @@ export const appRoutes: Routes = [
                 path: 'eventos',
                 loadComponent: () =>
                     import('@/pages/gestion/eventos/EventosComponent').then(m => m.EventosComponent)
+            },
+            {
+                path: 'penas',
+                loadComponent: () =>
+                    import('@/pages/gestion/penas/PenasComponent').then(m => m.PenasComponent),
+                canActivate: [superAdminGuard]
             },
             // {
             //     path: 'cuotas',

@@ -6,7 +6,6 @@ import com.softwells.fanops.model.CuotaEntity;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
-import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.repository.SocioRepository;
 import io.micrometer.common.util.StringUtils;
 import java.time.LocalDate;
@@ -25,15 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CuotaService {
 
   private final SocioRepository socioRepository;
-  private final PenaRepository penaRepository;
   private final CuotaRepository cuotaRepository;
   private final SepaService sepaService;
+  private final UsuarioService usuarioService;
 
   @Transactional
   public List<CuotaEntity> generarCuotas(String concepto) {
-    List<SocioEntity> sociosActivos = socioRepository.findByActivo(true);
-    PenaEntity pena = penaRepository.findById(1L)
-        .orElseThrow(() -> new IllegalStateException("Datos de la peña no encontrados."));
+    PenaEntity pena = usuarioService.obtenerPenaDelUsuarioAutenticado();
+    List<SocioEntity> sociosActivos = socioRepository.findByActivoAndPenaId(true, pena.getId());
 
     List<CuotaEntity> nuevasCuotas = new ArrayList<>();
     List<SocioEntity> sociosParaCobrar = new ArrayList<>();
@@ -103,7 +101,8 @@ public class CuotaService {
 
   @Transactional
   public String marcarPendientesComoPagadas() {
-    int actualizadas = cuotaRepository.actualizarPendientesAPagadas();
+    Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
+    int actualizadas = cuotaRepository.actualizarPendientesAPagadas(penaId);
     return actualizadas + " cuotas pendientes han sido marcadas como PAGADAS.";
   }
 }

@@ -4,7 +4,6 @@ import com.softwells.fanops.model.CuotaEntity;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.repository.SocioRepository;
-import com.softwells.fanops.repository.PenaRepository;
 import io.micrometer.common.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,18 +19,15 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SepaService {
 
-  private final PenaRepository penaRepository;
+  private final UsuarioService usuarioService;
 
   public String generarFicheroSepa(List<CuotaEntity> cuotas, LocalDateTime fechaPago) {
     double montoTotal = 0.0;
     int numeroTransacciones = cuotas.size();
     StringBuilder transaccionesXml = new StringBuilder();
 
-    // Recuperamos los datos de la peña desde la base de datos
-    // Asumimos que solo hay una entrada en la tabla 'pena' con ID 1
-    PenaEntity pena = penaRepository.findById(1L)
-        .orElseThrow(
-            () -> new IllegalStateException("No se encontraron los datos de la peña con ID 1"));
+    // Recuperamos los datos de la peña de trabajo del usuario autenticado
+    PenaEntity pena = usuarioService.obtenerPenaDelUsuarioAutenticado();
 
     final String FECHA_COBRO = fechaPago.toLocalDate().toString();
 

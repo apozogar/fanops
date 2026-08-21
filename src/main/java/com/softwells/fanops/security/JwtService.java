@@ -1,7 +1,5 @@
 package com.softwells.fanops.security;
 
-import com.softwells.fanops.model.PenaEntity;
-import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -11,8 +9,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
@@ -49,15 +45,10 @@ public class JwtService {
         .collect(Collectors.toList());
     extraClaims.put("authorities", authorities);
 
-    // Añadimos el nombre de la peña al token
-    if (userDetails instanceof UsuarioEntity) {
-      UsuarioEntity usuario = (UsuarioEntity) userDetails;
-      Optional<Long> clubId = usuario.getSocios().stream()
-          .map(SocioEntity::getPena)
-          .filter(Objects::nonNull)
-          .findFirst()
-          .map(PenaEntity::getId);
-      clubId.ifPresent(id -> extraClaims.put("clubId", id));
+    // Añadimos el id de la peña del usuario al token (no la tiene el superadmin, que no
+    // pertenece a ninguna en concreto: elige la peña de trabajo desde el panel).
+    if (userDetails instanceof UsuarioEntity usuario && usuario.getPena() != null) {
+      extraClaims.put("clubId", usuario.getPena().getId());
     }
 
     return Jwts.builder()
