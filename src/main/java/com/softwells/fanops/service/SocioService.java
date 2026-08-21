@@ -71,10 +71,19 @@ public class SocioService {
   private final PenaService penaService;
   private final UsuarioService usuarioService;
 
+  @Transactional
   public SocioEntity crear(SocioEntity socio) {
     if (socioRepository.existsByDni(socio.getDni())) {
       throw new IllegalArgumentException("Ya existe un socio con ese DNI");
     }
+    // El alta manual crea la ficha, nunca la cuenta de usuario. El formulario del panel manda
+    // siempre un "usuario" con los roles del checkbox de administrador, y para una ficha nueva
+    // ese objeto no corresponde a ninguna cuenta: llegaba a Hibernate como instancia
+    // transitoria y el guardado fallaba con TransientPropertyValueException. La cuenta la crea
+    // la propia persona al registrarse y confirmar el enlace de vinculación, que es lo que ata
+    // la ficha a un correo comprobado (ver VinculacionSocioService).
+    socio.setUsuario(null);
+
     // El socio se da de alta en la peña de trabajo de quien lo está creando (admin de su peña,
     // o la peña que el superadmin tenga seleccionada en ese momento).
     socio.setPena(usuarioService.obtenerPenaDelUsuarioAutenticado());

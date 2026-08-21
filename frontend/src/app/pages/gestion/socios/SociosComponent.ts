@@ -136,7 +136,12 @@ export class SociosComponent implements OnInit {
         } else if (this.userRole) {
             rolesParaGuardar.push(this.userRole);
         }
-        this.socio.usuario = {...this.socio.usuario, roles: rolesParaGuardar};
+        // Los roles viven en la cuenta de usuario, y una ficha nueva todavía no tiene cuenta: se
+        // crea cuando la persona se registra con ese correo y confirma el enlace de vinculación.
+        // Al crear no se manda "usuario" para no enviar una cuenta que no existe.
+        if (this.socio.uid) {
+            this.socio.usuario = {...this.socio.usuario, roles: rolesParaGuardar};
+        }
 
         if (this.socio.uid) {
             this.socioService.actualizarSocio(this.socio.uid, this.socio).subscribe({
