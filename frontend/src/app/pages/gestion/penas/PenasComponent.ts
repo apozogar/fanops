@@ -10,9 +10,11 @@ import {ToastModule} from 'primeng/toast';
 import {ToolbarModule} from 'primeng/toolbar';
 import {DialogModule} from 'primeng/dialog';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
+import {FileUploadModule} from 'primeng/fileupload';
 import {Ripple} from 'primeng/ripple';
 import {Tooltip} from 'primeng/tooltip';
 import {PenaService} from '@/services/pena.service';
+import {ActivePenaService} from '@/core/pena/active-pena.service';
 import {Pena, PenaRequest} from '@/interfaces/socio.interface';
 
 @Component({
@@ -29,12 +31,17 @@ import {Pena, PenaRequest} from '@/interfaces/socio.interface';
         ToolbarModule,
         DialogModule,
         ConfirmDialogModule,
+        FileUploadModule,
         Ripple,
         Tooltip
     ],
     templateUrl: './PenasComponent.html'
 })
 export class PenasComponent implements OnInit {
+    /** Formatos e imagen máxima admitidos para el logo (el backend valida lo mismo). */
+    readonly formatosLogo = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+    readonly tamanoMaximoLogo = 1024 * 1024; // 1 MB
+
     penas: Pena[] = [];
     pena: PenaRequest & { id?: number } = this.penaVacia();
     penaDialog: boolean = false;
@@ -44,7 +51,8 @@ export class PenasComponent implements OnInit {
     constructor(
         private readonly penaService: PenaService,
         private readonly messageService: MessageService,
-        private readonly confirmationService: ConfirmationService
+        private readonly confirmationService: ConfirmationService,
+        private readonly activePena: ActivePenaService
     ) {
     }
 
@@ -92,8 +100,9 @@ export class PenasComponent implements OnInit {
 
         if (id) {
             this.penaService.actualizar(id, datos).subscribe({
-                next: () => {
+                next: (response) => {
                     this.messageService.add({severity: 'success', summary: 'Éxito', detail: 'Peña actualizada'});
+                    this.activePena.actualizada(response.data);
                     this.cargarPenas();
                     this.penaDialog = false;
                 },
@@ -109,6 +118,42 @@ export class PenasComponent implements OnInit {
                 error: (err) => this.mostrarError(err, 'No se pudo crear la peña.')
             });
         }
+    }
+
+    /**
+     * Lee la imagen seleccionada y la deja en el formulario codificada en base64 (data URI), de
+     * modo que el logo se guarda en la BD y no depende de una URL externa que pueda cambiar.
+     */
+    seleccionarLogo(event: any): void {
+        const file: File = event?.files?.[0];
+        if (!file) {
+            return;
+        }
+        if (file.size > this.tamanoMaximoLogo) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Imagen demasiado grande',
+                detail: 'El logo no puede superar 1 MB.'
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            this.pena.logo = reader.result as string;
+        };
+        reader.onerror = () => {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'No se ha podido leer la imagen seleccionada.'
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    quitarLogo(): void {
+        this.pena.logo = '';
     }
 
     eliminarPena(pena: Pena): void {

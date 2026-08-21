@@ -63,6 +63,22 @@ export class ActivePenaService {
         window.location.reload();
     }
 
+    /**
+     * Refresca los datos de una peña ya cargada (p. ej. tras editar su logo o su color desde la
+     * pantalla de gestión) para que la cabecera y el tema reflejen el cambio sin recargar.
+     */
+    actualizada(pena: Pena | null | undefined): void {
+        if (!pena) {
+            return;
+        }
+
+        this._options.update((opciones) => opciones.map((candidate) => (candidate.id === pena.id ? pena : candidate)));
+
+        if (this._pena()?.id === pena.id) {
+            this.apply(pena);
+        }
+    }
+
     private loadOptionsForSuperAdmin(): void {
         this._loading.set(true);
 

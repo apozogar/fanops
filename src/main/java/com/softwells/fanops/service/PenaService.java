@@ -4,8 +4,11 @@ import com.softwells.fanops.controller.dto.PenaRequestDTO;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.repository.PenaRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +17,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class PenaService {
+
+  /** Tipos de imagen admitidos para el logo de la peña. */
+  private static final Set<String> TIPOS_IMAGEN_PERMITIDOS = Set.of(
+      "image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml");
+
+  /**
+   * Tamaño máximo de la imagen del logo. Se guarda en base64 en la propia BD y viaja en cada
+   * respuesta de la API (login, carnet, cabecera), así que conviene mantenerlo pequeño.
+   */
+  private static final int TAMANO_MAXIMO_LOGO_BYTES = 1024 * 1024; // 1 MB
+
+  /** Logo subido por el usuario: data URI en base64, p. ej. "data:image/png;base64,iVBOR..." */
+  private static final Pattern PATRON_DATA_URI =
+      Pattern.compile("^data:([a-z0-9.+/-]+);base64,([A-Za-z0-9+/=\\s]+)$",
+          Pattern.CASE_INSENSITIVE);
 
   private final PenaRepository repository;
 
@@ -62,6 +80,55 @@ public class PenaService {
     repository.delete(pena);
   }
 
+  /**
+   * Valida el logo recibido. La imagen se sube desde el navegador ya codificada en base64
+   * (data URI) y se guarda tal cual en la BD, de forma que no dependa de ninguna URL externa que
+   * pueda cambiar o dejar de estar disponible. Se siguen admitiendo URLs para no romper las peñas
+   * dadas de alta antes de este cambio.
+   *
+   * @return el logo normalizado, o {@code null} si no hay logo
+   */
+  private String validarLogo(String logo) {
+    if (logo == null || logo.isBlank()) {
+      return null;
+    }
+
+    String valor = logo.trim();
+    if (!valor.startsWith("data:")) {
+      // Compatibilidad: logos antiguos apuntando a una URL o a un asset del frontend.
+      return valor;
+    }
+
+    var matcher = PATRON_DATA_URI.matcher(valor);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException(
+          "El logo no es una imagen válida. Vuelve a seleccionar el fichero.");
+    }
+
+    String tipo = matcher.group(1).toLowerCase();
+    if (!TIPOS_IMAGEN_PERMITIDOS.contains(tipo)) {
+      throw new IllegalArgumentException(
+          "Formato de imagen no admitido. Usa PNG, JPG, WEBP, GIF o SVG.");
+    }
+
+    byte[] imagen;
+    try {
+      imagen = Base64.getMimeDecoder().decode(matcher.group(2));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "El logo no es una imagen válida. Vuelve a seleccionar el fichero.");
+    }
+    if (imagen.length == 0) {
+      throw new IllegalArgumentException("El logo está vacío. Vuelve a seleccionar el fichero.");
+    }
+    if (imagen.length > TAMANO_MAXIMO_LOGO_BYTES) {
+      throw new IllegalArgumentException(
+          "La imagen del logo no puede superar 1 MB. Reduce su tamaño e inténtalo de nuevo.");
+    }
+
+    return valor;
+  }
+
   private void applyChanges(PenaEntity pena, PenaRequestDTO dto) {
     pena.setNombre(dto.getNombre());
     pena.setIniciadorId(dto.getIniciadorId());
@@ -73,7 +140,7 @@ public class PenaService {
     pena.setCuotaMenor(dto.getCuotaMenor());
     pena.setEdadMayoria(dto.getEdadMayoria());
     pena.setEdadJubilacion(dto.getEdadJubilacion());
-    pena.setLogo(dto.getLogo());
+    pena.setLogo(validarLogo(dto.getLogo()));
     pena.setLema(dto.getLema());
     pena.setColor(dto.getColor());
   }

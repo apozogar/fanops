@@ -91,10 +91,34 @@
                         <input type="text" pInputText id="lema" [(ngModel)]="pena.lema" class="w-full" />
                     </div>
                 </div>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+                <div class="flex flex-col sm:flex-row sm:items-start gap-6">
                     <div class="flex-auto">
-                        <label for="logo" class="block font-semibold mb-2">URL del logo</label>
-                        <input type="text" pInputText id="logo" [(ngModel)]="pena.logo" class="w-full" />
+                        <label class="block font-semibold mb-2">Logo</label>
+                        <div class="flex items-start gap-4">
+                            <div class="flex items-center justify-center border rounded-lg border-surface-200 dark:border-surface-700 p-2 shrink-0" style="width: 5.5rem; height: 5.5rem">
+                                @if (pena.logo) {
+                                    <img [src]="pena.logo" alt="Logo de la peña" class="max-w-full max-h-full object-contain" />
+                                } @else {
+                                    <span class="text-xs text-muted-color text-center">Sin logo</span>
+                                }
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <p-fileUpload
+                                    mode="basic"
+                                    name="logo"
+                                    chooseLabel="Subir imagen"
+                                    chooseIcon="pi pi-upload"
+                                    [auto]="true"
+                                    [customUpload]="true"
+                                    [accept]="formatosLogo"
+                                    (onSelect)="seleccionarLogo($event)"
+                                ></p-fileUpload>
+                                @if (pena.logo) {
+                                    <p-button label="Quitar logo" icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="quitarLogo()"></p-button>
+                                }
+                                <small class="text-muted-color">PNG, JPG, WEBP, GIF o SVG. Máximo 1 MB.</small>
+                            </div>
+                        </div>
                     </div>
                     <div class="flex-auto">
                         <label for="color" class="block font-semibold mb-2">Color corporativo</label>

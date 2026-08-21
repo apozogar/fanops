@@ -57,7 +57,15 @@ export class AuthService {
                     tap(penaResponse => {
                         const pena = penaResponse.data;
                         this.currentPenaSubject.next(pena);
-                        localStorage.setItem('currentPena', JSON.stringify(pena));
+                        // Solo los campos que usa el frontend: la respuesta del backend arrastra la
+                        // colección de socios y, con el logo en base64, no cabría en localStorage.
+                        localStorage.setItem('currentPena', JSON.stringify({
+                            id: pena.id,
+                            nombre: pena.nombre,
+                            logo: pena.logo,
+                            lema: pena.lema,
+                            color: pena.color
+                        } as Pena));
                     }),
                     switchMap(() => of(response)) // Devolver la respuesta original del login
                 );
