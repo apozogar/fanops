@@ -20,6 +20,13 @@ public interface SocioRepository extends JpaRepository<SocioEntity, UUID> {
 
   List<SocioEntity> findByUsuarioEmail(String email);
 
+  /**
+   * Fichas de socio con ese email que todavía no tienen cuenta de usuario asociada, es decir,
+   * candidatas a vincularse cuando alguien se registra con ese mismo correo. La vinculación real
+   * no la hace el registro: se confirma por token desde el correo (ver VinculacionSocioService).
+   */
+  List<SocioEntity> findByEmailIgnoreCaseAndUsuarioIsNull(String email);
+
   // numeroSocio es único a nivel global (columna con constraint unique), así que la numeración
   // sigue siendo por toda la aplicación y no por peña.
   @Query("SELECT MAX(CAST(s.numeroSocio as INTEGER)) FROM SocioEntity s")

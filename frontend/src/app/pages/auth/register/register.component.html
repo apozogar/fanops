@@ -6,6 +6,26 @@
             style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
             <div class="w-full bg-surface-0 dark:bg-surface-900 py-12 px-8 sm:px-20"
                  style="border-radius: 53px">
+                @if (verificacionEnviada) {
+                    <!-- El email ya estaba en el listado de socios: la ficha se vincula al
+                         confirmar el enlace, no al registrarse. -->
+                    <div class="text-center" style="max-width: 32rem">
+                        <i class="pi pi-envelope text-primary" style="font-size: 3rem"></i>
+                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mt-4 mb-4">
+                            Revisa tu correo
+                        </div>
+                        <p class="text-muted-color">
+                            Ese email ya figura en el listado de socios de la peña. Te hemos enviado
+                            un mensaje a <strong>{{ registerData.email }}</strong> con un enlace para
+                            confirmar que eres tú y vincular tu ficha de socio a esta cuenta.
+                        </p>
+                        <p class="text-muted-color">
+                            El enlace caduca en 48 horas y solo puede usarse una vez.
+                        </p>
+                        <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4"
+                                  [routerLink]="['/auth/login']"></p-button>
+                    </div>
+                } @else {
                 <div class="text-center mb-8">
                     <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">
                         Registro de Nuevo Socio
@@ -69,6 +89,7 @@
                         <a [routerLink]="['/auth/login']" class="font-medium no-underline cursor-pointer text-primary">Inicia sesión</a>
                     </div>
                 </form>
+                }
             </div>
         </div>
     </div>
