@@ -241,7 +241,9 @@ public class VinculacionSocioService {
   private void enviarCorreo(String email, String token, List<SocioEntity> socios,
       String baseUrl) {
     String base = StringUtils.isNotBlank(baseUrl) ? baseUrl : publicBaseUrl;
-    String enlace = base + "/auth/vincular-socio?token=" + token;
+    // El "/#/" es obligatorio: el frontend enruta por hash (withHashLocation), así que sin él
+    // la ruta no la ve el router de Angular y el enlace acaba en el login, perdiendo el token.
+    String enlace = base + "/#/auth/vincular-socio?token=" + token;
     SocioEntity principal = socios.get(0);
     String nombrePena = principal.getPena() != null ? principal.getPena().getNombre() : "la peña";
 

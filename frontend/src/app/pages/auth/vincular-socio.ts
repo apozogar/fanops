@@ -1,12 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { RippleModule } from 'primeng/ripple';
+import { IconComponent } from '@/ui/icon/icon.component';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 import { VinculacionInfo } from '@/interfaces/vinculacion.interface';
 import { AuthService } from './auth.service';
 
@@ -18,7 +17,7 @@ import { AuthService } from './auth.service';
 @Component({
     selector: 'app-vincular-socio',
     standalone: true,
-    imports: [ButtonModule, InputTextModule, PasswordModule, ProgressSpinnerModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
+    imports: [UiButtonDirective, IconComponent, PasswordModule, ProgressSpinnerModule, FormsModule, RouterModule, ThemeToggleComponent],
     template: `
         <fo-theme-toggle [floating]="true" />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
@@ -31,14 +30,14 @@ import { AuthService } from './auth.service';
                             </div>
                         } @else if (error) {
                             <div class="text-center">
-                                <i class="pi pi-times-circle text-red-500" style="font-size: 3rem"></i>
+                                <fo-icon name="error" [size]="48" class="text-pink-500" />
                                 <h2 class="mt-4 text-surface-900 dark:text-surface-0">No se puede vincular</h2>
                                 <p class="text-muted-color">{{ error }}</p>
-                                <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4" routerLink="/auth/login"></p-button>
+                                <button foButton variant="primary" class="w-full mt-4" routerLink="/auth/login">Ir a Iniciar Sesión</button>
                             </div>
                         } @else if (vinculado) {
                             <div class="text-center">
-                                <i class="pi pi-check-circle text-primary" style="font-size: 3rem"></i>
+                                <fo-icon name="check-circulo" [size]="48" class="text-primary" />
                                 <h2 class="mt-4 text-surface-900 dark:text-surface-0">¡Cuenta vinculada!</h2>
                                 <p class="text-muted-color">Tu ficha de socio ya está asociada a esta cuenta. Te llevamos a la aplicación...</p>
                             </div>
@@ -70,7 +69,9 @@ import { AuthService } from './auth.service';
                                 <div class="p-error text-center mb-4">{{ errorConfirmacion }}</div>
                             }
 
-                            <p-button label="Vincular mi ficha" styleClass="w-full" [loading]="confirmando" (click)="confirmar()"></p-button>
+                            <button foButton variant="primary" class="w-full" [disabled]="confirmando" (click)="confirmar()">
+                                {{ confirmando ? 'Vinculando...' : 'Vincular mi ficha' }}
+                            </button>
                         }
                     </div>
                 </div>

@@ -11,11 +11,12 @@ import { MessageModule } from 'primeng/message';
 import { AuthService } from '@/pages/auth/auth.service';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
+import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-register',
     standalone: true,
-    imports: [UiButtonDirective, RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, ThemeToggleComponent],
+    imports: [UiButtonDirective, IconComponent, RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, ThemeToggleComponent],
     templateUrl: './register.component.html',
     styles: ``
 })

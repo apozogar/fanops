@@ -142,9 +142,11 @@ public class AuthController {
     usuarioRepository.findByEmailIgnoreCase(request.getEmail()).ifPresentOrElse(usuario -> {
       String token = jwtService.generateToken(usuario);
 
-      // Construimos el enlace de reseteo dinámicamente a partir del origen de la petición
+      // Construimos el enlace de reseteo dinámicamente a partir del origen de la petición.
+      // El "/#/" es obligatorio porque el frontend enruta por hash (withHashLocation): sin él
+      // el enlace acaba en el login y se pierde el token.
       String resetLink =
-          origenFrontend(servletRequest) + "/auth/reset-password?token=" + token;
+          origenFrontend(servletRequest) + "/#/auth/reset-password?token=" + token;
 
       try {
         SimpleMailMessage message = new SimpleMailMessage();

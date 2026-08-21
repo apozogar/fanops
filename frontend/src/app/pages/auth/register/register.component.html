@@ -10,7 +10,7 @@
                     <!-- El email ya estaba en el listado de socios: la ficha se vincula al
                          confirmar el enlace, no al registrarse. -->
                     <div class="text-center" style="max-width: 32rem">
-                        <i class="pi pi-envelope text-primary" style="font-size: 3rem"></i>
+                        <fo-icon name="correo" [size]="48" class="text-primary" />
                         <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mt-4 mb-4">
                             Revisa tu correo
                         </div>
@@ -22,8 +22,8 @@
                         <p class="text-muted-color">
                             El enlace caduca en 48 horas y solo puede usarse una vez.
                         </p>
-                        <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4"
-                                  [routerLink]="['/auth/login']"></p-button>
+                        <button foButton variant="primary" class="w-full mt-4"
+                                [routerLink]="['/auth/login']">Ir a Iniciar Sesión</button>
                     </div>
                 } @else {
                 <div class="text-center mb-8">
