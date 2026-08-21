@@ -1,6 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { ThemeService } from '@/core/theme/theme.service';
 import { UiButtonDirective } from './ui-button.directive';
+import { IconComponent } from './icon/icon.component';
 
 /**
  * Botón de cambio de tema claro/oscuro.
@@ -12,7 +13,7 @@ import { UiButtonDirective } from './ui-button.directive';
 @Component({
     selector: 'fo-theme-toggle',
     standalone: true,
-    imports: [UiButtonDirective],
+    imports: [UiButtonDirective, IconComponent],
     template: `
         <div [class]="floating() ? 'fixed top-5 right-5 z-30' : 'contents'">
             <button
@@ -25,7 +26,7 @@ import { UiButtonDirective } from './ui-button.directive';
                 [attr.aria-label]="theme.isDark() ? 'Activar tema claro' : 'Activar tema oscuro'"
                 [attr.aria-pressed]="theme.isDark()"
             >
-                <i class="pi" [class.pi-moon]="theme.isDark()" [class.pi-sun]="!theme.isDark()" aria-hidden="true"></i>
+                <fo-icon [name]="theme.isDark() ? 'tema-oscuro' : 'tema-claro'" />
             </button>
         </div>
     `

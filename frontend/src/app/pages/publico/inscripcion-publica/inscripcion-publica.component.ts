@@ -12,10 +12,13 @@ import {TagModule} from 'primeng/tag';
 import {EventoInscripcionDTO} from '@/interfaces/evento-inscripcion.dto';
 import {EventoService} from '@/services/evento.service';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiTagComponent } from '@/ui/ui-tag.component';
 @Component({
     selector: 'app-inscripcion-publica',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, ToastModule, ButtonModule, InputTextModule,
+    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, FormsModule, RouterModule, ToastModule, ButtonModule, InputTextModule,
         CardModule, ProgressSpinnerModule, TagModule],
     templateUrl: './inscripcion-publica.component.html',
     providers: [MessageService]

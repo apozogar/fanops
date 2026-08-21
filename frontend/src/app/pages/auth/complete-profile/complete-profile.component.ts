@@ -11,10 +11,11 @@ import { SocioService } from '@/services/SocioService';
 import { Socio } from '@/interfaces/socio.interface';
 import { UsuarioService } from '@/services/UsuarioService';
 
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-complete-profile',
     standalone: true,
-    imports: [FormsModule, ButtonModule, InputTextModule, DatePicker, MessageModule, ProgressSpinnerModule],
+    imports: [UiButtonDirective, FormsModule, ButtonModule, InputTextModule, DatePicker, MessageModule, ProgressSpinnerModule],
     templateUrl: './complete-profile.component.html'
 })
 export class CompleteProfileComponent implements OnInit {

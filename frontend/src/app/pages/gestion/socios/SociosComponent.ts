@@ -3,7 +3,6 @@ import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
 import {TableModule} from 'primeng/table';
-import {ButtonIcon, ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {ToastModule} from 'primeng/toast';
 import {ToolbarModule} from 'primeng/toolbar';
@@ -11,7 +10,6 @@ import {DialogModule} from 'primeng/dialog';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {TagModule} from 'primeng/tag';
 import {SocioService} from '@/services/SocioService';
-import {Ripple} from 'primeng/ripple';
 import {CheckboxModule} from 'primeng/checkbox';
 import {DatePickerModule} from 'primeng/datepicker';
 import {Textarea} from 'primeng/textarea';
@@ -24,6 +22,8 @@ import {
 } from "@/components/cuotas-socio-table/cuotas-socio-table.component";
 import {Role} from "@/interfaces/role.interface";
 import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros.component";
+import {UiButtonDirective} from "@/ui/ui-button.directive";
+import {IconComponent} from "@/ui/icon/icon.component";
 
 @Component({
     selector: 'app-socios',
@@ -32,17 +32,16 @@ import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros
         CommonModule,
         FormsModule,
         TableModule,
-        ButtonModule,
         InputTextModule,
         ToastModule,
         ToolbarModule,
         DialogModule,
         ConfirmDialogModule,
         TagModule,
-        Ripple,
         CheckboxModule,
         DatePickerModule,
-        Textarea, IconField, InputIcon, Tooltip, CuotasSocioTableComponent, GestionCobrosComponent
+        Textarea, IconField, InputIcon, Tooltip, CuotasSocioTableComponent, GestionCobrosComponent,
+        UiButtonDirective, IconComponent
 
     ],
     templateUrl: './SociosComponent.html'
@@ -170,7 +169,6 @@ export class SociosComponent implements OnInit {
         this.confirmationService.confirm({
             message: '¿Está seguro que desea eliminar este socio?',
             header: 'Confirmar',
-            icon: 'pi pi-exclamation-triangle',
             accept: () => {
                 this.socioService.eliminarSocio(socio.uid).subscribe({
                     next: () => {

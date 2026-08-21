@@ -3,80 +3,90 @@
  * para que cualquier utilidad de Tailwind siga ganando por especificidad.
  */
 
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-html {
-    /* Sin font-size fijo a propósito: respetamos el tamaño de fuente del sistema
-       (el layout anterior lo clavaba a 14px e ignoraba la accesibilidad). */
-    height: 100%;
-    -webkit-text-size-adjust: 100%;
-}
-
-body {
-    margin: 0;
-    min-height: 100%;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--fo-text);
-    background-color: var(--fo-bg);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* El shell gestiona su propio scroll; evitamos rebote horizontal en móvil. */
-    overflow-x: hidden;
-}
-
 /*
- * Bloqueo de scroll mientras la hoja de cuenta está abierta, solo en móvil: allí es un panel
- * modal a pantalla parcial y el fondo no debe desplazarse. En escritorio es un simple
- * desplegable y la página debe seguir siendo desplazable.
+ * Resets de elemento dentro de @layer base a propósito.
  *
- * El límite se decide aquí y no en TypeScript a propósito: una media query siempre acierta,
- * mientras que un breakpoint calculado en JS puede quedarse desincronizado al redimensionar.
+ * El CSS sin capa gana siempre a @layer utilities, así que reglas como `button { color: inherit }`
+ * o `h1 { color: ... }` sueltas anulaban en silencio cualquier utilidad text-* aplicada a esos
+ * elementos (por ejemplo el texto blanco de un botón primario). Metiéndolas en la capa base,
+ * Tailwind puede sobrescribirlas, que es el comportamiento esperado.
  */
-@media (max-width: 991px) {
-    body.fo-panel-open {
-        overflow: hidden;
+@layer base {
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
     }
-}
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    margin: 0;
-    font-weight: 600;
-    line-height: 1.25;
-    color: var(--fo-text);
-}
+    html {
+        /* Sin font-size fijo a propósito: respetamos el tamaño de fuente del sistema
+           (el layout anterior lo clavaba a 14px e ignoraba la accesibilidad). */
+        height: 100%;
+        -webkit-text-size-adjust: 100%;
+    }
 
-p {
-    margin: 0;
-}
+    body {
+        margin: 0;
+        min-height: 100%;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+        color: var(--fo-text);
+        background-color: var(--fo-bg);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        /* El shell gestiona su propio scroll; evitamos rebote horizontal en móvil. */
+        overflow-x: hidden;
+    }
 
-a {
-    color: inherit;
-    text-decoration: none;
-}
+    /*
+     * Bloqueo de scroll mientras la hoja de cuenta está abierta, solo en móvil: allí es un panel
+     * modal a pantalla parcial y el fondo no debe desplazarse. En escritorio es un simple
+     * desplegable y la página debe seguir siendo desplazable.
+     *
+     * El límite se decide aquí y no en TypeScript a propósito: una media query siempre acierta,
+     * mientras que un breakpoint calculado en JS puede quedarse desincronizado al redimensionar.
+     */
+    @media (max-width: 991px) {
+        body.fo-panel-open {
+            overflow: hidden;
+        }
+    }
 
-button {
-    font: inherit;
-    color: inherit;
-}
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 0;
+        font-weight: 600;
+        line-height: 1.25;
+        color: var(--fo-text);
+    }
 
-/* El layout de plantilla forzaba max-width:none, lo que rompía imágenes responsive. */
-img,
-svg,
-video,
-canvas {
-    max-width: 100%;
-    height: auto;
+    p {
+        margin: 0;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    button {
+        font: inherit;
+        color: inherit;
+    }
+
+    /* El layout de plantilla forzaba max-width:none, lo que rompía imágenes responsive. */
+    img,
+    svg,
+    video,
+    canvas {
+        max-width: 100%;
+        height: auto;
+    }
 }
 
 :focus-visible {
@@ -111,6 +121,20 @@ canvas {
  * Cuotas, Inscripciones). Se mantiene el nombre para no tocar esas plantillas, pero
  * reimplementada sobre los tokens nuevos, con borde y padding responsive.
  */
+/*
+ * Durante el cambio de tema se desactivan todas las transiciones.
+ *
+ * Sin esto, `transition-colors` intenta interpolar colores que vienen de una cadena de var()
+ * que cambia de golpe al alternar el tema: las transiciones se quedaban colgadas en estado
+ * "running" y los elementos conservaban el color del tema anterior hasta recargar la página.
+ * Además, un cambio de tema instantáneo es lo esperado; no debe verse un fundido.
+ */
+.fo-theme-switching *,
+.fo-theme-switching *::before,
+.fo-theme-switching *::after {
+    transition: none !important;
+}
+
 .card {
     background: var(--fo-surface);
     border: 1px solid var(--fo-border);

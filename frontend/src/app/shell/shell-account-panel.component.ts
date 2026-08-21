@@ -4,6 +4,7 @@ import { AuthService } from '@/pages/auth/auth.service';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
 import { PenaSwitcherComponent } from './pena-switcher.component';
+import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
 import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 
@@ -16,7 +17,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 @Component({
     selector: 'fo-shell-account-panel',
     standalone: true,
-    imports: [RouterLink, PenaSwitcherComponent],
+    imports: [RouterLink, PenaSwitcherComponent, IconComponent],
     host: {
         '(document:keydown.escape)': 'onEscape()'
     },
@@ -68,7 +69,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                                 (click)="close.emit()"
                                 class="flex items-center gap-3 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover"
                             >
-                                <i [class]="item.icon" class="text-base text-ink-muted" aria-hidden="true"></i>
+                                <fo-icon [name]="item.icon" class="text-ink-muted" />
                                 <span class="truncate">{{ item.label }}</span>
                             </a>
                         }
@@ -81,12 +82,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                         (click)="theme.toggleDark()"
                         class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink transition-colors hover:bg-surface-hover"
                     >
-                        <i
-                            class="pi text-base text-ink-muted"
-                            [class.pi-moon]="theme.isDark()"
-                            [class.pi-sun]="!theme.isDark()"
-                            aria-hidden="true"
-                        ></i>
+                        <fo-icon [name]="theme.isDark() ? 'tema-oscuro' : 'tema-claro'" class="text-ink-muted" />
                         <span>{{ theme.isDark() ? 'Tema claro' : 'Tema oscuro' }}</span>
                     </button>
 
@@ -95,7 +91,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                         (click)="logout()"
                         class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-danger transition-colors hover:bg-danger-soft"
                     >
-                        <i class="pi pi-sign-out text-base" aria-hidden="true"></i>
+                        <fo-icon name="cerrar-sesion" />
                         <span>Cerrar sesión</span>
                     </button>
                 </div>

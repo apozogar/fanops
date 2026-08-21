@@ -9,10 +9,13 @@ import {ToastModule} from 'primeng/toast';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiTagComponent } from '@/ui/ui-tag.component';
 @Component({
     selector: 'app-inscripcion-eventos',
     standalone: true,
-    imports: [CommonModule, CardModule, ButtonModule, ToastModule, ProgressSpinnerModule, TagModule],
+    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, CardModule, ButtonModule, ToastModule, ProgressSpinnerModule, TagModule],
     templateUrl: './inscripcion-eventos.component.html',
     styleUrls: ['./inscripcion-eventos.component.scss'],
     providers: [MessageService]

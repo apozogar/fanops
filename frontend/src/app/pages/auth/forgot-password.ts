@@ -7,10 +7,12 @@ import { RippleModule } from 'primeng/ripple';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 import { AuthService } from './auth.service';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-forgot-password',
     standalone: true,
-    imports: [ButtonModule, InputTextModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
+    imports: [UiButtonDirective, IconComponent, ButtonModule, InputTextModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
     template: `
         <fo-theme-toggle [floating]="true" />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
@@ -29,17 +31,17 @@ import { AuthService } from './auth.service';
                                 @if (error) {
                                     <div class="p-error text-center mb-4">{{ error }}</div>
                                 }
-                                <p-button label="Enviar enlace" styleClass="w-full" (click)="sendLink()"></p-button>
-                                <p-button label="Volver a Iniciar Sesión" styleClass="w-full mt-4 p-button-secondary" routerLink="/auth/login"></p-button>
+                                <button foButton variant="primary" class="w-full" (click)="sendLink()">Enviar enlace</button>
+                                <button foButton variant="secondary" class="w-full mt-4" routerLink="/auth/login">Volver a Iniciar Sesión</button>
                             </div>
                         }
 
                         @if (submitted) {
                             <div class="text-center">
-                                <i class="pi pi-check-circle text-primary" style="font-size: 3rem"></i>
+                                <fo-icon name="check-circulo" class="text-primary" style="font-size: 3rem" />
                                 <h2 class="mt-4">¡Enlace enviado!</h2>
                                 <p>Si existe una cuenta con el email proporcionado, recibirás un correo con las instrucciones para recuperar tu contraseña.</p>
-                                <p-button label="Volver a Iniciar Sesión" styleClass="w-full mt-4" routerLink="/auth/login"></p-button>
+                                <button foButton variant="primary" class="w-full mt-4" routerLink="/auth/login">Volver a Iniciar Sesión</button>
                             </div>
                         }
                     </div>

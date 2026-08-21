@@ -3,10 +3,11 @@ import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-notfound',
     standalone: true,
-    imports: [RouterModule, ThemeToggleComponent, ButtonModule],
+    imports: [UiButtonDirective, RouterModule, ThemeToggleComponent, ButtonModule],
     template: `
         <fo-theme-toggle [floating]="true" />
         <div class="flex items-center justify-center min-h-screen overflow-hidden">
@@ -21,7 +22,7 @@ import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
                         <div class="text-surface-600 dark:text-surface-200 mb-8">La página
                             solicitada no está disponible.
                         </div>
-                        <p-button label="Ir al Inicio" routerLink="/"/>
+                        <button foButton variant="primary" routerLink="/">Ir al Inicio</button>
                     </div>
                 </div>
             </div>

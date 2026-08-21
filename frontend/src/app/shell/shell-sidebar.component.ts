@@ -1,12 +1,13 @@
 import { Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { IconComponent } from '@/ui/icon/icon.component';
 import { NavSection } from './navigation';
 
 /** Navegación lateral de escritorio. En móvil no se renderiza: allí manda la barra de pestañas. */
 @Component({
     selector: 'fo-shell-sidebar',
     standalone: true,
-    imports: [RouterLink, RouterLinkActive],
+    imports: [RouterLink, RouterLinkActive, IconComponent],
     template: `
         <nav
             class="fixed left-0 z-20 hidden flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 lg:flex"
@@ -29,7 +30,7 @@ import { NavSection } from './navigation';
                             routerLinkActive="!bg-accent-soft !text-accent-soft-fg !font-semibold"
                             class="flex items-center gap-3 rounded-token px-3 py-2.5 text-sm text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
                         >
-                            <i [class]="item.icon" class="text-base" aria-hidden="true"></i>
+                            <fo-icon [name]="item.icon" [size]="18" />
                             <span class="truncate">{{ item.label }}</span>
                         </a>
                     }

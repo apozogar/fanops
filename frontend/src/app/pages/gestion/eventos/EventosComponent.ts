@@ -5,7 +5,6 @@ import {MessageService, ConfirmationService} from 'primeng/api';
 import {Table, TableModule} from 'primeng/table';
 import {Evento} from '@/interfaces/evento.interface';
 import {InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
-import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ToastModule} from 'primeng/toast';
@@ -21,14 +20,15 @@ import {TagModule} from 'primeng/tag';
 import {AccordionModule} from 'primeng/accordion';
 import {EventoService} from '@/services/evento.service';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-eventos',
     standalone: true,
-    imports: [
+    imports: [UiButtonDirective, IconComponent, 
         CommonModule,
         FormsModule,
         TableModule,
-        ButtonModule,
         InputTextModule,
         InputNumberModule,
         ToastModule,
@@ -187,7 +187,6 @@ export class EventosComponent implements OnInit {
         this.confirmationService.confirm({
             message: '¿Está seguro que desea eliminar este evento?',
             header: 'Confirmar',
-            icon: 'pi pi-exclamation-triangle',
             accept: () => {
                 if (!evento.uid) return;
                 this.eventoService.eliminarEvento(evento.uid).subscribe({

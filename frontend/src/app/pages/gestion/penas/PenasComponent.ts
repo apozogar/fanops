@@ -3,7 +3,6 @@ import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
 import {TableModule} from 'primeng/table';
-import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ToastModule} from 'primeng/toast';
@@ -11,20 +10,20 @@ import {ToolbarModule} from 'primeng/toolbar';
 import {DialogModule} from 'primeng/dialog';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {FileUploadModule} from 'primeng/fileupload';
-import {Ripple} from 'primeng/ripple';
 import {Tooltip} from 'primeng/tooltip';
 import {PenaService} from '@/services/pena.service';
 import {ActivePenaService} from '@/core/pena/active-pena.service';
 import {Pena, PenaRequest} from '@/interfaces/socio.interface';
 
+import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { IconComponent } from '@/ui/icon/icon.component';
 @Component({
     selector: 'app-penas',
     standalone: true,
-    imports: [
+    imports: [UiButtonDirective, IconComponent, 
         CommonModule,
         FormsModule,
         TableModule,
-        ButtonModule,
         InputTextModule,
         InputNumberModule,
         ToastModule,
@@ -32,7 +31,6 @@ import {Pena, PenaRequest} from '@/interfaces/socio.interface';
         DialogModule,
         ConfirmDialogModule,
         FileUploadModule,
-        Ripple,
         Tooltip
     ],
     templateUrl: './PenasComponent.html'
@@ -160,7 +158,6 @@ export class PenasComponent implements OnInit {
         this.confirmationService.confirm({
             message: `¿Seguro que quieres eliminar la peña "${pena.nombre}"? Esta acción no se puede deshacer.`,
             header: 'Confirmar eliminación',
-            icon: 'pi pi-exclamation-triangle',
             accept: () => {
                 this.penaService.eliminar(pena.id).subscribe({
                     next: () => {

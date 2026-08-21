@@ -105,10 +105,9 @@
                         }
 
                         <div class="flex items-center justify-between mt-8 gap-4">
-                            <p-button label="Completar más tarde" styleClass="w-full" [text]="true"
-                                      (onClick)="skip()"></p-button>
-                            <p-button label="Guardar Perfil" styleClass="w-full" type="submit"
-                                      [disabled]="profileForm.invalid"></p-button>
+                            <button foButton variant="ghost" class="w-full" (click)="skip()">Completar más tarde</button>
+                            <button foButton variant="primary" class="w-full" type="submit"
+                                    [disabled]="profileForm.invalid">Guardar Perfil</button>
                         </div>
                     </form>
                 } @else {

@@ -4,7 +4,6 @@ import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService} from 'primeng/api';
 import {TableModule} from 'primeng/table';
-import {ButtonModule} from 'primeng/button';
 import {InputNumberModule} from 'primeng/inputnumber';
 // import { CalendarModule } from 'primeng/calendar';
 import {SelectModule} from 'primeng/select';
@@ -15,14 +14,15 @@ import {CardModule} from 'primeng/card';
 import {Ripple} from "primeng/ripple";
 import {Toolbar} from "primeng/toolbar";
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-cuotas',
     standalone: true,
-    imports: [
+    imports: [UiButtonDirective, IconComponent, 
         CommonModule,
         FormsModule,
         TableModule,
-        ButtonModule,
         InputNumberModule,
         // CalendarModule,
         SelectModule,
@@ -30,7 +30,6 @@ import {Toolbar} from "primeng/toolbar";
         DialogModule,
         TagModule,
         CardModule,
-        Ripple,
         Toolbar
     ],
     templateUrl: './CuotasComponent.html'

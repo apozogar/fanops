@@ -7,6 +7,7 @@
  */
 
 import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
+import { FoIconName } from '@/ui/icon/icon-registry';
 
 export interface NavItem {
     id: string;
@@ -14,8 +15,8 @@ export interface NavItem {
     label: string;
     /** Etiqueta corta para la barra de pestañas de móvil, donde el espacio es mínimo. */
     shortLabel: string;
-    /** Clase de primeicons. */
-    icon: string;
+    /** Nombre del icono en el registro de la aplicación. */
+    icon: FoIconName;
     route: string;
 }
 
@@ -31,14 +32,14 @@ const AREA_PERSONAL: NavSection = {
             id: 'carnet',
             label: 'Mi carnet',
             shortLabel: 'Carnet',
-            icon: 'pi pi-id-card',
+            icon: 'socio',
             route: '/carnet-socio'
         },
         {
             id: 'inscripciones',
             label: 'Inscripción a eventos',
             shortLabel: 'Inscribirme',
-            icon: 'pi pi-calendar-plus',
+            icon: 'inscribirse',
             route: '/inscripciones'
         }
     ]
@@ -51,14 +52,14 @@ const GESTION: NavSection = {
             id: 'socios',
             label: 'Socios',
             shortLabel: 'Socios',
-            icon: 'pi pi-users',
+            icon: 'socios',
             route: '/socios'
         },
         {
             id: 'eventos',
             label: 'Eventos',
             shortLabel: 'Eventos',
-            icon: 'pi pi-calendar',
+            icon: 'calendario',
             route: '/eventos'
         }
     ]
@@ -71,7 +72,7 @@ const SUPERADMIN: NavSection = {
             id: 'penas',
             label: 'Gestión de peñas',
             shortLabel: 'Peñas',
-            icon: 'pi pi-shield',
+            icon: 'super-admin',
             route: '/penas'
         }
     ]

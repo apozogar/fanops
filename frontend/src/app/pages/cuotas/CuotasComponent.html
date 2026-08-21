@@ -12,7 +12,7 @@
                 <div
                     class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border"
                     style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-dollar text-orange-500 text-xl!"></i>
+                    <fo-icon name="dolar" [size]="22" class="text-orange-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">24 new </span>
@@ -32,7 +32,7 @@
     <!--                        <div-->
     <!--                            class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border"-->
     <!--                            style="width: 2.5rem; height: 2.5rem">-->
-    <!--                            <i class="pi pi-dollar text-orange-500 text-xl!"></i>-->
+    <!--                            <fo-icon name="dolar" [size]="22" class="text-orange-500" />-->
     <!--                        </div>-->
     <!--                    </div>-->
     <!--                    <span class="text-primary font-medium">%52+ </span>-->
@@ -52,7 +52,7 @@
     <!--                        <div-->
     <!--                            class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border"-->
     <!--                            style="width: 2.5rem; height: 2.5rem">-->
-    <!--                            <i class="pi pi-users text-cyan-500 text-xl!"></i>-->
+    <!--                            <fo-icon name="socios" [size]="22" class="text-cyan-500" />-->
     <!--                        </div>-->
     <!--                    </div>-->
     <!--                    <span class="text-primary font-medium">520 </span>-->
@@ -65,8 +65,10 @@
 <div class="card">
     <p-toolbar class="mb-4">
         <ng-template pTemplate="left">
-            <button pButton pRipple label="Nueva Cuota" icon="pi pi-plus"
-                    class="p-button-success mr-2" (click)="abrirNuevo()"></button>
+            <button foButton variant="primary" (click)="abrirNuevo()">
+                <fo-icon name="anadir" />
+                <span>Nueva Cuota</span>
+            </button>
         </ng-template>
     </p-toolbar>
     <p-table [value]="cuotas" [rows]="10" [paginator]="true"
@@ -92,13 +94,16 @@
                 </td>
                 <td>{{ cuota.periodo }}</td>
                 <td>
-                    <button pButton pRipple icon="pi pi-check"
-                            class="p-button-rounded p-button-success mr-2"
-                            *ngIf="cuota.estado === 'PENDIENTE'"
-                            (click)="marcarComoPagada(cuota)"></button>
-                    <button pButton pRipple icon="pi pi-pencil"
-                            class="p-button-rounded p-button-primary"
-                            (click)="editarCuota(cuota)"></button>
+                    <div class="flex items-center gap-1.5">
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                *ngIf="cuota.estado === 'PENDIENTE'"
+                                (click)="marcarComoPagada(cuota)"
+                                aria-label="Marcar como pagada"
+                        ><fo-icon name="check" [size]="16" /></button>
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                (click)="editarCuota(cuota)" aria-label="Editar cuota"
+                        ><fo-icon name="editar" [size]="16" /></button>
+                    </div>
                 </td>
             </tr>
         </ng-template>

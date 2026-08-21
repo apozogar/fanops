@@ -13,7 +13,7 @@
 
         <p-card *ngIf="!loading && errorCarga">
             <div class="text-center py-4">
-                <i class="pi pi-exclamation-triangle text-4xl text-danger mb-3"></i>
+                <fo-icon name="aviso" class="text-4xl text-danger mb-3" />
                 <p class="font-medium">No pudimos encontrar el evento.</p>
                 <p class="text-muted-color text-sm">Comprueba que el enlace es correcto.</p>
             </div>
@@ -21,7 +21,7 @@
 
         <p-card *ngIf="!loading && evento && enviado">
             <div class="text-center py-4">
-                <i class="pi pi-check-circle text-4xl text-success mb-3"></i>
+                <fo-icon name="check-circulo" class="text-4xl text-success mb-3" />
                 <h3 class="text-xl font-semibold mb-2">¡Te has apuntado!</h3>
                 <p>Tu solicitud para <strong>{{ evento.nombreEvento }}</strong> ha quedado en
                     <strong>lista de espera</strong>.</p>
@@ -35,22 +35,24 @@
                 <h3 class="text-xl font-semibold">{{ evento.nombreEvento }}</h3>
                 <div class="flex flex-col gap-2 text-sm">
                     <div class="flex items-center gap-2">
-                        <i class="pi pi-calendar"></i>
+                        <fo-icon name="calendario" />
                         <span>{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</span>
                     </div>
                     <div *ngIf="evento.ubicacion" class="flex items-center gap-2">
-                        <i class="pi pi-map-marker"></i>
+                        <fo-icon name="ubicacion" />
                         <span>{{ evento.ubicacion }}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <i class="pi pi-users"></i>
+                        <fo-icon name="socios" />
                         <span>{{ evento.plazasLibres < 0 ? 'Plazas ilimitadas' : evento.plazasLibres + ' plazas libres' }}</span>
                     </div>
                 </div>
 
-                <p-tag *ngIf="evento.inscripcionCerrada" severity="danger" icon="pi pi-ban"
-                       value="Plazo de inscripción cerrado"></p-tag>
-                <p-tag *ngIf="!evento.inscripcionCerrada" severity="info" [value]="fechaLimiteTexto()"></p-tag>
+                <fo-tag *ngIf="evento.inscripcionCerrada" tone="danger">
+                    <fo-icon name="no-permitido" [size]="14" />
+                    <span>Plazo de inscripción cerrado</span>
+                </fo-tag>
+                <fo-tag *ngIf="!evento.inscripcionCerrada" tone="info">{{ fechaLimiteTexto() }}</fo-tag>
 
                 <div *ngIf="!evento.inscripcionCerrada" class="flex flex-col gap-4 mt-2">
                     <div>
@@ -68,9 +70,12 @@
                         <input id="telefono" type="tel" pInputText class="w-full"
                                [(ngModel)]="telefono" placeholder="Para avisarte por WhatsApp"/>
                     </div>
-                    <p-button label="Apuntarme en lista de espera" icon="pi pi-check"
-                              [disabled]="!formularioValido || enviando" styleClass="mt-2"
-                              (click)="inscribirse()"></p-button>
+                    <button foButton variant="primary" class="mt-2"
+                            [disabled]="!formularioValido || enviando"
+                            (click)="inscribirse()">
+                        <fo-icon name="check" />
+                        <span>{{ enviando ? 'Enviando…' : 'Apuntarme en lista de espera' }}</span>
+                    </button>
                     <span class="text-xs text-muted-color">Al apuntarte aceptas que te avisemos por email o
                         WhatsApp cuando haya hueco disponible.</span>
                 </div>

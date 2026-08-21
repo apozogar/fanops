@@ -4,10 +4,12 @@ import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-access',
     standalone: true,
-    imports: [ButtonModule, RouterModule, RippleModule, ThemeToggleComponent, ButtonModule],
+    imports: [UiButtonDirective, IconComponent, ButtonModule, RouterModule, RippleModule, ThemeToggleComponent, ButtonModule],
     template: ` <fo-theme-toggle [floating]="true" />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
             <div class="flex flex-col items-center justify-center">
@@ -15,13 +17,13 @@ import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
                     <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20 flex flex-col items-center" style="border-radius: 53px">
                         <div class="gap-4 flex flex-col items-center">
                             <div class="flex justify-center items-center border-2 border-orange-500 rounded-full" style="width: 3.2rem; height: 3.2rem">
-                                <i class="text-orange-500 pi pi-fw pi-lock text-2xl!"></i>
+                                <fo-icon name="bloqueado" [size]="26" class="text-orange-500" />
                             </div>
                             <h1 class="text-surface-900 dark:text-surface-0 font-bold text-4xl lg:text-5xl mb-2">Access Denied</h1>
                             <span class="text-muted-color mb-8">You do not have the necessary permisions. Please contact admins.</span>
                             <img src="https://primefaces.org/cdn/templates/sakai/auth/asset-access.svg" alt="Access denied" class="mb-8" width="80%" />
                             <div class="col-span-12 mt-8 text-center">
-                                <p-button label="Go to Dashboard" routerLink="/" severity="warn" />
+                                <button foButton variant="warning" routerLink="/">Ir al inicio</button>
                             </div>
                         </div>
                     </div>

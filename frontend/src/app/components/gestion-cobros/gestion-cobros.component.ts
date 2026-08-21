@@ -11,10 +11,12 @@ import { Select } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-gestion-cobros',
     standalone: true,
-    imports: [DialogModule, ButtonModule, FileUploadModule, ToastModule, Select, FormsModule, InputTextModule, DatePickerModule],
+    imports: [UiButtonDirective, IconComponent, DialogModule, ButtonModule, FileUploadModule, ToastModule, Select, FormsModule, InputTextModule, DatePickerModule],
     templateUrl: './gestion-cobros.component.html',
     providers: [MessageService] // Proveedor local para no interferir con otros toasts
 })

@@ -11,7 +11,7 @@
                 <div
                     class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border"
                     style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-calendar text-cyan-500 text-xl!"></i>
+                    <fo-icon name="calendario" [size]="22" class="text-cyan-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">{{ numEventosPendientes }} pendientes</span>
@@ -26,14 +26,16 @@
 
     <p-toolbar class="mb-6">
         <ng-template #start>
-            <button pButton pRipple label="Nuevo Evento" icon="pi pi-plus"
-                    class="p-button-success mr-2" (click)="abrirNuevo()"></button>
+            <button foButton variant="primary" (click)="abrirNuevo()">
+                <fo-icon name="anadir" />
+                <span>Nuevo Evento</span>
+            </button>
         </ng-template>
 
         <ng-template #center>
             <p-iconfield iconPosition="left" class="ml-auto">
                 <p-inputicon>
-                    <i class="pi pi-search"></i>
+                    <fo-icon name="buscar" />
                 </p-inputicon>
                 <input pInputText type="text"
                        (input)="dt?.filterGlobal($event.target.value, 'contains')"
@@ -84,21 +86,25 @@
                     <span *ngIf="!evento.numEnEspera" class="text-muted-color">0</span>
                 </td>
                 <td>
-                    <button pButton pRipple icon="pi pi-users"
-                            class="p-button-rounded p-button-info mr-2"
-                            (click)="mostrarInscripciones(evento)" pTooltip="Ver Inscritos"
-                            tooltipPosition="top"></button>
-                    <button pButton pRipple icon="pi pi-share-alt"
-                            class="p-button-rounded p-button-secondary mr-2"
-                            (click)="copiarEnlacePublico(evento)"
-                            pTooltip="Copiar enlace público (no socios)"
-                            tooltipPosition="top"></button>
-                    <button pButton pRipple icon="pi pi-pencil"
-                            class="p-button-rounded p-button-success mr-2"
-                            (click)="editarEvento(evento)"></button>
-                    <button pButton pRipple icon="pi pi-trash"
-                            class="p-button-rounded p-button-danger"
-                            (click)="eliminarEvento(evento)"></button>
+                    <div class="flex items-center gap-1.5">
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                (click)="mostrarInscripciones(evento)" pTooltip="Ver Inscritos"
+                                tooltipPosition="top" aria-label="Ver inscritos"
+                        ><fo-icon name="socios" [size]="16" /></button>
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                (click)="copiarEnlacePublico(evento)"
+                                pTooltip="Copiar enlace público (no socios)"
+                                tooltipPosition="top" aria-label="Copiar enlace público"
+                        ><fo-icon name="compartir" [size]="16" /></button>
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                (click)="editarEvento(evento)" pTooltip="Editar evento"
+                                tooltipPosition="top" aria-label="Editar evento"
+                        ><fo-icon name="editar" [size]="16" /></button>
+                        <button foButton variant="ghost" size="icon-sm" class="rounded-full text-danger"
+                                (click)="eliminarEvento(evento)" pTooltip="Eliminar evento"
+                                tooltipPosition="top" aria-label="Eliminar evento"
+                        ><fo-icon name="eliminar" [size]="16" /></button>
+                    </div>
                 </td>
             </tr>
         </ng-template>
@@ -180,9 +186,11 @@
     </ng-template>
 
     <ng-template #footer>
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="eventoDialog = false"
-                  [text]="true"></p-button>
-        <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarEvento()"></p-button>
+        <button foButton variant="ghost" (click)="eventoDialog = false">Cancelar</button>
+        <button foButton variant="primary" (click)="guardarEvento()">
+            <fo-icon name="check" />
+            <span>Guardar</span>
+        </button>
     </ng-template>
 </p-dialog>
 
@@ -195,10 +203,12 @@
     <ng-template #content>
         <div *ngIf="eventoSeleccionado" class="mb-4">
             <span class="font-semibold">{{ eventoSeleccionado.nombreEvento }}</span>
-            <p-button label="Asignar plazas de espera" icon="pi pi-user-plus"
-                      class="ml-4" [loading]="asignandoPlazas"
-                      [disabled]="enEspera.length === 0"
-                      (click)="asignarPlazas()"></p-button>
+            <button foButton variant="primary" class="ml-4"
+                    [disabled]="enEspera.length === 0 || asignandoPlazas"
+                    (click)="asignarPlazas()">
+                <fo-icon name="usuario-nuevo" />
+                <span>{{ asignandoPlazas ? 'Asignando…' : 'Asignar plazas de espera' }}</span>
+            </button>
         </div>
 
         <p-accordion value="0">
@@ -271,7 +281,6 @@
         </p-accordion>
     </ng-template>
     <ng-template #footer>
-        <p-button label="Cerrar" icon="pi pi-times"
-                  (onClick)="inscripcionesDialog = false"></p-button>
+        <button foButton variant="secondary" (click)="inscripcionesDialog = false">Cerrar</button>
     </ng-template>
 </p-dialog>

@@ -22,48 +22,63 @@
                 <p-card [header]="evento.nombreEvento">
                     <div class="flex flex-col gap-2 mb-4">
                         <div class="flex items-center gap-2">
-                            <i class="pi pi-calendar"></i>
+                            <fo-icon name="calendario" />
                             <span>{{ evento.fechaEvento | date: 'dd/MM/yyyy' }}</span>
                         </div>
                         @if (evento.fechaLimiteInscripcion) {
                             <div class="flex items-center gap-2">
-                                <i class="pi pi-clock"></i>
+                                <fo-icon name="hora" />
                                 <span>Inscripción hasta el {{ evento.fechaLimiteInscripcion | date: 'dd/MM/yyyy HH:mm' }}</span>
                             </div>
                         }
                         @if (evento.ubicacion) {
                             <div class="flex items-center gap-2">
-                                <i class="pi pi-map-marker"></i>
+                                <fo-icon name="ubicacion" />
                                 <span>{{ evento.ubicacion }}</span>
                             </div>
                         }
                         <div class="flex items-center gap-2" [class.text-danger]="evento.plazasLibres === 0">
-                            <i class="pi pi-users"></i>
+                            <fo-icon name="socios" />
                             <span>{{ plazasTexto(evento) }}</span>
                         </div>
                         @if (evento.enListaEspera > 0) {
                             <div class="flex items-center gap-2 text-warning">
-                                <i class="pi pi-hourglass"></i>
+                                <fo-icon name="espera" />
                                 <span>{{ evento.enListaEspera }} en lista de espera</span>
                             </div>
                         }
                         @if (evento.inscripcionCerrada) {
                             <div class="flex items-center gap-2 text-danger">
-                                <i class="pi pi-ban"></i>
+                                <fo-icon name="no-permitido" />
                                 <span>Plazo de inscripción cerrado</span>
                             </div>
                         }
                     </div>
                     <ng-template pTemplate="footer">
                         @if (!evento.isCurrentUserInscrito) {
-                            <p-button label="Inscribir" icon="pi pi-check" [disabled]="evento.inscripcionCerrada" (click)="inscribir(evento)"></p-button>
+                            <button foButton variant="primary" [disabled]="evento.inscripcionCerrada" (click)="inscribir(evento)">
+                                <fo-icon name="check" />
+                                <span>Inscribir</span>
+                            </button>
                         } @else {
                             @if (enEspera(evento)) {
-                                <p-tag severity="warn" icon="pi pi-hourglass" value="En lista de espera" styleClass="mr-2"></p-tag>
-                                <p-button label="Cancelar" icon="pi pi-times" styleClass="p-button-danger p-button-outlined" (click)="anularInscripcion(evento)"></p-button>
+                                <fo-tag tone="warn" class="mr-2">
+                                    <fo-icon name="espera" [size]="14" />
+                                    <span>En lista de espera</span>
+                                </fo-tag>
+                                <button foButton variant="danger" (click)="anularInscripcion(evento)">
+                                    <fo-icon name="cerrar" />
+                                    <span>Cancelar</span>
+                                </button>
                             } @else {
-                                <p-tag severity="success" icon="pi pi-check" value="Plaza confirmada" styleClass="mr-2"></p-tag>
-                                <p-button label="Quitar inscripción" icon="pi pi-times" styleClass="p-button-danger p-button-outlined" (click)="anularInscripcion(evento)"></p-button>
+                                <fo-tag tone="success" class="mr-2">
+                                    <fo-icon name="check" [size]="14" />
+                                    <span>Plaza confirmada</span>
+                                </fo-tag>
+                                <button foButton variant="danger" (click)="anularInscripcion(evento)">
+                                    <fo-icon name="cerrar" />
+                                    <span>Quitar inscripción</span>
+                                </button>
                             }
                         }
                     </ng-template>

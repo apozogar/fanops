@@ -8,10 +8,12 @@ import { RippleModule } from 'primeng/ripple';
 import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 import { AuthService } from './auth.service';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-reset-password',
     standalone: true,
-    imports: [ButtonModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
+    imports: [UiButtonDirective, IconComponent, ButtonModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
     template: `
         <fo-theme-toggle [floating]="true" />
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
@@ -32,16 +34,16 @@ import { AuthService } from './auth.service';
                                 @if (error) {
                                     <div class="p-error text-center mb-4">{{ error }}</div>
                                 }
-                                <p-button label="Restablecer" styleClass="w-full" (click)="resetPassword()"></p-button>
+                                <button foButton variant="primary" class="w-full" (click)="resetPassword()">Restablecer</button>
                             </div>
                         }
 
                         @if (submitted) {
                             <div class="text-center">
-                                <i class="pi pi-check-circle text-primary" style="font-size: 3rem"></i>
+                                <fo-icon name="check-circulo" class="text-primary" style="font-size: 3rem" />
                                 <h2 class="mt-4">¡Contraseña actualizada!</h2>
                                 <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
-                                <p-button label="Ir a Iniciar Sesión" styleClass="w-full mt-4" routerLink="/auth/login"></p-button>
+                                <button foButton variant="primary" class="w-full mt-4" routerLink="/auth/login">Ir a Iniciar Sesión</button>
                             </div>
                         }
                     </div>

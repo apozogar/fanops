@@ -43,9 +43,9 @@
                                 registrarte?</a>
                         </div>
                     </div>
-                    <p-button label="Iniciar Sesión" styleClass="w-full" [loading]="loading"
-                              (click)="login()"
-                              (keyup.enter)="login()"></p-button>
+                    <button foButton variant="primary" class="w-full" [disabled]="loading"
+                            (click)="login()"
+                            (keyup.enter)="login()">{{ loading ? 'Entrando…' : 'Iniciar Sesión' }}</button>
                 </div>
             </div>
         </div>

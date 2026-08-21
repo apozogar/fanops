@@ -3,6 +3,7 @@ import { updatePrimaryPalette, updateSurfacePalette } from '@primeuix/themes';
 import { buildScale, ColorScale, DEFAULT_ACCENT, readableForegroundFor } from './color';
 
 const DARK_CLASS = 'app-dark';
+const TRANSITION_LOCK_CLASS = 'fo-theme-switching';
 const STORAGE_KEY_DARK = 'fanops.theme.dark';
 
 /**
@@ -107,8 +108,30 @@ export class ThemeService {
     }
 
     private applyDarkClass(): void {
-        document.documentElement.classList.toggle(DARK_CLASS, this.isDark());
+        this.withoutTransitions(() => {
+            document.documentElement.classList.toggle(DARK_CLASS, this.isDark());
+        });
         this.syncBrowserThemeColor();
+    }
+
+    /**
+     * Aplica un cambio de tema con las transiciones desactivadas (ver .fo-theme-switching en
+     * base.scss). Al cambiar toda la paleta de golpe, las transiciones de color se quedaban
+     * colgadas y dejaban botones y superficies con el color del tema anterior.
+     */
+    private withoutTransitions(apply: () => void): void {
+        const root = document.documentElement;
+        root.classList.add(TRANSITION_LOCK_CLASS);
+        apply();
+        // Se fuerza el recálculo de estilos para que el cambio quede ya aplicado sin
+        // transición; después se vuelven a habilitar.
+        void root.offsetHeight;
+
+        // Se usa setTimeout y no requestAnimationFrame: rAF no se ejecuta mientras la pestaña
+        // está oculta o no está pintando, y la clase se quedaría puesta dejando la aplicación
+        // sin transiciones. El recálculo forzado de arriba ya garantiza que no queda ninguna
+        // transición pendiente que pudiera arrancar al quitarla.
+        setTimeout(() => root.classList.remove(TRANSITION_LOCK_CLASS), 50);
     }
 
     /**

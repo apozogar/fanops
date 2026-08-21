@@ -3,8 +3,11 @@
     <p-toolbar styleClass="mb-6">
         <ng-template #start>
             <div class="flex flex-wrap gap-2">
-                <button pButton pRipple icon="pi pi-refresh" class="p-button-secondary" (click)="cargarPenas()" pTooltip="Refrescar" tooltipPosition="top"></button>
-                <button pButton pRipple icon="pi pi-plus" class="p-button-success" (click)="abrirNueva()">
+                <button foButton variant="secondary" size="icon" (click)="cargarPenas()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
+                    <fo-icon name="refrescar" />
+                </button>
+                <button foButton variant="primary" (click)="abrirNueva()">
+                    <fo-icon name="anadir" />
                     <span class="hidden md:inline ml-2">Nueva Peña</span>
                 </button>
             </div>
@@ -38,28 +41,28 @@
                 <td class="hidden md:table-cell">{{ pena.cuotaMenor }}</td>
                 <td class="hidden md:table-cell">{{ pena.cuentaIban }}</td>
                 <td style="min-width: 110px">
-                    <button
-                        pButton
-                        pRipple
-                        icon="pi pi-pencil"
-                        [rounded]="true"
-                        [outlined]="true"
-                        class="p-button-sm md:p-button-normal p-button-rounded p-button-success mr-2"
-                        (click)="editarPena(pena)"
-                        pTooltip="Editar Peña"
-                        tooltipPosition="top"
-                    ></button>
-                    <button
-                        pButton
-                        pRipple
-                        icon="pi pi-trash"
-                        [rounded]="true"
-                        [outlined]="true"
-                        class="p-button-sm md:p-button-normal p-button-rounded p-button-danger"
-                        (click)="eliminarPena(pena)"
-                        pTooltip="Eliminar Peña"
-                        tooltipPosition="top"
-                    ></button>
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            foButton
+                            variant="ghost"
+                            size="icon-sm"
+                            class="rounded-full"
+                            (click)="editarPena(pena)"
+                            pTooltip="Editar Peña"
+                            tooltipPosition="top"
+                            aria-label="Editar peña"
+                        ><fo-icon name="editar" [size]="16" /></button>
+                        <button
+                            foButton
+                            variant="ghost"
+                            size="icon-sm"
+                            class="rounded-full text-danger"
+                            (click)="eliminarPena(pena)"
+                            pTooltip="Eliminar Peña"
+                            tooltipPosition="top"
+                            aria-label="Eliminar peña"
+                        ><fo-icon name="eliminar" [size]="16" /></button>
+                    </div>
                 </td>
             </tr>
         </ng-template>
@@ -107,14 +110,16 @@
                                     mode="basic"
                                     name="logo"
                                     chooseLabel="Subir imagen"
-                                    chooseIcon="pi pi-upload"
                                     [auto]="true"
                                     [customUpload]="true"
                                     [accept]="formatosLogo"
                                     (onSelect)="seleccionarLogo($event)"
                                 ></p-fileUpload>
                                 @if (pena.logo) {
-                                    <p-button label="Quitar logo" icon="pi pi-trash" severity="danger" [text]="true" size="small" (onClick)="quitarLogo()"></p-button>
+                                    <button foButton variant="ghost" size="sm" class="text-danger" (click)="quitarLogo()">
+                                        <fo-icon name="eliminar" [size]="16" />
+                                        <span>Quitar logo</span>
+                                    </button>
                                 }
                                 <small class="text-muted-color">PNG, JPG, WEBP, GIF o SVG. Máximo 1 MB.</small>
                             </div>
@@ -186,7 +191,10 @@
     </ng-template>
 
     <ng-template #footer>
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="penaDialog = false" [text]="true"></p-button>
-        <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarPena()"></p-button>
+        <button foButton variant="ghost" (click)="penaDialog = false">Cancelar</button>
+        <button foButton variant="primary" (click)="guardarPena()">
+            <fo-icon name="check" />
+            <span>Guardar</span>
+        </button>
     </ng-template>
 </p-dialog>

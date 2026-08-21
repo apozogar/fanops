@@ -11,10 +11,11 @@ import {AuthService} from '../auth.service';
 import {CommonModule} from '@angular/common';
 import {Message} from "primeng/message";
 
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent, Message],
+    imports: [UiButtonDirective, CommonModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent, Message],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss']
 })

@@ -1,5 +1,6 @@
 import { Component, inject, input } from '@angular/core';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
+import { IconComponent } from '@/ui/icon/icon.component';
 
 /**
  * Selector de peña para el superadmin.
@@ -10,6 +11,7 @@ import { ActivePenaService } from '@/core/pena/active-pena.service';
 @Component({
     selector: 'fo-pena-switcher',
     standalone: true,
+    imports: [IconComponent],
     template: `
         <label class="relative flex items-center">
             <span class="sr-only">Peña activa</span>
@@ -28,7 +30,7 @@ import { ActivePenaService } from '@/core/pena/active-pena.service';
                     <option [value]="pena.id">{{ pena.nombre }}</option>
                 }
             </select>
-            <i class="pi pi-chevron-down pointer-events-none absolute right-3 text-xs text-ink-muted" aria-hidden="true"></i>
+            <fo-icon name="seleccionar" [size]="14" class="pointer-events-none absolute right-3 text-ink-muted" />
         </label>
     `
 })

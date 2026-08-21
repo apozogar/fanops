@@ -7,7 +7,7 @@
                     <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSocios }}</div>
                 </div>
                 <div class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-users text-cyan-500 text-xl!"></i>
+                    <fo-icon name="socios" [size]="22" class="text-cyan-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">{{ estadistica?.nuevosSocios }} nuevos </span>
@@ -22,7 +22,7 @@
                     <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJovenes }}</div>
                 </div>
                 <div class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-user text-orange-500 text-xl!"></i>
+                    <fo-icon name="usuario" [size]="22" class="text-orange-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">Menores de {{ estadistica?.edadMayoria }}</span>
@@ -38,7 +38,7 @@
                     <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJubilados }}</div>
                 </div>
                 <div class="flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-id-card text-purple-500 text-xl!"></i>
+                    <fo-icon name="socio" [size]="22" class="text-purple-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">Mayores de edad</span>
@@ -54,7 +54,7 @@
                     <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalImpagados }}</div>
                 </div>
                 <div class="flex items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-exclamation-triangle text-red-500 text-xl!"></i>
+                    <fo-icon name="aviso" [size]="22" class="text-red-500" />
                 </div>
             </div>
             <span class="text-primary font-medium">Cuotas devueltas</span>
@@ -70,19 +70,25 @@
     <p-toolbar styleClass="mb-6">
         <ng-template #start>
             <div class="flex flex-wrap gap-2">
-                <button pButton pRipple icon="pi pi-refresh" class="p-button-secondary" (click)="cargarSocios()" pTooltip="Refrescar" tooltipPosition="top"></button>
-                <button pButton pRipple icon="pi pi-plus" class="p-button-success" (click)="abrirNuevo()">
-                    <span class="hidden md:inline ml-2">Nuevo Socio</span>
+                <button foButton variant="secondary" size="icon" (click)="cargarSocios()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
+                    <fo-icon name="refrescar" />
                 </button>
-                <button pButton pRipple icon="pi pi-filter-fill" class="p-button-warning" (click)="cargarSocios('impagados')">
-                    <span class="hidden md:inline ml-2">Ver Impagados</span>
+                <button foButton variant="primary" (click)="abrirNuevo()">
+                    <fo-icon name="anadir" />
+                    <span class="hidden md:inline">Nuevo Socio</span>
+                </button>
+                <button foButton variant="warning" (click)="cargarSocios('impagados')">
+                    <fo-icon name="filtrar" />
+                    <span class="hidden md:inline">Ver Impagados</span>
                 </button>
                 <!-- Indicador de filtro activo -->
                 @if (filtroActivo) {
                 <div class="flex items-center gap-2">
-                    <i class="pi pi-info-circle text-blue-500"></i>
+                    <fo-icon name="info" class="text-blue-500" />
                     <span class="font-medium text-blue-700 dark:text-blue-300"> Filtrando: <b>{{ filtroActivo | titlecase }}</b> </span>
-                    <button pButton pRipple icon="pi pi-times" class="p-button-text p-button-secondary" (click)="limpiarFiltros()" pTooltip="Limpiar filtro"></button>
+                    <button foButton variant="ghost" size="icon-sm" (click)="limpiarFiltros()" pTooltip="Limpiar filtro" aria-label="Limpiar filtro">
+                        <fo-icon name="cerrar" [size]="16" />
+                    </button>
                 </div>
                 }
             </div>
@@ -92,16 +98,18 @@
             <div class="flex flex-wrap gap-2 justify-end">
                 <p-iconfield iconPosition="left">
                     <p-inputicon>
-                        <i class="pi pi-search"></i>
+                        <fo-icon name="buscar" />
                     </p-inputicon>
                     <input pInputText type="text" (input)="dt.filterGlobal($event.target.value, 'contains')" placeholder="Buscar..." />
                 </p-iconfield>
-                <button pButton pRipple icon="pi pi-credit-card" severity="info" (click)="cobrosDialog = true">
-                    <span class="hidden md:inline ml-2">Gestión de Cobros</span>
+                <button foButton variant="info" (click)="cobrosDialog = true">
+                    <fo-icon name="banco" />
+                    <span class="hidden md:inline">Gestión de Cobros</span>
                 </button>
                 <input type="file" #fileUpload style="display: none" (change)="onFileSelect($event)" accept=".xlsx, .xls" />
-                <button pButton pRipple icon="pi pi-upload" severity="secondary" (click)="fileUpload.click()">
-                    <span class="hidden md:inline ml-2">Importar</span>
+                <button foButton variant="secondary" (click)="fileUpload.click()">
+                    <fo-icon name="subir" />
+                    <span class="hidden md:inline">Importar</span>
                 </button>
             </div>
         </ng-template>
@@ -140,39 +148,38 @@
                     <p-tag [severity]="socio.activo ? 'success' : 'danger'" [value]="socio.activo ? 'Activo' : 'Inactivo'" />
                 </td>
                 <td style="min-width: 130px">
+                    <div class="flex items-center gap-1.5">
                     <button
-                        pButton
-                        pRipple
-                        icon="pi pi-euro"
-                        [rounded]="true"
-                        [outlined]="true"
-                        class="p-button-sm md:p-button-normal p-button-rounded p-button-info mr-2"
+                        foButton
+                        variant="ghost"
+                        size="icon-sm"
+                        class="rounded-full"
                         (click)="mostrarCuotas(socio)"
                         pTooltip="Ver Cuotas"
                         tooltipPosition="top"
-                    ></button>
+                        aria-label="Ver cuotas"
+                    ><fo-icon name="euro" [size]="16" /></button>
                     <button
-                        pButton
-                        pRipple
-                        icon="pi pi-pencil"
-                        [rounded]="true"
-                        [outlined]="true"
-                        class="p-button-sm md:p-button-normal p-button-rounded p-button-success mr-2"
+                        foButton
+                        variant="ghost"
+                        size="icon-sm"
+                        class="rounded-full"
                         (click)="editarSocio(socio)"
                         pTooltip="Editar Socio"
                         tooltipPosition="top"
-                    ></button>
+                        aria-label="Editar socio"
+                    ><fo-icon name="editar" [size]="16" /></button>
                     <button
-                        pButton
-                        pRipple
-                        icon="pi pi-trash"
-                        [rounded]="true"
-                        [outlined]="true"
-                        class="p-button-sm md:p-button-normal p-button-rounded p-button-danger"
+                        foButton
+                        variant="ghost"
+                        size="icon-sm"
+                        class="rounded-full text-danger"
                         (click)="eliminarSocio(socio)"
                         pTooltip="Eliminar Socio"
                         tooltipPosition="top"
-                    ></button>
+                        aria-label="Eliminar socio"
+                    ><fo-icon name="eliminar" [size]="16" /></button>
+                    </div>
                 </td>
             </tr>
         </ng-template>
@@ -304,8 +311,11 @@
     </ng-template>
 
     <ng-template #footer>
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="socioDialog = false" [text]="true"></p-button>
-        <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarSocio()"></p-button>
+        <button foButton variant="ghost" (click)="socioDialog = false">Cancelar</button>
+        <button foButton variant="primary" (click)="guardarSocio()">
+            <fo-icon name="check" />
+            <span>Guardar</span>
+        </button>
     </ng-template>
 </p-dialog>
 

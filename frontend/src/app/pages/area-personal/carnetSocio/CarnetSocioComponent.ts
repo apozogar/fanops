@@ -17,10 +17,12 @@ import { CuotasSocioTableComponent } from '@/components/cuotas-socio-table/cuota
 import { SocioFormComponent } from '@/components/socio-form/socio-form.component';
 import { environment } from '../../../../environments/environment';
 
+import { IconComponent } from '@/ui/icon/icon.component';
+import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-carnet-socio',
     standalone: true,
-    imports: [CardModule, TableModule, BadgeModule, ButtonModule, Tooltip, DialogModule, InputTextModule, FormsModule, ToastModule, Carousel, CuotasSocioTableComponent, SocioFormComponent],
+    imports: [UiButtonDirective, IconComponent, CardModule, TableModule, BadgeModule, ButtonModule, Tooltip, DialogModule, InputTextModule, FormsModule, ToastModule, Carousel, CuotasSocioTableComponent, SocioFormComponent],
     providers: [MessageService],
     templateUrl: 'CarnetSocioComponent.html',
     styleUrl: 'CarnetSocioComponent.scss'

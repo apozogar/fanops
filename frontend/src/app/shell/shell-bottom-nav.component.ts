@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
 
 /**
@@ -12,7 +13,7 @@ import { NavItem } from './navigation';
 @Component({
     selector: 'fo-shell-bottom-nav',
     standalone: true,
-    imports: [RouterLink, RouterLinkActive],
+    imports: [RouterLink, RouterLinkActive, IconComponent],
     template: `
         <nav
             class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface lg:hidden"
@@ -29,7 +30,7 @@ import { NavItem } from './navigation';
                             [attr.aria-current]="link.isActive ? 'page' : null"
                             class="flex h-full flex-col items-center justify-center gap-1 px-1 text-ink-muted transition-colors active:bg-surface-hover"
                         >
-                            <i [class]="item.icon" class="text-lg leading-none" aria-hidden="true"></i>
+                            <fo-icon [name]="item.icon" [size]="20" />
                             <span class="w-full truncate text-center text-[0.6875rem] leading-tight">{{ item.shortLabel }}</span>
                         </a>
                     </li>
@@ -41,7 +42,7 @@ import { NavItem } from './navigation';
                             (click)="more.emit()"
                             class="flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-ink-muted transition-colors active:bg-surface-hover"
                         >
-                            <i class="pi pi-ellipsis-h text-lg leading-none" aria-hidden="true"></i>
+                            <fo-icon name="mas-opciones" [size]="20" />
                             <span class="text-[0.6875rem] leading-tight">Más</span>
                         </button>
                     </li>
