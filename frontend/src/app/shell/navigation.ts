@@ -36,6 +36,13 @@ const AREA_PERSONAL: NavSection = {
             route: '/carnet-socio'
         },
         {
+            id: 'cuotas',
+            label: 'Mis cuotas',
+            shortLabel: 'Cuotas',
+            icon: 'euro',
+            route: '/cuotas-socio'
+        },
+        {
             id: 'inscripciones',
             label: 'Inscripción a eventos',
             shortLabel: 'Inscribirme',

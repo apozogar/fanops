@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { ShellComponent } from '@/shell/shell.component';
 import { Notfound } from '@/pages/notfound/notfound';
 import { CarnetSocioComponent } from '@/pages/area-personal/carnetSocio/CarnetSocioComponent';
+import { CuotasSocioComponent } from '@/pages/area-personal/cuotasSocio/CuotasSocioComponent';
 import { InscripcionPublicaComponent } from '@/pages/publico/inscripcion-publica/inscripcion-publica.component';
 import { InscripcionEventosComponent } from '@/pages/area-personal/inscripcion-eventos/inscripcion-eventos.component';
 import { adminGuard } from '@/guards/admin.guard';
@@ -49,6 +50,10 @@ export const appRoutes: Routes = [
             {
                 path: 'carnet-socio',
                 component: CarnetSocioComponent
+            },
+            {
+                path: 'cuotas-socio',
+                component: CuotasSocioComponent
             },
             {
                 path: 'inscripciones',

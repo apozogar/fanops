@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import {finalize} from 'rxjs';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
@@ -52,6 +53,9 @@ export class SociosComponent implements OnInit {
     socioDialog: boolean = false;
     loading: boolean = false;
     submitted: boolean = false;
+
+    /** Guardado en vuelo: alimenta el indicador del botón y evita un doble envío. */
+    guardando = false;
 
     filtroActivo: string | null = null;
     cobrosDialog: boolean = false;
@@ -129,6 +133,11 @@ export class SociosComponent implements OnInit {
     guardarSocio(): void {
         this.submitted = true;
 
+        if (this.guardando) {
+            return;
+        }
+        this.guardando = true;
+
         // Preparamos los roles basados en el checkbox
         const rolesParaGuardar: Role[] = [];
         if (this.isAdmin && this.adminRole) {
@@ -144,7 +153,7 @@ export class SociosComponent implements OnInit {
         }
 
         if (this.socio.uid) {
-            this.socioService.actualizarSocio(this.socio.uid, this.socio).subscribe({
+            this.socioService.actualizarSocio(this.socio.uid, this.socio).pipe(finalize(() => (this.guardando = false))).subscribe({
                 next: () => {
                     this.messageService.add({
                         severity: 'success',
@@ -156,7 +165,7 @@ export class SociosComponent implements OnInit {
                 }
             });
         } else {
-            this.socioService.crearSocio(this.socio).subscribe({
+            this.socioService.crearSocio(this.socio).pipe(finalize(() => (this.guardando = false))).subscribe({
                 next: () => {
                     this.messageService.add({
                         severity: 'success',

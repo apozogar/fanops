@@ -1,4 +1,4 @@
-import { Directive, computed, input } from '@angular/core';
+import { Directive, booleanAttribute, computed, input } from '@angular/core';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'success' | 'warning' | 'info' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm';
@@ -33,25 +33,43 @@ const SIZES: Record<ButtonSize, string> = {
     'icon-sm': 'p-0 w-9 h-9 shrink-0'
 };
 
+/** Clase que activa el indicador de carga. Su aspecto está en base.scss. */
+const LOADING_CLASS = 'fo-btn-loading';
+
 /**
  * Botón propio, aplicable a cualquier `<button>` o `<a>` nativo.
  *
  * Sustituye a pButton: se estiliza por completo con los tokens de theme.scss, así que el color
  * de la peña lo tiñe sin tener que pelearse con el tema de PrimeNG.
  *
+ * Con `loading` en true muestra un indicador de carga en lugar del contenido. El contenido se
+ * oculta sin salir del flujo, así que el botón no cambia de tamaño mientras espera.
+ *
+ * IMPORTANTE: `loading` no desactiva el botón por sí solo. La directiva no toca `disabled` a
+ * propósito, porque colisionaría con el `[disabled]` que ponga cada plantilla; hay que incluir
+ * la bandera en la propia expresión, como en el ejemplo.
+ *
  * @example <button foButton variant="primary">Guardar</button>
+ * @example <button foButton variant="primary" [loading]="guardando" [disabled]="guardando || form.invalid">…</button>
  * @example <button foButton variant="ghost" size="icon" class="rounded-full">…</button>
  */
 @Directive({
     selector: '[foButton]',
     standalone: true,
     host: {
-        '[class]': 'classes()'
+        '[class]': 'classes()',
+        '[attr.aria-busy]': 'loading() ? true : null'
     }
 })
 export class UiButtonDirective {
     readonly variant = input<ButtonVariant>('secondary');
     readonly size = input<ButtonSize>('md');
 
-    protected readonly classes = computed(() => `${BASE} ${VARIANTS[this.variant()]} ${SIZES[this.size()]}`);
+    /** Muestra el indicador de carga en lugar del contenido del botón. */
+    readonly loading = input(false, { transform: booleanAttribute });
+
+    protected readonly classes = computed(() => {
+        const base = `${BASE} ${VARIANTS[this.variant()]} ${SIZES[this.size()]}`;
+        return this.loading() ? `${base} ${LOADING_CLASS}` : base;
+    });
 }

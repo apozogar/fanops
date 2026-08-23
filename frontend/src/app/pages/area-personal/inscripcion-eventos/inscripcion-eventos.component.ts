@@ -1,4 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
+import {finalize} from 'rxjs';
 import {CommonModule} from '@angular/common';
 import {EventoInscripcionDTO} from "@/interfaces/evento-inscripcion.dto";
 import {EventoService} from '@/services/evento.service';
@@ -24,6 +25,13 @@ export class InscripcionEventosComponent implements OnInit {
     eventos: EventoInscripcionDTO[] = [];
     loading = true;
 
+    /**
+     * Eventos con una inscripción o anulación en vuelo. Se guarda por uid, y no con una única
+     * bandera, para que el indicador salga solo en el botón que se ha pulsado y no en todas las
+     * tarjetas del listado.
+     */
+    private readonly accionesEnCurso = new Set<string>();
+
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
 
@@ -46,10 +54,20 @@ export class InscripcionEventosComponent implements OnInit {
         });
     }
 
-    inscribir(evento: EventoInscripcionDTO) {
-        if (!evento.uid) return;
+    /** true si el evento tiene una inscripción o anulación en curso. */
+    enCurso(evento: EventoInscripcionDTO): boolean {
+        return !!evento.uid && this.accionesEnCurso.has(evento.uid);
+    }
 
-        this.eventoService.inscribir(evento.uid).subscribe({
+    inscribir(evento: EventoInscripcionDTO) {
+        if (!evento.uid || this.enCurso(evento)) return;
+
+        const uid = evento.uid;
+        this.accionesEnCurso.add(uid);
+
+        this.eventoService.inscribir(evento.uid).pipe(
+            finalize(() => this.accionesEnCurso.delete(uid))
+        ).subscribe({
             next: (resp) => {
                 evento.isCurrentUserInscrito = true;
                 evento.estadoInscripcionActual = resp.data;
@@ -68,9 +86,14 @@ export class InscripcionEventosComponent implements OnInit {
     }
 
     anularInscripcion(evento: EventoInscripcionDTO) {
-        if (!evento.uid) return;
+        if (!evento.uid || this.enCurso(evento)) return;
 
-        this.eventoService.anularInscripcion(evento.uid).subscribe({
+        const uid = evento.uid;
+        this.accionesEnCurso.add(uid);
+
+        this.eventoService.anularInscripcion(evento.uid).pipe(
+            finalize(() => this.accionesEnCurso.delete(uid))
+        ).subscribe({
             next: () => {
                 evento.isCurrentUserInscrito = false;
                 evento.estadoInscripcionActual = null;

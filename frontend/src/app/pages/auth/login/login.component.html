@@ -43,9 +43,9 @@
                                 registrarte?</a>
                         </div>
                     </div>
-                    <button foButton variant="primary" class="w-full" [disabled]="loading"
+                    <button foButton variant="primary" class="w-full" [loading]="loading" [disabled]="loading"
                             (click)="login()"
-                            (keyup.enter)="login()">{{ loading ? 'Entrando…' : 'Iniciar Sesión' }}</button>
+                            (keyup.enter)="login()"><span>Iniciar Sesión</span></button>
                 </div>
             </div>
         </div>

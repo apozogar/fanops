@@ -191,8 +191,8 @@
     </ng-template>
 
     <ng-template #footer>
-        <button foButton variant="ghost" (click)="penaDialog = false">Cancelar</button>
-        <button foButton variant="primary" (click)="guardarPena()">
+        <button foButton variant="ghost" [disabled]="guardando" (click)="penaDialog = false"><span>Cancelar</span></button>
+        <button foButton variant="primary" [loading]="guardando" [disabled]="guardando" (click)="guardarPena()">
             <fo-icon name="check" />
             <span>Guardar</span>
         </button>

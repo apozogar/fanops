@@ -1,4 +1,5 @@
 import {Component, OnInit} from '@angular/core';
+import {finalize} from 'rxjs';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
@@ -46,6 +47,9 @@ export class PenasComponent implements OnInit {
     loading: boolean = false;
     submitted: boolean = false;
 
+    /** Guardado en vuelo: alimenta el indicador del botón y evita un doble envío. */
+    guardando = false;
+
     constructor(
         private readonly penaService: PenaService,
         private readonly messageService: MessageService,
@@ -90,14 +94,16 @@ export class PenasComponent implements OnInit {
 
     guardarPena(): void {
         this.submitted = true;
-        if (!this.pena.nombre) {
+        if (!this.pena.nombre || this.guardando) {
             return;
         }
+
+        this.guardando = true;
 
         const {id, ...datos} = this.pena;
 
         if (id) {
-            this.penaService.actualizar(id, datos).subscribe({
+            this.penaService.actualizar(id, datos).pipe(finalize(() => (this.guardando = false))).subscribe({
                 next: (response) => {
                     this.messageService.add({severity: 'success', summary: 'Éxito', detail: 'Peña actualizada'});
                     this.activePena.actualizada(response.data);
@@ -107,7 +113,7 @@ export class PenasComponent implements OnInit {
                 error: (err) => this.mostrarError(err, 'No se pudo actualizar la peña.')
             });
         } else {
-            this.penaService.crear(datos).subscribe({
+            this.penaService.crear(datos).pipe(finalize(() => (this.guardando = false))).subscribe({
                 next: () => {
                     this.messageService.add({severity: 'success', summary: 'Éxito', detail: 'Peña creada'});
                     this.cargarPenas();

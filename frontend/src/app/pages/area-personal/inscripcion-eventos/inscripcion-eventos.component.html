@@ -56,7 +56,13 @@
                     </div>
                     <ng-template pTemplate="footer">
                         @if (!evento.isCurrentUserInscrito) {
-                            <button foButton variant="primary" [disabled]="evento.inscripcionCerrada" (click)="inscribir(evento)">
+                            <button
+                                foButton
+                                variant="primary"
+                                [loading]="enCurso(evento)"
+                                [disabled]="evento.inscripcionCerrada || enCurso(evento)"
+                                (click)="inscribir(evento)"
+                            >
                                 <fo-icon name="check" />
                                 <span>Inscribir</span>
                             </button>
@@ -66,7 +72,13 @@
                                     <fo-icon name="espera" [size]="14" />
                                     <span>En lista de espera</span>
                                 </fo-tag>
-                                <button foButton variant="danger" (click)="anularInscripcion(evento)">
+                                <button
+                                    foButton
+                                    variant="danger"
+                                    [loading]="enCurso(evento)"
+                                    [disabled]="enCurso(evento)"
+                                    (click)="anularInscripcion(evento)"
+                                >
                                     <fo-icon name="cerrar" />
                                     <span>Cancelar</span>
                                 </button>
@@ -75,7 +87,13 @@
                                     <fo-icon name="check" [size]="14" />
                                     <span>Plaza confirmada</span>
                                 </fo-tag>
-                                <button foButton variant="danger" (click)="anularInscripcion(evento)">
+                                <button
+                                    foButton
+                                    variant="danger"
+                                    [loading]="enCurso(evento)"
+                                    [disabled]="enCurso(evento)"
+                                    (click)="anularInscripcion(evento)"
+                                >
                                     <fo-icon name="cerrar" />
                                     <span>Quitar inscripción</span>
                                 </button>

@@ -1,0 +1,14 @@
+<div class="cuotas-container">
+    <div class="cuotas-header-main">
+        <h2>{{ penaInfo?.nombre || 'Cargando...' }}</h2>
+        <h3>Mis Cuotas</h3>
+    </div>
+
+    @for (socio of socios; track socio.numeroSocio) {
+        <div class="history-table-container">
+            <p-card [header]="socios.length > 1 ? ('Nº Socio ' + socio.numeroSocio + ' - ' + socio.nombre) : 'Historial de Cuotas'">
+                <app-cuotas-socio-table [cuotas]="socio.cuotas"></app-cuotas-socio-table>
+            </p-card>
+        </div>
+    }
+</div>

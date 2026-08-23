@@ -135,6 +135,55 @@
     transition: none !important;
 }
 
+/*
+ * Indicador de carga de los botones (la activa foButton con [loading]).
+ *
+ * El contenido se oculta con visibility y no con display, para que siga ocupando su sitio y el
+ * botón no cambie de tamaño al empezar a cargar. El indicador usa currentColor, así que sigue
+ * al color del botón (y por tanto al de la peña en el primario) sin configurar nada.
+ *
+ * Nota: se ocultan los hijos ELEMENTO. El contenido de un botón que pueda cargar debe ir
+ * envuelto (por ejemplo en un <span>), no como texto suelto.
+ */
+.fo-btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.fo-btn-loading > * {
+    visibility: hidden;
+}
+
+.fo-btn-loading::after {
+    content: '';
+    position: absolute;
+    /* inset + margin auto centra de forma determinista, sin depender de cómo resuelva cada
+       navegador la posición estática de un absoluto dentro de un contenedor flex. */
+    inset: 0;
+    margin: auto;
+    width: 1.05em;
+    height: 1.05em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: var(--fo-radius-full);
+    animation: fo-spin 0.6s linear infinite;
+}
+
+@keyframes fo-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Respeta a quien pide menos movimiento: el indicador deja de girar y se marca con opacidad. */
+@media (prefers-reduced-motion: reduce) {
+    .fo-btn-loading::after {
+        animation: none;
+        border-right-color: currentColor;
+        opacity: 0.4;
+    }
+}
+
 .card {
     background: var(--fo-surface);
     border: 1px solid var(--fo-border);

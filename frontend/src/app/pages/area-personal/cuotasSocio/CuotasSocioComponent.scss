@@ -1,0 +1,42 @@
+:host {
+    display: flex;
+    justify-content: center;
+}
+
+.cuotas-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+
+    @media (max-width: 768px) {
+        padding: 0.5rem;
+    }
+}
+
+.cuotas-header-main {
+    margin-bottom: 1rem;
+
+    h2, h3 {
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+    }
+
+    h3 {
+        font-size: 0.9rem;
+        font-weight: normal;
+    }
+}
+
+.history-table-container {
+    margin-top: 1rem;
+    width: 100%;
+
+    &:first-child {
+        margin-top: 0;
+    }
+}

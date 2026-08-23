@@ -24,9 +24,9 @@
                 <span class="font-bold text-lg">1. Generar Remesa SEPA</span>
             </div>
             <p class="text-muted-color">Crea el fichero XML con las cuotas semestrales pendientes de cobro. Este es el fichero que debes subir a tu banca online (CaixaBankNow).</p>
-            <button foButton variant="primary" (click)="generarYDescargarRemesa()" [disabled]="loadingGenerar">
+            <button foButton variant="primary" [loading]="loadingGenerar" [disabled]="loadingGenerar" (click)="generarYDescargarRemesa()">
                 <fo-icon name="exportar" />
-                <span>{{ loadingGenerar ? 'Generando…' : 'Generar y Descargar' }}</span>
+                <span>Generar y Descargar</span>
             </button>
         </div>
 
@@ -50,9 +50,9 @@
                     <span class="font-bold text-lg">3. Confirmar Pagos</span>
                 </div>
                 <p class="text-muted-color"><b>Paso final:</b> Una vez procesadas las devoluciones, pulsa aquí para marcar todas las cuotas que siguen 'Pendientes' como 'Pagadas'.</p>
-                <button foButton variant="success" (click)="confirmarPagosPendientes()" [disabled]="loadingConfirmar">
+                <button foButton variant="success" [loading]="loadingConfirmar" [disabled]="loadingConfirmar" (click)="confirmarPagosPendientes()">
                     <fo-icon name="confirmar" />
-                    <span>{{ loadingConfirmar ? 'Confirmando…' : 'Confirmar Pagos Correctos' }}</span>
+                    <span>Confirmar Pagos Correctos</span>
                 </button>
             </div>
         }

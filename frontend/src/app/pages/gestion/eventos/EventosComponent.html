@@ -204,10 +204,11 @@
         <div *ngIf="eventoSeleccionado" class="mb-4">
             <span class="font-semibold">{{ eventoSeleccionado.nombreEvento }}</span>
             <button foButton variant="primary" class="ml-4"
+                    [loading]="asignandoPlazas"
                     [disabled]="enEspera.length === 0 || asignandoPlazas"
                     (click)="asignarPlazas()">
                 <fo-icon name="usuario-nuevo" />
-                <span>{{ asignandoPlazas ? 'Asignando…' : 'Asignar plazas de espera' }}</span>
+                <span>Asignar plazas de espera</span>
             </button>
         </div>
 

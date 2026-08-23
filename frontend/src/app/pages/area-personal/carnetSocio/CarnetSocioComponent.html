@@ -1,75 +1,51 @@
 <div class="carnet-container">
-    <!-- La cabecera ahora es un título general sobre las pestañas -->
     <div class="carnet-header-main flex space-around">
         <div class="carnet-title">
             <h2>{{ penaInfo?.nombre || 'Cargando...' }}</h2>
+            <h3>Mis Carnets de Socio</h3>
         </div>
         <div class="header-icons">
             <fo-icon name="anadir" class="add-icon" pTooltip="Añadir Nuevo Socio"  (click)="abrirDialogoNuevoSocio()" />
         </div>
     </div>
 
-    <p-tabs value="carnet" class="carnet-tabs">
-        <p-tablist>
-            <p-tab value="carnet">Carnet</p-tab>
-            <p-tab value="cuotas">Cuotas</p-tab>
-        </p-tablist>
-        <p-tabpanels>
-            <!-- Pestaña del carnet: solo el carrusel de carnets, sin el historial -->
-            <p-tabpanel value="carnet">
-                <p-carousel [value]="socios" [numVisible]="1" [numScroll]="1" [circular]="false" styleClass="full-width-carousel" [showNavigators]="socios.length > 1" [showIndicators]="socios.length > 1">
-                    <ng-template let-socio pTemplate="item">
-                        <div class="carnet-slide">
-                            <p-card class="carnet-card">
-                                <!-- Cuerpo del carnet con la información del socio -->
-                                <div class="carnet-body">
-                                    @if (penaInfo?.logo) {
-                                    <img [src]="penaInfo?.logo" alt="Logo de la Peña" class="profile-pic" />
-                                    }
-                                    <div class="socio-info">
-                                        <div class="info-row">
-                                            <span class="label">Nº Socio:</span>
-                                            <span class="value">{{ socio?.numeroSocio || '...' }}</span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="label">Nombre:</span>
-                                            <span class="value">{{ socio?.nombre || 'Cargando...' }}</span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="label">DNI:</span>
-                                            <span class="value">{{ socio?.dni || '...' }}</span>
-                                        </div>
-                                        <div class="info-row">
-                                            <span class="label">Teléfono:</span>
-                                            <span class="value">{{ socio?.telefono || '...' }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Pie de página del carnet -->
-                                <div class="carnet-footer">
-                                    <p>{{ penaInfo?.lema || '...' }}</p>
-                                </div>
-                            </p-card>
+    <p-carousel [value]="socios" [numVisible]="1" [numScroll]="1" [circular]="false" styleClass="full-width-carousel" [showNavigators]="socios.length > 1" [showIndicators]="socios.length > 1">
+        <ng-template let-socio pTemplate="item">
+            <div class="carnet-slide">
+                <p-card class="carnet-card">
+                    <!-- Cuerpo del carnet con la información del socio -->
+                    <div class="carnet-body">
+                        @if (penaInfo?.logo) {
+                        <img [src]="penaInfo?.logo" alt="Logo de la Peña" class="profile-pic" />
+                        }
+                        <div class="socio-info">
+                            <div class="info-row">
+                                <span class="label">Nº Socio:</span>
+                                <span class="value">{{ socio?.numeroSocio || '...' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Nombre:</span>
+                                <span class="value">{{ socio?.nombre || 'Cargando...' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">DNI:</span>
+                                <span class="value">{{ socio?.dni || '...' }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Teléfono:</span>
+                                <span class="value">{{ socio?.telefono || '...' }}</span>
+                            </div>
                         </div>
-                    </ng-template>
-                </p-carousel>
-            </p-tabpanel>
+                    </div>
 
-            <!-- Pestaña de cuotas: historial de pagos de cada socio -->
-            <p-tabpanel value="cuotas">
-                <div class="cuotas-list">
-                    @for (socio of socios; track socio.numeroSocio) {
-                        <div class="history-table-container">
-                            <p-card [header]="socios.length > 1 ? ('Nº Socio ' + socio.numeroSocio + ' - ' + socio.nombre) : 'Historial de Cuotas'">
-                                <app-cuotas-socio-table [cuotas]="socio.cuotas"></app-cuotas-socio-table>
-                            </p-card>
-                        </div>
-                    }
-                </div>
-            </p-tabpanel>
-        </p-tabpanels>
-    </p-tabs>
+                    <!-- Pie de página del carnet -->
+                    <div class="carnet-footer">
+                        <p>{{ penaInfo?.lema || '...' }}</p>
+                    </div>
+                </p-card>
+            </div>
+        </ng-template>
+    </p-carousel>
 </div>
 
 <!-- Dialogo para añadir nuevo socio -->

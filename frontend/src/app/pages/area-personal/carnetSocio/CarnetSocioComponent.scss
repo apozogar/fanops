@@ -143,15 +143,6 @@
     }
 }
 
-.history-table-container {
-    margin-top: 1rem;
-    width: 100%;
-
-    &:first-child {
-        margin-top: 0;
-    }
-}
-
 .p-card.p-component.p-card-header {
     background-color: var(--primary-pena-color);
 }
@@ -173,14 +164,4 @@
 .carnet-slide {
     padding: 0.5rem; // Un pequeño padding para que no se pegue a los bordes
     box-sizing: border-box;
-}
-
-// La pestaña seleccionada usa también el color de la peña
-:host ::ng-deep .carnet-tabs {
-    .p-tab {
-        &.p-tab-active {
-            border-color: var(--primary-pena-color);
-            color: var(--primary-pena-color);
-        }
-    }
 }

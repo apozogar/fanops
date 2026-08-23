@@ -71,10 +71,11 @@
                                [(ngModel)]="telefono" placeholder="Para avisarte por WhatsApp"/>
                     </div>
                     <button foButton variant="primary" class="mt-2"
+                            [loading]="enviando"
                             [disabled]="!formularioValido || enviando"
                             (click)="inscribirse()">
                         <fo-icon name="check" />
-                        <span>{{ enviando ? 'Enviando…' : 'Apuntarme en lista de espera' }}</span>
+                        <span>Apuntarme en lista de espera</span>
                     </button>
                     <span class="text-xs text-muted-color">Al apuntarte aceptas que te avisemos por email o
                         WhatsApp cuando haya hueco disponible.</span>
