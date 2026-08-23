@@ -36,7 +36,7 @@ public class SmtpEmailSender implements EmailSender {
       mensaje.setSubject(asunto);
       mensaje.setText(cuerpo);
       mailSender.send(mensaje);
-      log.info("Email enviado por SMTP a {} (asunto: {})", destinatario, asunto);
+      log.info("Email enviado por SMTP a {} (asunto: {}):\n cuerpo {}", destinatario, asunto, cuerpo);
     } catch (Exception e) {
       throw new EmailNoEnviadoException(
           "No se pudo enviar el correo por SMTP a " + destinatario, e);

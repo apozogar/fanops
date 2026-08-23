@@ -234,24 +234,24 @@ public class SocioService {
     Long penaId = pena.getId();
 
     long totalSocios = socioRepository.countByPenaId(penaId);
-    long nuevosSocios = socioRepository.countByFechaAltaGreaterThanEqualAndPenaId(fechaDesde,
-        penaId);
+    long nuevosSocios =
+        socioRepository.countByFechaAltaGreaterThanEqualAndPenaId(fechaDesde, penaId);
 
     Integer edadMayoria = pena.getEdadMayoria() != null ? pena.getEdadMayoria() : 18;
     LocalDate fechaCorteJovenes = LocalDate.now().minusYears(edadMayoria);
-    long totalSociosJovenes = socioRepository.countByFechaNacimientoAfterAndPenaId(
-        fechaCorteJovenes, penaId);
+    long totalSociosJovenes =
+        socioRepository.countByFechaNacimientoAfterAndPenaId(fechaCorteJovenes, penaId);
 
     // Calculamos la fecha de corte para ser jubilado
     Integer edadJubilacion = pena.getEdadJubilacion() != null ? pena.getEdadJubilacion() : 65;
     LocalDate fechaCorteJubilados = LocalDate.now().minusYears(edadJubilacion);
-    long totalSociosJubilados = socioRepository.countByFechaNacimientoBeforeOrEqualsAndPenaId(
-        fechaCorteJubilados, penaId);
+    long totalSociosJubilados =
+        socioRepository.countByFechaNacimientoBeforeOrEqualsAndPenaId(fechaCorteJubilados, penaId);
 
     List<EstadoCuota> estadosImpagados = List.of(EstadoCuota.RECHAZADA, EstadoCuota.VENCIDA);
     int totalImpagados = cuotaRepository.countDistinctSociosByEstadoIn(estadosImpagados, penaId);
 
-    return new SocioStatsDto(totalSocios, nuevosSocios, totalSociosJovenes, pena.getEdadMayoria(),
+    return new SocioStatsDto(totalSocios, nuevosSocios, totalSociosJovenes, edadMayoria,
         totalSociosJubilados, edadJubilacion, totalImpagados);
   }
 
@@ -279,15 +279,14 @@ public class SocioService {
       for (int sheetIndex = 0; sheetIndex < sheetNum; sheetIndex++) {
         Sheet sheet = workbook.getSheetAt(sheetIndex);
         // Creamos un formateador que acepta múltiples patrones de fecha
-        DateTimeFormatter dateFormatter = new DateTimeFormatterBuilder()
-            .appendOptional(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd-MM-yy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd MM yyyy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd - MM - yyyy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd /MM /yyyy"))
-            .appendOptional(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-            .toFormatter();
+        DateTimeFormatter dateFormatter =
+            new DateTimeFormatterBuilder().appendOptional(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd-MM-yy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd MM yyyy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd - MM - yyyy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd /MM /yyyy"))
+                .appendOptional(DateTimeFormatter.ofPattern("dd.MM.yyyy")).toFormatter();
 
         // Saltamos la primera fila (cabecera)
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
@@ -378,8 +377,8 @@ public class SocioService {
   }
 
   public List<SocioEntity> obtenerSocioAutenticado() {
-    String userEmail = Objects.requireNonNull(
-        SecurityContextHolder.getContext().getAuthentication()).getName();
+    String userEmail =
+        Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
     // Asumimos que un usuario tiene al menos una ficha de socio.
     // Esta lógica busca la primera que encuentra asociada a su email.
     return socioRepository.findByUsuarioEmail(userEmail);
@@ -387,15 +386,16 @@ public class SocioService {
 
   @Transactional(readOnly = true)
   public CarnetDto obtenerDatosCarnetUsuarioAutenticado() {
-    String userEmail = Objects.requireNonNull(
-        SecurityContextHolder.getContext().getAuthentication()).getName();
+    String userEmail =
+        Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
 
     // 1. Obtener la información de la peña de trabajo del usuario autenticado
     PenaEntity penaInfo = usuarioService.obtenerPenaDelUsuarioAutenticado();
 
     // 2. Obtener todos los socios del usuario y mapearlos a DTOs
-    List<SocioDto> sociosDto = socioRepository.findByUsuarioEmail(userEmail).stream()
-        .map(SocioDto::fromEntity).collect(Collectors.toList());
+    List<SocioDto> sociosDto =
+        socioRepository.findByUsuarioEmail(userEmail).stream().map(SocioDto::fromEntity)
+            .collect(Collectors.toList());
 
     return new CarnetDto(penaInfo, sociosDto);
   }
@@ -405,9 +405,8 @@ public class SocioService {
     String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
     // 2. Buscar el usuario principal en la base de datos
-    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail)
-        .orElseThrow(
-            () -> new UsernameNotFoundException("Usuario no encontrado con email: " + userEmail));
+    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail).orElseThrow(
+        () -> new UsernameNotFoundException("Usuario no encontrado con email: " + userEmail));
 
     // 3. Crear y configurar la nueva entidad Socio
     SocioEntity nuevoSocio = new SocioEntity();
@@ -424,8 +423,8 @@ public class SocioService {
 
     // Si no se proporciona un número de cuenta, hereda el del socio principal.
     if (nuevoSocioData.getNumeroCuenta() == null || nuevoSocioData.getNumeroCuenta().isBlank()) {
-      SocioEntity socioPrincipal = usuario.getSocios().stream().findFirst()
-          .orElseThrow(() -> new IllegalStateException(
+      SocioEntity socioPrincipal = usuario.getSocios().stream().findFirst().orElseThrow(
+          () -> new IllegalStateException(
               "El usuario no tiene un socio principal para heredar la cuenta."));
       nuevoSocio.setNumeroCuenta(socioPrincipal.getNumeroCuenta());
     } else {
