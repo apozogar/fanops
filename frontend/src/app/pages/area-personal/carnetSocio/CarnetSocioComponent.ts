@@ -10,6 +10,7 @@ import { Tooltip } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
+import { TabsModule } from 'primeng/tabs';
 import { CarnetDto, Pena, Socio } from '@/interfaces/socio.interface';
 import { ApiResponse } from '@/interfaces/api-response.interface';
 import { Carousel } from 'primeng/carousel';
@@ -22,7 +23,7 @@ import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-carnet-socio',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, CardModule, TableModule, BadgeModule, ButtonModule, Tooltip, DialogModule, InputTextModule, FormsModule, ToastModule, Carousel, CuotasSocioTableComponent, SocioFormComponent],
+    imports: [UiButtonDirective, IconComponent, CardModule, TableModule, BadgeModule, ButtonModule, Tooltip, DialogModule, InputTextModule, FormsModule, ToastModule, TabsModule, Carousel, CuotasSocioTableComponent, SocioFormComponent],
     providers: [MessageService],
     templateUrl: 'CarnetSocioComponent.html',
     styleUrl: 'CarnetSocioComponent.scss'
