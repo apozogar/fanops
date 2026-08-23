@@ -28,6 +28,23 @@ export interface EventoInscripcionDTO {
   misSocios: SocioInscripcion[];
 }
 
+export type MotivoFalta = 'NO_PRESENTADO' | 'CANCELACION_TARDIA';
+
+/**
+ * Falta de un socio en un evento. Llega desde las faltas y no desde las inscripciones porque una
+ * cancelación tardía borra la inscripción: quien anuló fuera de plazo solo aparece aquí.
+ */
+export interface FaltaEvento {
+  uid: string;
+  socioUid: string;
+  numeroSocio?: number | null;
+  nombre: string;
+  motivo: MotivoFalta;
+  fechaRegistro: Date;
+  penalizacionesRestantes: number;
+  faltasAcumuladas: number;
+}
+
 /** Petición de inscripción de una o varias fichas de socio. */
 export interface InscripcionSocioRequest {
   socioUids: string[];

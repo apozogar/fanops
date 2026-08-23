@@ -1,6 +1,7 @@
 package com.softwells.fanops.service;
 
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
+import com.softwells.fanops.controller.dto.FaltaEventoDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
@@ -544,10 +545,42 @@ public class EventoService {
     return faltaRepository.countBySocioUid(socio.getUid());
   }
 
-  /** Retira una falta: sirve tanto para justificar una ausencia como para corregir un error. */
+  /** Quienes han fallado en este evento, tanto por no presentarse como por anular fuera de plazo. */
+  public List<FaltaEventoDTO> getFaltas(UUID eventoId) {
+    return faltaRepository.findByEventoUid(eventoId).stream()
+        .map(falta -> {
+          SocioEntity socio = falta.getSocio();
+          return FaltaEventoDTO.builder()
+              .uid(falta.getUid())
+              .socioUid(socio.getUid())
+              .numeroSocio(socio.getNumeroSocio())
+              .nombre(socio.getNombre())
+              .motivo(falta.getMotivo())
+              .fechaRegistro(falta.getFechaRegistro())
+              .penalizacionesRestantes(falta.getPenalizacionesRestantes())
+              .faltasAcumuladas(faltasDe(socio))
+              .build();
+        })
+        .sorted(Comparator.comparing(FaltaEventoDTO::getFechaRegistro))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Retira una falta: sirve tanto para justificar una ausencia como para corregir un error. Si la
+   * inscripción sigue existiendo se le devuelve la asistencia a PENDIENTE, para que no quede
+   * marcada como ausente una persona a la que se le ha perdonado la falta.
+   */
   public void quitarFalta(UUID faltaId) {
     FaltaEventoEntity falta = faltaRepository.findById(faltaId)
         .orElseThrow(() -> new EntityNotFoundException("Falta no encontrada con ID: " + faltaId));
+
+    inscripcionRepository
+        .findByEventoUidAndSocioUid(falta.getEvento().getUid(), falta.getSocio().getUid())
+        .ifPresent(inscripcion -> {
+          inscripcion.setAsistencia(AsistenciaEvento.PENDIENTE);
+          inscripcionRepository.save(inscripcion);
+        });
+
     faltaRepository.delete(falta);
   }
 

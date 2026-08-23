@@ -2,6 +2,7 @@ package com.softwells.fanops.controller;
 
 import com.softwells.fanops.controller.dto.ApiResponse;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
+import com.softwells.fanops.controller.dto.FaltaEventoDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
@@ -159,9 +160,16 @@ public class EventoController {
     return ResponseEntity.ok(new ApiResponse<>(true, mensaje, promocionadas));
   }
 
+  /** Quienes han fallado en el evento: ausentes y quienes anularon con el plazo ya cerrado. */
+  @GetMapping("/{id}/faltas")
+  public ResponseEntity<ApiResponse<List<FaltaEventoDTO>>> getFaltas(@PathVariable UUID id) {
+    return ResponseEntity.ok(new ApiResponse<>(true, "Faltas recuperadas",
+        eventoService.getFaltas(id)));
+  }
+
   /**
-   * Pasa lista a un inscrito con plaza. Marcarlo como ausente le genera una falta; volver a
-   * PENDIENTE o a ASISTIO la retira.
+   * Marca o desmarca la falta de un inscrito con plaza. NO_ASISTIO se la pone, PENDIENTE la
+   * retira.
    *
    * @return faltas acumuladas por ese socio tras el cambio
    */

@@ -225,7 +225,6 @@
                                 <th>Email</th>
                                 <th>Teléfono</th>
                                 <th>Inscripción</th>
-                                <th class="text-center">Asistencia</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </ng-template>
@@ -246,29 +245,16 @@
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>
                                 <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <!-- Pasar lista: se pulsa una vez para marcar y otra para retirar la marca. -->
+                                <!-- Solo se marca a quien ha fallado: no hay que confirmar uno a
+                                     uno a los que vinieron. Volver a pulsar retira la falta. -->
                                 <td class="text-center whitespace-nowrap">
                                     <button foButton size="icon-sm" class="rounded-full"
-                                            [variant]="inscripcion.asistencia === 'ASISTIO' ? 'primary' : 'ghost'"
-                                            [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="marcarAsistencia(inscripcion, 'ASISTIO')"
-                                            pTooltip="Vino" tooltipPosition="top" aria-label="Marcar que vino"
-                                    ><fo-icon name="check" [size]="16" /></button>
-                                    <button foButton size="icon-sm" class="rounded-full ml-1"
                                             [variant]="inscripcion.asistencia === 'NO_ASISTIO' ? 'danger' : 'ghost'"
                                             [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="marcarAsistencia(inscripcion, 'NO_ASISTIO')"
-                                            pTooltip="No vino (genera falta)" tooltipPosition="top"
-                                            aria-label="Marcar que no vino"
-                                    ><fo-icon name="cerrar" [size]="16" /></button>
-                                </td>
-                                <td class="text-center whitespace-nowrap">
-                                    <button *ngIf="inscripcion.faltaUid" foButton variant="ghost" size="icon-sm"
-                                            class="rounded-full text-warn"
-                                            [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="quitarFalta(inscripcion)"
-                                            pTooltip="Retirar la falta de este evento" tooltipPosition="top"
-                                            aria-label="Retirar la falta"
+                                            (click)="alternarFalta(inscripcion)"
+                                            [pTooltip]="inscripcion.asistencia === 'NO_ASISTIO' ? 'Retirar la falta' : 'Poner falta (no vino)'"
+                                            tooltipPosition="top"
+                                            [attr.aria-label]="inscripcion.asistencia === 'NO_ASISTIO' ? 'Retirar la falta' : 'Poner falta'"
                                     ><fo-icon name="espera" [size]="16" /></button>
                                     <button foButton variant="ghost" size="icon-sm"
                                             class="rounded-full text-danger"
@@ -281,7 +267,7 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="empty">
-                            <tr><td colspan="7">No hay inscritos confirmados.</td></tr>
+                            <tr><td colspan="6">No hay inscritos confirmados.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>
@@ -331,6 +317,53 @@
                         </ng-template>
                         <ng-template pTemplate="empty">
                             <tr><td colspan="6">No hay nadie en lista de espera.</td></tr>
+                        </ng-template>
+                    </p-table>
+                </p-accordion-content>
+            </p-accordion-panel>
+            <p-accordion-panel value="2">
+                <p-accordion-header>Han fallado ({{ faltas.length }})</p-accordion-header>
+                <p-accordion-content>
+                    <p-table [value]="faltas" [rows]="10" [paginator]="true" [rowHover]="true"
+                             dataKey="uid">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Nº Socio</th>
+                                <th>Nombre</th>
+                                <th>Motivo</th>
+                                <th>Registrada</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-falta>
+                            <tr>
+                                <td>{{ falta.numeroSocio ?? '—' }}</td>
+                                <td>
+                                    {{ falta.nombre }}
+                                    <p-tag *ngIf="falta.faltasAcumuladas > 1" severity="warn"
+                                           [value]="falta.faltasAcumuladas + ' falta(s) en total'"
+                                           class="ml-1"></p-tag>
+                                </td>
+                                <td>
+                                    {{ motivoFaltaTexto(falta) }}
+                                    <p-tag *ngIf="falta.penalizacionesRestantes > 0" severity="danger"
+                                           [value]="'a espera x' + falta.penalizacionesRestantes"
+                                           class="ml-1"></p-tag>
+                                </td>
+                                <td>{{ falta.fechaRegistro | date:'dd/MM/yyyy HH:mm' }}</td>
+                                <td class="text-center">
+                                    <button foButton variant="ghost" size="icon-sm"
+                                            class="rounded-full text-warn"
+                                            [disabled]="marcandoAsistencia === falta.uid"
+                                            (click)="quitarFalta(falta)"
+                                            pTooltip="Retirar la falta" tooltipPosition="top"
+                                            aria-label="Retirar la falta"
+                                    ><fo-icon name="check" [size]="16" /></button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="empty">
+                            <tr><td colspan="5">Nadie ha fallado en este evento.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>

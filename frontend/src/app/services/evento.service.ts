@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AsistenciaEvento, EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
+import { AsistenciaEvento, EventoInscripcionDTO, FaltaEvento, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '@/interfaces/api-response.interface';
@@ -78,7 +78,12 @@ export class EventoService {
     return this.http.delete<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}`);
   }
 
-  /** Pasa lista a un inscrito con plaza. Devuelve las faltas acumuladas del socio. */
+  /** Quienes han fallado en el evento: ausentes y cancelaciones fuera de plazo. */
+  getFaltas(eventoId: string): Observable<ApiResponse<FaltaEvento[]>> {
+    return this.http.get<ApiResponse<FaltaEvento[]>>(`${this.apiUrl}/${eventoId}/faltas`);
+  }
+
+  /** Marca o retira la falta de un inscrito con plaza. Devuelve sus faltas acumuladas. */
   marcarAsistencia(eventoId: string, inscripcionId: string, asistencia: AsistenciaEvento): Observable<ApiResponse<number>> {
     const params = new HttpParams().set('asistencia', asistencia);
     return this.http.put<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}/asistencia`, null, { params });

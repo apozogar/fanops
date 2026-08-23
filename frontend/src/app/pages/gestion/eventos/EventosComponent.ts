@@ -4,7 +4,7 @@ import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
 import {Table, TableModule} from 'primeng/table';
 import {Evento} from '@/interfaces/evento.interface';
-import {AsistenciaEvento, InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
+import {AsistenciaEvento, FaltaEvento, InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ToastModule} from 'primeng/toast';
@@ -18,6 +18,7 @@ import {IconFieldModule} from 'primeng/iconfield';
 import {InputIconModule} from 'primeng/inputicon';
 import {TagModule} from 'primeng/tag';
 import {AccordionModule} from 'primeng/accordion';
+import {TooltipModule} from 'primeng/tooltip';
 import {EventoService} from '@/services/evento.service';
 
 import { IconComponent } from '@/ui/icon/icon.component';
@@ -42,6 +43,7 @@ import { UiButtonDirective } from '@/ui/ui-button.directive';
         InputIconModule,
         TagModule,
         AccordionModule,
+        TooltipModule,
     ],
     templateUrl: './EventosComponent.html',
     styleUrls: ['./EventosComponent.scss'],
@@ -54,6 +56,7 @@ export class EventosComponent implements OnInit {
     eventoDialog: boolean = false;
     inscripcionesDialog: boolean = false;
     inscripciones: InscripcionAdmin[] = [];
+    faltas: FaltaEvento[] = [];
     eventoSeleccionado: Evento | null = null;
     loading: boolean = false;
     asignandoPlazas: boolean = false;
@@ -115,6 +118,7 @@ export class EventosComponent implements OnInit {
         if (!evento.uid) return;
         this.eventoSeleccionado = evento;
         this.inscripciones = [];
+        this.faltas = [];
         this.inscripcionesDialog = true;
         this.eventoService.getInscripciones(evento.uid).subscribe({
             next: (response) => {
@@ -126,6 +130,20 @@ export class EventosComponent implements OnInit {
                 severity: 'error',
                 summary: 'Error',
                 detail: err.error?.message || 'No se pudieron cargar las inscripciones.'
+            })
+        });
+        // Las faltas se piden aparte: una cancelación tardía borra la inscripción, así que hay
+        // gente que ha fallado y no sale en ninguna de las otras dos listas.
+        this.eventoService.getFaltas(evento.uid).subscribe({
+            next: (response) => {
+                if (response.success && response.data) {
+                    this.faltas = response.data;
+                }
+            },
+            error: (err) => this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: err.error?.message || 'No se pudieron cargar las faltas.'
             })
         });
     }
@@ -191,26 +209,26 @@ export class EventosComponent implements OnInit {
     // ----------------------------------------------------------------
 
     /**
-     * Marca la asistencia. Se hace por persona en lugar de con un guardado global para que pasar
-     * lista sea reversible al momento: si te equivocas, vuelves a pulsar y la falta desaparece.
+     * Pone o retira la falta de un inscrito. Solo se marca a quien ha fallado: no hace falta
+     * confirmar uno a uno a los que sí vinieron, que son la mayoría.
      */
-    marcarAsistencia(inscripcion: InscripcionAdmin, asistencia: AsistenciaEvento) {
+    alternarFalta(inscripcion: InscripcionAdmin) {
         const evento = this.eventoSeleccionado;
         if (!evento?.uid || this.marcandoAsistencia) return;
 
-        // Volver a pulsar el botón ya activo retira la marca.
-        const destino: AsistenciaEvento = inscripcion.asistencia === asistencia ? 'PENDIENTE' : asistencia;
+        const tieneFalta = inscripcion.asistencia === 'NO_ASISTIO';
+        const destino: AsistenciaEvento = tieneFalta ? 'PENDIENTE' : 'NO_ASISTIO';
 
         this.marcandoAsistencia = inscripcion.uid;
         this.eventoService.marcarAsistencia(evento.uid, inscripcion.uid, destino).subscribe({
             next: (resp) => {
                 this.marcandoAsistencia = null;
                 this.messageService.add({
-                    severity: destino === 'NO_ASISTIO' ? 'warn' : 'success',
-                    summary: resp.message || 'Asistencia actualizada',
-                    detail: destino === 'NO_ASISTIO'
-                        ? `${inscripcion.nombre} acumula ${resp.data} falta(s)`
-                        : inscripcion.nombre
+                    severity: tieneFalta ? 'success' : 'warn',
+                    summary: tieneFalta ? 'Falta retirada' : 'Falta registrada',
+                    detail: tieneFalta
+                        ? inscripcion.nombre
+                        : `${inscripcion.nombre} acumula ${resp.data} falta(s)`
                 });
                 this.mostrarInscripciones(evento);
             },
@@ -219,29 +237,29 @@ export class EventosComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err.error?.message || 'No se pudo registrar la asistencia.'
+                    detail: err.error?.message || 'No se pudo registrar la falta.'
                 });
             }
         });
     }
 
-    /** Retira la falta de este evento, dejando la asistencia como estaba sin penalización. */
-    quitarFalta(inscripcion: InscripcionAdmin) {
+    /** Retira una falta desde la pestaña de fallos, incluida la de una cancelación tardía. */
+    quitarFalta(falta: FaltaEvento) {
         const evento = this.eventoSeleccionado;
-        if (!evento?.uid || !inscripcion.faltaUid) return;
+        if (!evento?.uid) return;
 
         this.confirmationService.confirm({
-            message: `¿Retirar la falta de ${inscripcion.nombre}? Dejará de penalizarle en sus próximas inscripciones.`,
+            message: `¿Retirar la falta de ${falta.nombre}? Dejará de penalizarle en sus próximas inscripciones.`,
             header: 'Retirar falta',
             accept: () => {
-                this.marcandoAsistencia = inscripcion.uid;
-                this.eventoService.quitarFalta(inscripcion.faltaUid!).subscribe({
+                this.marcandoAsistencia = falta.uid;
+                this.eventoService.quitarFalta(falta.uid).subscribe({
                     next: () => {
                         this.marcandoAsistencia = null;
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Falta retirada',
-                            detail: inscripcion.nombre
+                            detail: falta.nombre
                         });
                         this.mostrarInscripciones(evento);
                     },
@@ -258,9 +276,11 @@ export class EventosComponent implements OnInit {
         });
     }
 
-    /** true si ya se ha pasado lista a alguien, para saber si la columna aporta algo. */
-    get listaPasada(): boolean {
-        return this.inscritos.some(i => i.asistencia && i.asistencia !== 'PENDIENTE');
+    /** Texto del motivo para la pestaña de fallos. */
+    motivoFaltaTexto(falta: FaltaEvento): string {
+        return falta.motivo === 'CANCELACION_TARDIA'
+            ? 'Anuló fuera de plazo'
+            : 'No se presentó';
     }
 
     eliminarInscripcion(inscripcion: InscripcionAdmin) {
