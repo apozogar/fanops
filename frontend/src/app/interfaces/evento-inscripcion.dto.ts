@@ -1,5 +1,8 @@
 export type EstadoInscripcion = 'CONFIRMADA' | 'EN_ESPERA';
 
+/** Resultado de pasar lista a quien tenía plaza. */
+export type AsistenciaEvento = 'PENDIENTE' | 'ASISTIO' | 'NO_ASISTIO';
+
 /** Estado de una ficha de socio del usuario actual frente a un evento. */
 export interface SocioInscripcion {
   socioUid: string;
@@ -48,4 +51,11 @@ export interface InscripcionAdmin {
   nombre: string;
   email: string;
   telefono?: string;
+  asistencia?: AsistenciaEvento | null;
+  /** Faltas acumuladas por el socio en total, no solo en este evento. */
+  faltasAcumuladas: number;
+  /** Falta que arrastra de este evento, si la tiene. */
+  faltaUid?: string | null;
+  /** Inscripciones futuras que le irán forzadas a lista de espera. */
+  penalizacionesPendientes: number;
 }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!--
+    Soporte de faltas en eventos: se pasa lista a los inscritos y quien no aparece arrastra una
+    penalización que le manda a lista de espera en sus próximas inscripciones.
+
+    Estas dos columnas van en Liquibase y no se dejan a Hibernate porque "asistencia" es NOT NULL
+    sobre una tabla que ya tiene filas: Postgres rechaza el ALTER TABLE ... ADD COLUMN NOT NULL sin
+    DEFAULT, Hibernate (ddl-auto: update) se limita a registrar el error como warning y sigue
+    arrancando, y la aplicación acaba consultando una columna que no existe. Aquí se añade con
+    DEFAULT, se rellenan las filas antiguas y solo después se marca NOT NULL.
+
+    La tabla "evento_faltas" no aparece aquí a propósito: es nueva, así que Hibernate la crea sin
+    problema a partir de FaltaEventoEntity, igual que el resto de tablas del proyecto.
+  -->
+  <changeSet id="003-1-add-asistencia-to-evento-inscripciones" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="evento_inscripciones"/>
+      <not>
+        <columnExists tableName="evento_inscripciones" columnName="asistencia"/>
+      </not>
+    </preConditions>
+    <addColumn tableName="evento_inscripciones">
+      <column name="asistencia" type="VARCHAR(255)" defaultValue="PENDIENTE"/>
+    </addColumn>
+    <addNotNullConstraint
+        tableName="evento_inscripciones" columnName="asistencia"
+        columnDataType="VARCHAR(255)" defaultNullValue="PENDIENTE"/>
+  </changeSet>
+
+  <!--
+    Eventos de castigo por falta, configurable por peña. Es nullable a propósito: null significa
+    "sin configurar" y el servicio aplica su valor por defecto, así que las peñas ya existentes no
+    necesitan backfill.
+  -->
+  <changeSet id="003-2-add-penalizacion-to-pena" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="pena"/>
+      <not>
+        <columnExists tableName="pena" columnName="eventos_penalizacion_por_falta"/>
+      </not>
+    </preConditions>
+    <addColumn tableName="pena">
+      <column name="eventos_penalizacion_por_falta" type="INT"/>
+    </addColumn>
+  </changeSet>
+
+</databaseChangeLog>

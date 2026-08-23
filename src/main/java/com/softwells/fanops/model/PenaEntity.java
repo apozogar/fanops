@@ -34,6 +34,12 @@ public class PenaEntity {
   private Double cuotaMenor;
   private Integer edadMayoria;
   private Integer edadJubilacion;
+
+  /**
+   * Cuántas inscripciones posteriores van forzadas a lista de espera por cada falta. 0 desactiva
+   * las penalizaciones sin dejar de registrar las faltas.
+   */
+  private Integer eventosPenalizacionPorFalta;
   @Column(columnDefinition = "TEXT")
   private String logo;
   private String lema;

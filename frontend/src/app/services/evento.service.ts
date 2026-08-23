@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
+import { AsistenciaEvento, EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '@/interfaces/api-response.interface';
@@ -76,6 +76,23 @@ export class EventoService {
    */
   eliminarInscripcion(eventoId: string, inscripcionId: string): Observable<ApiResponse<number>> {
     return this.http.delete<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}`);
+  }
+
+  /** Pasa lista a un inscrito con plaza. Devuelve las faltas acumuladas del socio. */
+  marcarAsistencia(eventoId: string, inscripcionId: string, asistencia: AsistenciaEvento): Observable<ApiResponse<number>> {
+    const params = new HttpParams().set('asistencia', asistencia);
+    return this.http.put<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}/asistencia`, null, { params });
+  }
+
+  /** Retira una falta (justificada o marcada por error). */
+  quitarFalta(faltaId: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/faltas/${faltaId}`);
+  }
+
+  /** true si anular la plaza ahora le costaría una falta al socio. */
+  avisoAnulacion(eventoId: string, socioUid?: string): Observable<ApiResponse<boolean>> {
+    const params = socioUid ? new HttpParams().set('socioUid', socioUid) : undefined;
+    return this.http.get<ApiResponse<boolean>>(`${this.apiUrl}/${eventoId}/anular/aviso`, { params });
   }
 
   asignarPlazas(eventoId: string): Observable<ApiResponse<number>> {

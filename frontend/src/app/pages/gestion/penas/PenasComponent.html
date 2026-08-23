@@ -185,6 +185,12 @@
                         <label for="edadJubilacion" class="block font-semibold mb-2">Edad de jubilación</label>
                         <p-inputNumber id="edadJubilacion" [(ngModel)]="pena.edadJubilacion" class="w-full" styleClass="w-full" />
                     </div>
+                    <div class="flex-auto">
+                        <label for="eventosPenalizacionPorFalta" class="block font-semibold mb-2">Eventos de penalización por falta</label>
+                        <p-inputNumber id="eventosPenalizacionPorFalta" [(ngModel)]="pena.eventosPenalizacionPorFalta"
+                                       [min]="0" [max]="20" class="w-full" styleClass="w-full" />
+                        <small class="text-ink-muted">Inscripciones que irán a lista de espera por cada falta. 0 registra las faltas sin penalizar.</small>
+                    </div>
                 </div>
             </div>
         </div>

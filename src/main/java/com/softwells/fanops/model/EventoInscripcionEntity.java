@@ -1,5 +1,6 @@
 package com.softwells.fanops.model;
 
+import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.enums.EstadoInscripcion;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,4 +51,12 @@ public class EventoInscripcionEntity {
 
   /** true si el inscrito era socio prioritario (activo y con cuota al día) al inscribirse. */
   private boolean socioPrioritario;
+
+  /**
+   * Resultado de pasar lista. Solo tiene sentido en inscripciones con plaza confirmada: quien se
+   * queda en lista de espera nunca llegó a tener sitio, así que no puede faltar.
+   */
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private AsistenciaEvento asistencia = AsistenciaEvento.PENDIENTE;
 }

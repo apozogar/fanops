@@ -6,6 +6,7 @@ import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
+import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.service.EventoService;
@@ -156,6 +157,45 @@ public class EventoController {
             + " persona(s) han pasado desde la lista de espera."
         : "Inscripción eliminada correctamente";
     return ResponseEntity.ok(new ApiResponse<>(true, mensaje, promocionadas));
+  }
+
+  /**
+   * Pasa lista a un inscrito con plaza. Marcarlo como ausente le genera una falta; volver a
+   * PENDIENTE o a ASISTIO la retira.
+   *
+   * @return faltas acumuladas por ese socio tras el cambio
+   */
+  @PutMapping("/{id}/inscripciones/{inscripcionId}/asistencia")
+  public ResponseEntity<ApiResponse<Long>> marcarAsistencia(@PathVariable UUID id,
+      @PathVariable UUID inscripcionId, @RequestParam AsistenciaEvento asistencia) {
+    long faltas = eventoService.marcarAsistencia(id, inscripcionId, asistencia);
+    String mensaje = switch (asistencia) {
+      case NO_ASISTIO -> "Falta registrada";
+      case ASISTIO -> "Asistencia registrada";
+      case PENDIENTE -> "Marca de asistencia retirada";
+    };
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, faltas));
+  }
+
+  /** Retira una falta, ya sea por estar justificada o por un error al pasar lista. */
+  @DeleteMapping("/faltas/{faltaId}")
+  public ResponseEntity<ApiResponse<Void>> quitarFalta(@PathVariable UUID faltaId) {
+    eventoService.quitarFalta(faltaId);
+    return ResponseEntity.ok(new ApiResponse<>(true, "Falta retirada", null));
+  }
+
+  /**
+   * Avisa de si anular la plaza ahora costaría una falta, para poder advertirlo antes de que el
+   * socio confirme la baja.
+   */
+  @GetMapping("/{id}/anular/aviso")
+  @PreAuthorize("isAuthenticated()")
+  public ResponseEntity<ApiResponse<Boolean>> avisoAnulacion(@PathVariable UUID id,
+      @RequestParam(required = false) UUID socioUid) {
+    boolean costariaFalta = eventoService.anularCostariaFalta(id, socioUid);
+    return ResponseEntity.ok(new ApiResponse<>(true, costariaFalta
+        ? "Anular ahora supondría una falta"
+        : "Anular ahora no supone falta", costariaFalta));
   }
 
   /**

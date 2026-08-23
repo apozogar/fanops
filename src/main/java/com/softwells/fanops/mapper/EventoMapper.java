@@ -3,6 +3,7 @@ package com.softwells.fanops.mapper;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
+import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.SocioEntity;
@@ -47,6 +48,10 @@ public class EventoMapper {
         .nombre(inscripcion.getNombre())
         .email(inscripcion.getEmail())
         .telefono(inscripcion.getTelefono())
+        // Las inscripciones anteriores a la columna de asistencia pueden traerla a null.
+        .asistencia(inscripcion.getAsistencia() != null
+            ? inscripcion.getAsistencia()
+            : AsistenciaEvento.PENDIENTE)
         .build();
   }
 }

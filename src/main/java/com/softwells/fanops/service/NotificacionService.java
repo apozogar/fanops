@@ -1,8 +1,10 @@
 package com.softwells.fanops.service;
 
 import com.softwells.fanops.enums.EstadoInscripcion;
+import com.softwells.fanops.enums.MotivoFalta;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
+import com.softwells.fanops.model.SocioEntity;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -108,6 +110,35 @@ public class NotificacionService {
             + "Si crees que se trata de un error, ponte en contacto con nosotros.";
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
         inscripcion.getTelefono());
+  }
+
+  /**
+   * Aviso de falta. Se explica el motivo y el efecto, porque la penalización se nota más tarde
+   * (al apuntarse al siguiente evento) y sin este aviso parecería un fallo del sistema.
+   */
+  public void enviarAvisoFalta(SocioEntity socio, EventoEntity evento, MotivoFalta motivo,
+      int penalizaciones) {
+    String asunto = "Falta registrada en " + evento.getNombreEvento();
+    StringBuilder cuerpo = new StringBuilder("Hola " + socio.getNombre() + ",\n\n");
+    if (motivo == MotivoFalta.CANCELACION_TARDIA) {
+      cuerpo.append("Has anulado tu plaza de '").append(evento.getNombreEvento())
+          .append("' (").append(evento.getFechaEvento())
+          .append(") con el plazo de inscripción ya cerrado, así que se te ha registrado una falta.")
+          .append("\n\nSi alguien de la lista de espera ocupa tu plaza, la falta se retirará sola.");
+    } else {
+      cuerpo.append("Tenías plaza en '").append(evento.getNombreEvento())
+          .append("' (").append(evento.getFechaEvento())
+          .append(") y no se ha registrado tu asistencia, así que se te ha puesto una falta.");
+    }
+    if (penalizaciones > 0) {
+      cuerpo.append("\n\nEfecto: ")
+          .append(penalizaciones == 1
+              ? "en tu próxima inscripción entrarás en lista de espera"
+              : "en tus próximas " + penalizaciones + " inscripciones entrarás en lista de espera")
+          .append(", aunque queden plazas libres.");
+    }
+    cuerpo.append("\n\nSi crees que se trata de un error, ponte en contacto con nosotros.");
+    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono());
   }
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,

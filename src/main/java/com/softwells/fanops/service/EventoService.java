@@ -5,16 +5,20 @@ import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
+import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.enums.EstadoCuota;
 import com.softwells.fanops.enums.EstadoInscripcion;
+import com.softwells.fanops.enums.MotivoFalta;
 import com.softwells.fanops.mapper.EventoMapper;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
+import com.softwells.fanops.model.FaltaEventoEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
 import com.softwells.fanops.repository.EventoInscripcionRepository;
 import com.softwells.fanops.repository.EventoRepository;
+import com.softwells.fanops.repository.FaltaEventoRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
@@ -41,7 +45,11 @@ public class EventoService {
   private final EventoInscripcionRepository inscripcionRepository;
   private final UsuarioRepository usuarioRepository;
   private final CuotaRepository cuotaRepository;
+  private final FaltaEventoRepository faltaRepository;
   private final NotificacionService notificacionService;
+
+  /** Penalización por falta si la peña no la tiene configurada. */
+  private static final int PENALIZACION_POR_FALTA_DEFECTO = 1;
 
   // ----------------------------------------------------------------
   // Consultas
@@ -119,8 +127,24 @@ public class EventoService {
   }
 
   public List<InscripcionAdminDTO> getInscripciones(UUID eventoId) {
+    // Las faltas de este evento se traen de una vez: son pocas y evita una consulta por inscrito.
+    Map<UUID, FaltaEventoEntity> faltasDelEvento = new LinkedHashMap<>();
+    for (FaltaEventoEntity falta : faltaRepository.findByEventoUid(eventoId)) {
+      faltasDelEvento.putIfAbsent(falta.getSocio().getUid(), falta);
+    }
+
     return inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(eventoId).stream()
-        .map(EventoMapper::toInscripcionAdminDTO)
+        .map(inscripcion -> {
+          InscripcionAdminDTO dto = EventoMapper.toInscripcionAdminDTO(inscripcion);
+          SocioEntity socio = inscripcion.getSocio();
+          if (socio != null) {
+            dto.setFaltasAcumuladas(faltasDe(socio));
+            dto.setPenalizacionesPendientes(penalizacionesPendientesDe(socio));
+            FaltaEventoEntity falta = faltasDelEvento.get(socio.getUid());
+            dto.setFaltaUid(falta != null ? falta.getUid() : null);
+          }
+          return dto;
+        })
         .collect(Collectors.toList());
   }
 
@@ -206,7 +230,11 @@ public class EventoService {
 
     List<EventoInscripcionEntity> creadas = new ArrayList<>();
     for (SocioEntity socio : aInscribir) {
-      EstadoInscripcion estado = confirmarAlguno && hayHueco(evento, confirmadas)
+      // La penalización solo se gasta si de verdad le cuesta la plaza: si el evento estaba lleno
+      // se habría quedado en espera igualmente, y castigarle entonces no sería castigo.
+      boolean habriaEntrado = confirmarAlguno && hayHueco(evento, confirmadas);
+      boolean penalizado = habriaEntrado && consumirPenalizacion(socio);
+      EstadoInscripcion estado = habriaEntrado && !penalizado
           ? EstadoInscripcion.CONFIRMADA
           : EstadoInscripcion.EN_ESPERA;
 
@@ -335,13 +363,43 @@ public class EventoService {
             .orElseThrow(() -> new IllegalStateException(
                 socio.getNombre() + " no está inscrito en este evento."));
 
+    EventoEntity evento = inscripcion.getEvento();
     EstadoInscripcion estadoAnulado = inscripcion.getEstado();
+    // Renunciar a una plaza con el plazo ya cerrado deja un hueco que quizá nadie cubra, así que
+    // cuenta como falta. Se retira sola si al repartir alguien acaba ocupando ese sitio.
+    boolean cancelacionTardia = estadoAnulado == EstadoInscripcion.CONFIRMADA
+        && inscripcionCerrada(evento);
+
     inscripcionRepository.delete(inscripcion);
     inscripcionRepository.flush();
 
-    if (estadoAnulado == EstadoInscripcion.CONFIRMADA) {
-      promoverListaEspera(eventoId);
+    int promocionadas = estadoAnulado == EstadoInscripcion.CONFIRMADA
+        ? promoverListaEspera(eventoId)
+        : 0;
+
+    // Se reparte primero y solo se pone la falta si el hueco ha quedado sin cubrir: así se evita
+    // avisar de una falta que se iba a retirar acto seguido. Si el sitio se cubre más tarde, la
+    // retira promoverListaEspera.
+    if (cancelacionTardia && promocionadas == 0) {
+      registrarFalta(socio, evento, MotivoFalta.CANCELACION_TARDIA);
     }
+  }
+
+  /**
+   * Indica si anular ahora la plaza de un socio le costaría una falta, para poder avisarle antes
+   * de que confirme. Solo penaliza con el plazo cerrado y si no hay nadie esperando que cubra el
+   * hueco: si hay lista de espera, la plaza se reasigna al momento y no hay falta.
+   */
+  public boolean anularCostariaFalta(UUID eventoId, UUID socioUid) {
+    SocioEntity socio = resolverSocioPropio(socioUid);
+    EventoEntity evento = findEvento(eventoId);
+
+    return inscripcionRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
+        .filter(i -> i.getEstado() == EstadoInscripcion.CONFIRMADA)
+        .filter(i -> inscripcionCerrada(evento))
+        .map(i -> inscripcionRepository.countByEventoUidAndEstado(eventoId,
+            EstadoInscripcion.EN_ESPERA) == 0)
+        .orElse(false);
   }
 
   /** Localiza una ficha del usuario autenticado, rechazando uids que no sean suyos. */
@@ -423,7 +481,133 @@ public class EventoService {
       confirmadas++;
       promocionadas++;
     }
+
+    perdonarCancelacionesTardiasCubiertas(eventoId, promocionadas);
     return promocionadas;
+  }
+
+  /**
+   * Retira una falta por cancelación tardía por cada plaza que se ha vuelto a cubrir: si alguien
+   * ha ocupado el hueco, la baja no ha perjudicado a nadie. Se perdonan las más antiguas primero.
+   */
+  private void perdonarCancelacionesTardiasCubiertas(UUID eventoId, int plazasCubiertas) {
+    if (plazasCubiertas <= 0) {
+      return;
+    }
+    List<FaltaEventoEntity> pendientes =
+        faltaRepository.findByEventoUidAndMotivoOrderByFechaRegistroAsc(eventoId,
+            MotivoFalta.CANCELACION_TARDIA);
+    pendientes.stream()
+        .limit(plazasCubiertas)
+        .forEach(faltaRepository::delete);
+  }
+
+  // ----------------------------------------------------------------
+  // Faltas y penalizaciones
+  // ----------------------------------------------------------------
+
+  /**
+   * Pasa lista a un inscrito con plaza. Marcarlo como ausente le genera una falta; corregir la
+   * marca la retira, para que un error al pasar lista no penalice a quien no toca.
+   *
+   * @return las faltas acumuladas por ese socio después del cambio
+   */
+  public long marcarAsistencia(UUID eventoId, UUID inscripcionId, AsistenciaEvento asistencia) {
+    EventoInscripcionEntity inscripcion = inscripcionRepository.findById(inscripcionId)
+        .orElseThrow(() -> new EntityNotFoundException(
+            "Inscripción no encontrada con ID: " + inscripcionId));
+
+    EventoEntity evento = inscripcion.getEvento();
+    if (evento == null || !evento.getUid().equals(eventoId)) {
+      throw new IllegalArgumentException("La inscripción no pertenece a este evento.");
+    }
+    if (inscripcion.getEstado() != EstadoInscripcion.CONFIRMADA) {
+      throw new IllegalStateException(
+          "Solo se pasa lista a quien tenía plaza: " + inscripcion.getNombre()
+              + " se quedó en lista de espera.");
+    }
+
+    inscripcion.setAsistencia(asistencia != null ? asistencia : AsistenciaEvento.PENDIENTE);
+    inscripcionRepository.save(inscripcion);
+
+    SocioEntity socio = inscripcion.getSocio();
+    if (socio == null) {
+      return 0; // Un no socio no tiene ficha que penalizar; se guarda la asistencia y nada más.
+    }
+
+    if (inscripcion.getAsistencia() == AsistenciaEvento.NO_ASISTIO) {
+      registrarFalta(socio, evento, MotivoFalta.NO_PRESENTADO);
+    } else {
+      faltaRepository.findByEventoUidAndSocioUidAndMotivo(eventoId, socio.getUid(),
+          MotivoFalta.NO_PRESENTADO).ifPresent(faltaRepository::delete);
+    }
+    return faltaRepository.countBySocioUid(socio.getUid());
+  }
+
+  /** Retira una falta: sirve tanto para justificar una ausencia como para corregir un error. */
+  public void quitarFalta(UUID faltaId) {
+    FaltaEventoEntity falta = faltaRepository.findById(faltaId)
+        .orElseThrow(() -> new EntityNotFoundException("Falta no encontrada con ID: " + faltaId));
+    faltaRepository.delete(falta);
+  }
+
+  /** Crea la falta si el socio no tenía ya una del mismo motivo en ese evento. */
+  private void registrarFalta(SocioEntity socio, EventoEntity evento, MotivoFalta motivo) {
+    if (faltaRepository.findByEventoUidAndSocioUidAndMotivo(evento.getUid(), socio.getUid(), motivo)
+        .isPresent()) {
+      return;
+    }
+    FaltaEventoEntity falta = new FaltaEventoEntity();
+    falta.setSocio(socio);
+    falta.setEvento(evento);
+    falta.setMotivo(motivo);
+    falta.setFechaRegistro(LocalDateTime.now());
+    falta.setPenalizacionesRestantes(penalizacionPorFalta(socio));
+    faltaRepository.save(falta);
+    notificacionService.enviarAvisoFalta(socio, evento, motivo,
+        falta.getPenalizacionesRestantes());
+  }
+
+  /**
+   * Gasta una penalización pendiente del socio, si tiene alguna.
+   *
+   * @return true si esta inscripción debe ir forzada a lista de espera
+   */
+  private boolean consumirPenalizacion(SocioEntity socio) {
+    List<FaltaEventoEntity> pendientes = faltaRepository
+        .findBySocioUidAndPenalizacionesRestantesGreaterThanOrderByFechaRegistroAsc(
+            socio.getUid(), 0);
+    if (pendientes.isEmpty()) {
+      return false;
+    }
+    // Se gasta la falta más antigua: así se cumplen en el orden en que se cometieron.
+    FaltaEventoEntity falta = pendientes.get(0);
+    falta.setPenalizacionesRestantes(falta.getPenalizacionesRestantes() - 1);
+    faltaRepository.save(falta);
+    return true;
+  }
+
+  /** Eventos de castigo por falta según la peña del socio. */
+  private int penalizacionPorFalta(SocioEntity socio) {
+    Integer configurado = socio.getPena() != null
+        ? socio.getPena().getEventosPenalizacionPorFalta()
+        : null;
+    return configurado != null ? Math.max(0, configurado) : PENALIZACION_POR_FALTA_DEFECTO;
+  }
+
+  /** Faltas acumuladas por socio, para pintarlas junto a cada inscrito. */
+  private long faltasDe(SocioEntity socio) {
+    return socio != null ? faltaRepository.countBySocioUid(socio.getUid()) : 0;
+  }
+
+  /** Inscripciones futuras que irán forzadas a lista de espera por faltas sin cumplir. */
+  private int penalizacionesPendientesDe(SocioEntity socio) {
+    return faltaRepository
+        .findBySocioUidAndPenalizacionesRestantesGreaterThanOrderByFechaRegistroAsc(
+            socio.getUid(), 0)
+        .stream()
+        .mapToInt(FaltaEventoEntity::getPenalizacionesRestantes)
+        .sum();
   }
 
   // ----------------------------------------------------------------

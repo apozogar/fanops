@@ -4,11 +4,12 @@ import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {EventoInscripcionDTO, SocioInscripcion} from "@/interfaces/evento-inscripcion.dto";
 import {EventoService} from '@/services/evento.service';
-import {MessageService} from 'primeng/api';
+import {ConfirmationService, MessageService} from 'primeng/api';
 import {CardModule} from 'primeng/card';
 import {ButtonModule} from 'primeng/button';
 import {CheckboxModule} from 'primeng/checkbox';
 import {ToastModule} from 'primeng/toast';
+import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 
@@ -18,10 +19,10 @@ import { UiTagComponent } from '@/ui/ui-tag.component';
 @Component({
     selector: 'app-inscripcion-eventos',
     standalone: true,
-    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, FormsModule, CardModule, ButtonModule, CheckboxModule, ToastModule, ProgressSpinnerModule, TagModule],
+    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, FormsModule, CardModule, ButtonModule, CheckboxModule, ConfirmDialogModule, ToastModule, ProgressSpinnerModule, TagModule],
     templateUrl: './inscripcion-eventos.component.html',
     styleUrls: ['./inscripcion-eventos.component.scss'],
-    providers: [MessageService]
+    providers: [MessageService, ConfirmationService]
 })
 export class InscripcionEventosComponent implements OnInit, OnDestroy {
     /** Cada cuánto se refresca la lista en segundo plano para reflejar cambios de otros socios. */
@@ -47,6 +48,7 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
 
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
 
     ngOnInit(): void {
         this.cargarEventos();
@@ -220,9 +222,39 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
         });
     }
 
+    /**
+     * Antes de anular se pregunta al servidor si la baja costaría una falta. Se consulta en vez de
+     * calcularlo aquí porque depende de si queda alguien en la lista de espera que cubra el hueco,
+     * y eso cambia con lo que hagan otros socios.
+     */
     anularInscripcion(evento: EventoInscripcionDTO, socio: SocioInscripcion) {
         if (this.eventoOcupado(evento)) return;
 
+        const clave = this.clave(evento, socio);
+        this.accionesEnCurso.add(clave);
+
+        this.eventoService.avisoAnulacion(evento.uid, socio.socioUid).pipe(
+            finalize(() => this.accionesEnCurso.delete(clave))
+        ).subscribe({
+            next: (resp) => this.confirmarAnulacion(evento, socio, resp.data === true),
+            // Si el aviso falla no se bloquea la baja: se pregunta con el texto conservador.
+            error: () => this.confirmarAnulacion(evento, socio, true)
+        });
+    }
+
+    private confirmarAnulacion(evento: EventoInscripcionDTO, socio: SocioInscripcion, costariaFalta: boolean) {
+        const mensaje = costariaFalta
+            ? `El plazo de inscripción ya está cerrado y no hay nadie en lista de espera para ocupar la plaza de ${socio.nombre}. Si la anulas ahora se le registrará una falta, y su próxima inscripción irá a lista de espera. ¿Anular igualmente?`
+            : `¿Anular la inscripción de ${socio.nombre}?`;
+
+        this.confirmationService.confirm({
+            message: mensaje,
+            header: costariaFalta ? 'Esto supondrá una falta' : 'Confirmar baja',
+            accept: () => this.ejecutarAnulacion(evento, socio)
+        });
+    }
+
+    private ejecutarAnulacion(evento: EventoInscripcionDTO, socio: SocioInscripcion) {
         const clave = this.clave(evento, socio);
         this.accionesEnCurso.add(clave);
 

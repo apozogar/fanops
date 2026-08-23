@@ -22,6 +22,9 @@ public class PenaRequestDTO {
   private Double cuotaMenor;
   private Integer edadMayoria;
   private Integer edadJubilacion;
+
+  /** Inscripciones que van forzadas a lista de espera por cada falta. 0 desactiva el castigo. */
+  private Integer eventosPenalizacionPorFalta;
   private String logo;
   private String lema;
   private String color;

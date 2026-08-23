@@ -15,5 +15,6 @@
   -->
   <include file="db/changelog/changes/001-roles-table-and-seed.xml" relativeToChangelogFile="false"/>
   <include file="db/changelog/changes/002-usuario-pena.xml" relativeToChangelogFile="false"/>
+  <include file="db/changelog/changes/003-evento-asistencia-penalizaciones.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>

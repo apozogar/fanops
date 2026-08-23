@@ -225,6 +225,7 @@
                                 <th>Email</th>
                                 <th>Teléfono</th>
                                 <th>Inscripción</th>
+                                <th class="text-center">Asistencia</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </ng-template>
@@ -235,11 +236,40 @@
                                     {{ inscripcion.nombre }}
                                     <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
                                            value="Socio" class="ml-1"></p-tag>
+                                    <p-tag *ngIf="inscripcion.faltasAcumuladas > 0" severity="warn"
+                                           [value]="inscripcion.faltasAcumuladas + ' falta(s)'"
+                                           class="ml-1"></p-tag>
+                                    <p-tag *ngIf="inscripcion.penalizacionesPendientes > 0" severity="danger"
+                                           [value]="'a espera x' + inscripcion.penalizacionesPendientes"
+                                           class="ml-1"></p-tag>
                                 </td>
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>
                                 <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <td class="text-center">
+                                <!-- Pasar lista: se pulsa una vez para marcar y otra para retirar la marca. -->
+                                <td class="text-center whitespace-nowrap">
+                                    <button foButton size="icon-sm" class="rounded-full"
+                                            [variant]="inscripcion.asistencia === 'ASISTIO' ? 'primary' : 'ghost'"
+                                            [disabled]="marcandoAsistencia === inscripcion.uid"
+                                            (click)="marcarAsistencia(inscripcion, 'ASISTIO')"
+                                            pTooltip="Vino" tooltipPosition="top" aria-label="Marcar que vino"
+                                    ><fo-icon name="check" [size]="16" /></button>
+                                    <button foButton size="icon-sm" class="rounded-full ml-1"
+                                            [variant]="inscripcion.asistencia === 'NO_ASISTIO' ? 'danger' : 'ghost'"
+                                            [disabled]="marcandoAsistencia === inscripcion.uid"
+                                            (click)="marcarAsistencia(inscripcion, 'NO_ASISTIO')"
+                                            pTooltip="No vino (genera falta)" tooltipPosition="top"
+                                            aria-label="Marcar que no vino"
+                                    ><fo-icon name="cerrar" [size]="16" /></button>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
+                                    <button *ngIf="inscripcion.faltaUid" foButton variant="ghost" size="icon-sm"
+                                            class="rounded-full text-warn"
+                                            [disabled]="marcandoAsistencia === inscripcion.uid"
+                                            (click)="quitarFalta(inscripcion)"
+                                            pTooltip="Retirar la falta de este evento" tooltipPosition="top"
+                                            aria-label="Retirar la falta"
+                                    ><fo-icon name="espera" [size]="16" /></button>
                                     <button foButton variant="ghost" size="icon-sm"
                                             class="rounded-full text-danger"
                                             [disabled]="eliminandoInscripcion === inscripcion.uid"
@@ -251,7 +281,7 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="empty">
-                            <tr><td colspan="6">No hay inscritos confirmados.</td></tr>
+                            <tr><td colspan="7">No hay inscritos confirmados.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>
@@ -278,6 +308,12 @@
                                     {{ inscripcion.nombre }}
                                     <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
                                            value="Socio" class="ml-1"></p-tag>
+                                    <p-tag *ngIf="inscripcion.faltasAcumuladas > 0" severity="warn"
+                                           [value]="inscripcion.faltasAcumuladas + ' falta(s)'"
+                                           class="ml-1"></p-tag>
+                                    <p-tag *ngIf="inscripcion.penalizacionesPendientes > 0" severity="danger"
+                                           [value]="'a espera x' + inscripcion.penalizacionesPendientes"
+                                           class="ml-1"></p-tag>
                                 </td>
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>

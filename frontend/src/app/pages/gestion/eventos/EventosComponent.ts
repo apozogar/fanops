@@ -4,7 +4,7 @@ import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
 import {Table, TableModule} from 'primeng/table';
 import {Evento} from '@/interfaces/evento.interface';
-import {InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
+import {AsistenciaEvento, InscripcionAdmin} from '@/interfaces/evento-inscripcion.dto';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {ToastModule} from 'primeng/toast';
@@ -58,6 +58,8 @@ export class EventosComponent implements OnInit {
     loading: boolean = false;
     asignandoPlazas: boolean = false;
     eliminandoInscripcion: string | null = null;
+    /** Inscripción con un cambio de asistencia o de falta en vuelo. */
+    marcandoAsistencia: string | null = null;
 
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
@@ -182,6 +184,83 @@ export class EventosComponent implements OnInit {
                 });
             }
         });
+    }
+
+    // ----------------------------------------------------------------
+    // Pasar lista y faltas
+    // ----------------------------------------------------------------
+
+    /**
+     * Marca la asistencia. Se hace por persona en lugar de con un guardado global para que pasar
+     * lista sea reversible al momento: si te equivocas, vuelves a pulsar y la falta desaparece.
+     */
+    marcarAsistencia(inscripcion: InscripcionAdmin, asistencia: AsistenciaEvento) {
+        const evento = this.eventoSeleccionado;
+        if (!evento?.uid || this.marcandoAsistencia) return;
+
+        // Volver a pulsar el botón ya activo retira la marca.
+        const destino: AsistenciaEvento = inscripcion.asistencia === asistencia ? 'PENDIENTE' : asistencia;
+
+        this.marcandoAsistencia = inscripcion.uid;
+        this.eventoService.marcarAsistencia(evento.uid, inscripcion.uid, destino).subscribe({
+            next: (resp) => {
+                this.marcandoAsistencia = null;
+                this.messageService.add({
+                    severity: destino === 'NO_ASISTIO' ? 'warn' : 'success',
+                    summary: resp.message || 'Asistencia actualizada',
+                    detail: destino === 'NO_ASISTIO'
+                        ? `${inscripcion.nombre} acumula ${resp.data} falta(s)`
+                        : inscripcion.nombre
+                });
+                this.mostrarInscripciones(evento);
+            },
+            error: (err) => {
+                this.marcandoAsistencia = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudo registrar la asistencia.'
+                });
+            }
+        });
+    }
+
+    /** Retira la falta de este evento, dejando la asistencia como estaba sin penalización. */
+    quitarFalta(inscripcion: InscripcionAdmin) {
+        const evento = this.eventoSeleccionado;
+        if (!evento?.uid || !inscripcion.faltaUid) return;
+
+        this.confirmationService.confirm({
+            message: `¿Retirar la falta de ${inscripcion.nombre}? Dejará de penalizarle en sus próximas inscripciones.`,
+            header: 'Retirar falta',
+            accept: () => {
+                this.marcandoAsistencia = inscripcion.uid;
+                this.eventoService.quitarFalta(inscripcion.faltaUid!).subscribe({
+                    next: () => {
+                        this.marcandoAsistencia = null;
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: 'Falta retirada',
+                            detail: inscripcion.nombre
+                        });
+                        this.mostrarInscripciones(evento);
+                    },
+                    error: (err) => {
+                        this.marcandoAsistencia = null;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: err.error?.message || 'No se pudo retirar la falta.'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    /** true si ya se ha pasado lista a alguien, para saber si la columna aporta algo. */
+    get listaPasada(): boolean {
+        return this.inscritos.some(i => i.asistencia && i.asistencia !== 'PENDIENTE');
     }
 
     eliminarInscripcion(inscripcion: InscripcionAdmin) {

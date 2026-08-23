@@ -15,6 +15,8 @@ export interface Pena {
     cuotaMenor?: number;
     edadMayoria?: number;
     edadJubilacion?: number;
+    /** Inscripciones que van forzadas a lista de espera por cada falta. 0 desactiva el castigo. */
+    eventosPenalizacionPorFalta?: number;
 }
 
 /** Datos editables al crear/actualizar una peña (sin id, lo pone el backend). */
