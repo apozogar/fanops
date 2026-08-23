@@ -51,7 +51,7 @@ public class AuthController {
   private final PasswordEncoder passwordEncoder;
   private final EmailSender emailSender;
 
-  @Value("${app.public-base-url:http://localhost:4200}")
+  @Value("${app.public-base-url:http://localhost:5300}")
   private String publicBaseUrl;
 
   /**

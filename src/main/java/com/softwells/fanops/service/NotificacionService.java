@@ -26,7 +26,7 @@ public class NotificacionService {
   private final EmailSender emailSender;
   private final RestClient.Builder restClientBuilder;
 
-  @Value("${app.public-base-url:http://localhost:4200}")
+  @Value("${app.public-base-url:http://localhost:5300}")
   private String publicBaseUrl;
 
   @Value("${whatsapp.enabled:false}")

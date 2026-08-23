@@ -68,7 +68,7 @@ app:
       expiration: ${APP_JWT_EXPIRATION:1209600000}  # 14 dias en milisegundos
   # Base URL pública de la aplicación (para enlaces en emails/WhatsApp).
   # En Fly.io se puede inyectar con FLY_APP_URL.
-  public-base-url: ${PUBLIC_BASE_URL:http://localhost:4200}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:5300}
   # Bootstrap del primer usuario superadmin (solo se crea si no existe ya ningún
   # usuario con ROLE_SUPERADMIN). OBLIGATORIO cambiar estos valores en producción
   # vía variables de entorno, y cambiar la contraseña tras el primer login.
