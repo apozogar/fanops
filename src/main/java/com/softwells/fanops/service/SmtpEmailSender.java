@@ -26,20 +26,25 @@ public class SmtpEmailSender implements EmailSender {
   @Value("${mail.from.address}")
   private String fromAddress;
 
+  @Value("${mail.active}")
+  private boolean active;
+
   @Override
-  public void enviar(String destinatario, String nombreDestinatario, String asunto,
-      String cuerpo) {
+  public void enviar(String destinatario, String nombreDestinatario, String asunto, String cuerpo) {
     try {
       SimpleMailMessage mensaje = new SimpleMailMessage();
       mensaje.setFrom(fromAddress);
       mensaje.setTo(destinatario);
       mensaje.setSubject(asunto);
       mensaje.setText(cuerpo);
-      mailSender.send(mensaje);
-      log.info("Email enviado por SMTP a {} (asunto: {}):\n cuerpo {}", destinatario, asunto, cuerpo);
+      if (active) {
+        mailSender.send(mensaje);
+      }
+      log.info("Email enviado por SMTP a {} (asunto: {}):\n cuerpo {}", destinatario, asunto,
+          cuerpo);
     } catch (Exception e) {
-      throw new EmailNoEnviadoException(
-          "No se pudo enviar el correo por SMTP a " + destinatario, e);
+      throw new EmailNoEnviadoException("No se pudo enviar el correo por SMTP a " + destinatario,
+          e);
     }
   }
 }

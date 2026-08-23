@@ -2,7 +2,7 @@
 
 <div class="card">
     <h2>Próximos Eventos</h2>
-    <p>Explora los próximos eventos y apúntate. Los socios con la cuota al día tienen prioridad.</p>
+    <p>Explora los próximos eventos y apúntate. Si quedan plazas libres tu plaza queda confirmada al instante; si el evento está completo entrarás en la lista de espera y te avisaremos si se libera un hueco.</p>
 
     @if (loading) {
         <div class="flex justify-center items-center h-64">
@@ -54,50 +54,91 @@
                             </div>
                         }
                     </div>
+                    <!-- Una fila por ficha de socio de la cuenta: en un multicarnet deja ver
+                         a quién se está apuntando en vez de operar sobre un socio indeterminado. -->
+                    <div class="flex flex-col gap-2 border-t border-token pt-3"
+                         [class.hidden]="evento.misSocios.length === 0">
+                        @for (socio of evento.misSocios; track socio.socioUid) {
+                            <div class="flex items-center justify-between gap-2 min-h-8">
+                                @if (socio.estado) {
+                                    <span class="truncate">{{ etiquetaSocio(socio) }}</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        @if (socio.estado === 'EN_ESPERA') {
+                                            <fo-tag tone="warn">
+                                                <fo-icon name="espera" [size]="14" />
+                                                <span>En lista de espera</span>
+                                            </fo-tag>
+                                        } @else {
+                                            <fo-tag tone="success">
+                                                <fo-icon name="check" [size]="14" />
+                                                <span>Plaza confirmada</span>
+                                            </fo-tag>
+                                        }
+                                        <button
+                                            foButton
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            class="rounded-full text-danger"
+                                            [loading]="enCurso(evento, socio)"
+                                            [disabled]="eventoOcupado(evento)"
+                                            [attr.aria-label]="'Anular la inscripción de ' + socio.nombre"
+                                            (click)="anularInscripcion(evento, socio)"
+                                        >
+                                            <fo-icon name="cerrar" [size]="16" />
+                                        </button>
+                                    </div>
+                                } @else if (esMulticarnet(evento)) {
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <p-checkbox
+                                            [binary]="true"
+                                            [ngModel]="estaSeleccionado(evento, socio)"
+                                            [disabled]="evento.inscripcionCerrada || eventoOcupado(evento)"
+                                            (onChange)="alternarSeleccion(evento, socio)"
+                                        ></p-checkbox>
+                                        <span class="truncate">{{ etiquetaSocio(socio) }}</span>
+                                    </label>
+                                    <span class="text-ink-muted text-xs shrink-0">Sin inscribir</span>
+                                } @else {
+                                    <span class="truncate">{{ etiquetaSocio(socio) }}</span>
+                                    <span class="text-ink-muted text-xs shrink-0">Sin inscribir</span>
+                                }
+                            </div>
+                        }
+
+                        @if (puedeElegirGrupoIndivisible(evento)) {
+                            <label class="flex items-center gap-2 cursor-pointer text-sm text-ink-muted">
+                                <p-checkbox
+                                    [binary]="true"
+                                    [ngModel]="soloSiEntranTodos(evento)"
+                                    [disabled]="eventoOcupado(evento)"
+                                    (onChange)="alternarSoloSiEntranTodos(evento)"
+                                ></p-checkbox>
+                                <span>Solo si entramos todos (si no hay plazas para el grupo, todos a la lista de espera)</span>
+                            </label>
+                        }
+                    </div>
                     <ng-template pTemplate="footer">
-                        @if (!evento.isCurrentUserInscrito) {
+                        @if (evento.misSocios.length === 0) {
+                            <fo-tag tone="warn">
+                                <fo-icon name="espera" [size]="14" />
+                                <span>Tu cuenta no tiene ninguna ficha de socio asociada</span>
+                            </fo-tag>
+                        } @else if (pendientes(evento).length > 0) {
                             <button
                                 foButton
                                 variant="primary"
                                 [loading]="enCurso(evento)"
-                                [disabled]="evento.inscripcionCerrada || enCurso(evento)"
+                                [disabled]="!puedeInscribir(evento)"
                                 (click)="inscribir(evento)"
                             >
                                 <fo-icon name="check" />
-                                <span>Inscribir</span>
+                                <span>{{ textoBotonInscribir(evento) }}</span>
                             </button>
                         } @else {
-                            @if (enEspera(evento)) {
-                                <fo-tag tone="warn" class="mr-2">
-                                    <fo-icon name="espera" [size]="14" />
-                                    <span>En lista de espera</span>
-                                </fo-tag>
-                                <button
-                                    foButton
-                                    variant="danger"
-                                    [loading]="enCurso(evento)"
-                                    [disabled]="enCurso(evento)"
-                                    (click)="anularInscripcion(evento)"
-                                >
-                                    <fo-icon name="cerrar" />
-                                    <span>Cancelar</span>
-                                </button>
-                            } @else {
-                                <fo-tag tone="success" class="mr-2">
-                                    <fo-icon name="check" [size]="14" />
-                                    <span>Plaza confirmada</span>
-                                </fo-tag>
-                                <button
-                                    foButton
-                                    variant="danger"
-                                    [loading]="enCurso(evento)"
-                                    [disabled]="enCurso(evento)"
-                                    (click)="anularInscripcion(evento)"
-                                >
-                                    <fo-icon name="cerrar" />
-                                    <span>Quitar inscripción</span>
-                                </button>
-                            }
+                            <fo-tag tone="neutral">
+                                <fo-icon name="check" [size]="14" />
+                                <span>Ya estáis todos apuntados</span>
+                            </fo-tag>
                         }
                     </ng-template>
                 </p-card>

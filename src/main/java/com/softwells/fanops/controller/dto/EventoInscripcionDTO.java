@@ -1,9 +1,9 @@
 package com.softwells.fanops.controller.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.softwells.fanops.enums.EstadoInscripcion;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import lombok.Builder;
 import lombok.Data;
@@ -28,9 +28,14 @@ public class EventoInscripcionDTO {
 
   private int enListaEspera;
 
+  /** true si al menos uno de los socios del usuario actual está inscrito. */
   @JsonProperty("isCurrentUserInscrito")
   private boolean isCurrentUserInscrito;
 
-  /** Estado de la inscripción del usuario actual (null si no está inscrito). */
-  private EstadoInscripcion estadoInscripcionActual;
+  /**
+   * Estado de cada ficha de socio del usuario actual frente a este evento. En un multicarnet
+   * trae una entrada por persona, de forma que se ve quién está inscrito y con qué estado.
+   * Vacía en las consultas anónimas o de administración.
+   */
+  private List<SocioInscripcionDTO> misSocios;
 }

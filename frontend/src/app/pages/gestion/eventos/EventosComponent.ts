@@ -57,6 +57,7 @@ export class EventosComponent implements OnInit {
     eventoSeleccionado: Evento | null = null;
     loading: boolean = false;
     asignandoPlazas: boolean = false;
+    eliminandoInscripcion: string | null = null;
 
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
@@ -178,6 +179,42 @@ export class EventosComponent implements OnInit {
                     severity: 'error',
                     summary: 'Error',
                     detail: err.error?.message || 'No se pudieron asignar las plazas.'
+                });
+            }
+        });
+    }
+
+    eliminarInscripcion(inscripcion: InscripcionAdmin) {
+        const evento = this.eventoSeleccionado;
+        if (!evento?.uid || !inscripcion.uid) return;
+
+        const enEspera = inscripcion.estado === 'EN_ESPERA';
+        this.confirmationService.confirm({
+            message: enEspera
+                ? `¿Quitar a ${inscripcion.nombre} de la lista de espera?`
+                : `¿Dar de baja a ${inscripcion.nombre}? Su plaza pasará automáticamente al siguiente de la lista de espera.`,
+            header: 'Confirmar baja',
+            accept: () => {
+                this.eliminandoInscripcion = inscripcion.uid;
+                this.eventoService.eliminarInscripcion(evento.uid!, inscripcion.uid).subscribe({
+                    next: (resp) => {
+                        this.eliminandoInscripcion = null;
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: 'Inscripción eliminada',
+                            detail: resp.message || 'La inscripción se ha dado de baja.'
+                        });
+                        this.mostrarInscripciones(evento);
+                        this.cargarEventos();
+                    },
+                    error: (err) => {
+                        this.eliminandoInscripcion = null;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: err.error?.message || 'No se pudo eliminar la inscripción.'
+                        });
+                    }
                 });
             }
         });

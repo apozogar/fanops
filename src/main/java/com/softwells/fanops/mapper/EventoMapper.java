@@ -2,13 +2,24 @@ package com.softwells.fanops.mapper;
 
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
+import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.SocioEntity;
+import java.util.List;
 
 public class EventoMapper {
 
   public static EventoInscripcionDTO toInscripcionDTO(EventoEntity evento) {
+    return toInscripcionDTO(evento, List.of());
+  }
+
+  /**
+   * @param misSocios estado de cada ficha de socio del usuario autenticado frente al evento;
+   *                  lista vacía en consultas anónimas o de administración
+   */
+  public static EventoInscripcionDTO toInscripcionDTO(EventoEntity evento,
+      List<SocioInscripcionDTO> misSocios) {
     return EventoInscripcionDTO.builder()
         .uid(evento.getUid())
         .nombreEvento(evento.getNombreEvento())
@@ -20,7 +31,7 @@ public class EventoMapper {
         .plazasLibres(evento.getPlazasLibres())
         .enListaEspera(evento.getNumEnEspera())
         .isCurrentUserInscrito(evento.isCurrentUserInscrito())
-        .estadoInscripcionActual(evento.getEstadoInscripcionActual())
+        .misSocios(misSocios)
         .build();
   }
 

@@ -3,6 +3,8 @@ package com.softwells.fanops.service;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
+import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
+import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
 import com.softwells.fanops.enums.EstadoCuota;
 import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.mapper.EventoMapper;
@@ -17,9 +19,11 @@ import com.softwells.fanops.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -62,37 +66,49 @@ public class EventoService {
   }
 
   public List<EventoInscripcionDTO> findAllForInscripcion() {
-    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail)
-        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-
-    // Asumimos que el primer socio es el principal para la inscripción
-    SocioEntity socioPrincipal = usuario.getSocios().stream().findFirst()
-        .orElseThrow(() -> new IllegalStateException("El usuario no tiene un socio asociado."));
+    List<SocioEntity> misSocios = sociosDelUsuarioAutenticado();
 
     return eventoRepository.findAll().stream()
-        .peek(evento -> completarInfoUsuario(evento, socioPrincipal))
-        .map(EventoMapper::toInscripcionDTO)
+        .map(evento -> EventoMapper.toInscripcionDTO(evento, completarInfoUsuario(evento,
+            misSocios)))
         .sorted(Comparator.comparing(EventoInscripcionDTO::getFechaEvento))
         .collect(Collectors.toList());
   }
 
-  private void completarInfoUsuario(EventoEntity evento, SocioEntity socioPrincipal) {
+  /**
+   * Rellena los contadores del evento y devuelve el estado de cada ficha de socio del usuario.
+   * En un multicarnet hay una entrada por persona, inscrita o no, para que el usuario vea a
+   * quién está apuntando en lugar de operar sobre un "socio principal" indeterminado.
+   */
+  private List<SocioInscripcionDTO> completarInfoUsuario(EventoEntity evento,
+      List<SocioEntity> misSocios) {
     List<EventoInscripcionEntity> inscripciones =
         inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid());
-    Optional<EventoInscripcionEntity> miInscripcion = inscripciones.stream()
-        .filter(i -> i.getSocio() != null && i.getSocio().getUid().equals(socioPrincipal.getUid()))
-        .findFirst();
 
-    evento.setCurrentUserInscrito(miInscripcion.isPresent());
-    evento.setEstadoInscripcionActual(miInscripcion.map(EventoInscripcionEntity::getEstado)
-        .orElse(null));
+    Map<UUID, EstadoInscripcion> estadoPorSocio = new LinkedHashMap<>();
+    for (EventoInscripcionEntity inscripcion : inscripciones) {
+      if (inscripcion.getSocio() != null) {
+        estadoPorSocio.put(inscripcion.getSocio().getUid(), inscripcion.getEstado());
+      }
+    }
+
+    List<SocioInscripcionDTO> estadoMisSocios = misSocios.stream()
+        .map(socio -> SocioInscripcionDTO.builder()
+            .socioUid(socio.getUid())
+            .numeroSocio(socio.getNumeroSocio())
+            .nombre(socio.getNombre())
+            .estado(estadoPorSocio.get(socio.getUid()))
+            .build())
+        .collect(Collectors.toList());
+
+    evento.setCurrentUserInscrito(estadoMisSocios.stream().anyMatch(s -> s.getEstado() != null));
     evento.setNumInscritos((int) inscripciones.stream()
         .filter(i -> i.getEstado() == EstadoInscripcion.CONFIRMADA).count());
     evento.setNumEnEspera((int) inscripciones.stream()
         .filter(i -> i.getEstado() == EstadoInscripcion.EN_ESPERA).count());
     evento.setPlazasLibres(calcularPlazasLibres(evento, evento.getNumInscritos()));
     evento.setInscripcionCerrada(inscripcionCerrada(evento));
+    return estadoMisSocios;
   }
 
   /** Información pública de un evento para el formulario de inscripción de no socios. */
@@ -116,8 +132,13 @@ public class EventoService {
     return eventoRepository.save(evento);
   }
 
+  /**
+   * Actualiza el evento. Si al ampliar (o quitar) el límite de plazas quedan huecos libres, se
+   * promociona automáticamente a la lista de espera y se avisa a quien consigue plaza.
+   */
   public EventoEntity update(UUID id, EventoEntity eventoDetails) {
     EventoEntity eventoExistente = findEvento(id);
+    Integer plazasAnteriores = eventoExistente.getNumeroPlazas();
 
     eventoExistente.setNombreEvento(eventoDetails.getNombreEvento());
     eventoExistente.setFechaEvento(eventoDetails.getFechaEvento());
@@ -128,7 +149,20 @@ public class EventoService {
     eventoExistente.setCosteTotalEstimado(eventoDetails.getCosteTotalEstimado());
     eventoExistente.setCosteTotalReal(eventoDetails.getCosteTotalReal());
 
-    return eventoRepository.save(eventoExistente);
+    EventoEntity guardado = eventoRepository.save(eventoExistente);
+
+    if (seAmplioElAforo(plazasAnteriores, guardado.getNumeroPlazas())) {
+      promoverListaEspera(id);
+    }
+    return guardado;
+  }
+
+  /** Cierto si el nuevo aforo deja más hueco que el anterior (incluido pasar a ilimitado). */
+  private boolean seAmplioElAforo(Integer anterior, Integer nuevo) {
+    if (anterior == null) {
+      return false; // antes era ilimitado: no puede haber más hueco que antes
+    }
+    return nuevo == null || nuevo > anterior;
   }
 
   public void delete(UUID id) {
@@ -140,43 +174,120 @@ public class EventoService {
   // ----------------------------------------------------------------
 
   /**
-   * Inscribe al socio principal del usuario autenticado. Los socios prioritarios (activos y con
-   * la cuota al día) se confirman al instante si hay hueco; el resto queda en lista de espera.
+   * Inscribe a los socios indicados del usuario autenticado. Si hay plazas libres el socio tiene
+   * la plaza asegurada y se confirma al instante; solo si el evento está completo queda en lista
+   * de espera. Estar al día con la cuota no condiciona la plaza: únicamente da prioridad dentro
+   * de la lista de espera.
+   *
+   * <p>En un multicarnet se pueden apuntar varias personas de una vez. Si no caben todas, el
+   * comportamiento depende de {@code soloSiEntranTodos}: con el flag activo el grupo no se separa
+   * y va entero a la lista de espera; sin él, los que quepan se confirman y el resto espera.
+   *
+   * @return estado resultante de cada socio inscrito, en el orden solicitado
    */
-  public EstadoInscripcion inscribirSocio(UUID eventoId) {
-    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail)
-        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-    SocioEntity socio = usuario.getSocios().stream().findFirst()
-        .orElseThrow(() -> new IllegalStateException("Usuario sin socio principal."));
+  public List<SocioInscripcionDTO> inscribirSocios(UUID eventoId,
+      InscripcionSocioRequest request) {
+    List<SocioEntity> aInscribir = resolverSociosSolicitados(request);
 
     EventoEntity evento = findEvento(eventoId);
     validarInscripcionAbierta(evento);
 
-    if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
-      throw new IllegalStateException("Ya estás inscrito en este evento.");
+    for (SocioEntity socio : aInscribir) {
+      if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+        throw new IllegalStateException(socio.getNombre() + " ya está inscrito en este evento.");
+      }
     }
 
-    boolean socioAlDia = esSocioAlDia(socio);
     long confirmadas = inscripcionRepository.countByEventoUidAndEstado(eventoId,
         EstadoInscripcion.CONFIRMADA);
-    EstadoInscripcion estado =
-        (socioAlDia && hayHueco(evento, confirmadas)) ? EstadoInscripcion.CONFIRMADA
-            : EstadoInscripcion.EN_ESPERA;
+    // Con "solo si entramos todos" el grupo no se parte: si no caben todos, ninguno coge plaza.
+    boolean entranTodos = plazasLibresPara(evento, confirmadas) >= aInscribir.size();
+    boolean confirmarAlguno = !(request != null && request.isSoloSiEntranTodos() && !entranTodos);
 
-    EventoInscripcionEntity inscripcion = new EventoInscripcionEntity();
-    inscripcion.setEvento(evento);
-    inscripcion.setSocio(socio);
-    inscripcion.setNombre(socio.getNombre());
-    inscripcion.setEmail(socio.getEmail());
-    inscripcion.setTelefono(socio.getTelefono());
-    inscripcion.setFechaInscripcion(LocalDateTime.now());
-    inscripcion.setEstado(estado);
-    inscripcion.setSocioPrioritario(socioAlDia);
-    inscripcionRepository.save(inscripcion);
+    List<EventoInscripcionEntity> creadas = new ArrayList<>();
+    for (SocioEntity socio : aInscribir) {
+      EstadoInscripcion estado = confirmarAlguno && hayHueco(evento, confirmadas)
+          ? EstadoInscripcion.CONFIRMADA
+          : EstadoInscripcion.EN_ESPERA;
 
-    notificacionService.enviarConfirmacionInscripcion(socio, evento, estado);
-    return estado;
+      EventoInscripcionEntity inscripcion = new EventoInscripcionEntity();
+      inscripcion.setEvento(evento);
+      inscripcion.setSocio(socio);
+      inscripcion.setNombre(socio.getNombre());
+      inscripcion.setEmail(socio.getEmail());
+      inscripcion.setTelefono(socio.getTelefono());
+      inscripcion.setFechaInscripcion(LocalDateTime.now());
+      inscripcion.setEstado(estado);
+      inscripcion.setSocioPrioritario(esSocioAlDia(socio));
+      inscripcionRepository.save(inscripcion);
+      creadas.add(inscripcion);
+
+      if (estado == EstadoInscripcion.CONFIRMADA) {
+        confirmadas++;
+      }
+    }
+
+    // Un único aviso por operación, detallando a cada persona: enviar un correo por socio
+    // saturaría al titular de un multicarnet, que suele compartir email y teléfono con sus hijos.
+    notificacionService.enviarResumenInscripcion(creadas, evento);
+
+    return creadas.stream()
+        .map(inscripcion -> SocioInscripcionDTO.builder()
+            .socioUid(inscripcion.getSocio().getUid())
+            .numeroSocio(inscripcion.getSocio().getNumeroSocio())
+            .nombre(inscripcion.getNombre())
+            .estado(inscripcion.getEstado())
+            .build())
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Resuelve y valida los socios de la petición. Todos deben pertenecer al usuario autenticado,
+   * que es lo que impide apuntar a fichas ajenas pasando uids a mano. Si no se indica ninguno y
+   * el usuario tiene una sola ficha, se asume esa.
+   */
+  private List<SocioEntity> resolverSociosSolicitados(InscripcionSocioRequest request) {
+    List<SocioEntity> misSocios = sociosDelUsuarioAutenticado();
+    if (misSocios.isEmpty()) {
+      throw new IllegalStateException("El usuario no tiene ninguna ficha de socio asociada.");
+    }
+
+    List<UUID> solicitados = request != null ? request.getSocioUids() : null;
+    if (solicitados == null || solicitados.isEmpty()) {
+      if (misSocios.size() > 1) {
+        throw new IllegalArgumentException(
+            "Indica a quién quieres inscribir: tu cuenta tiene varias fichas de socio.");
+      }
+      return List.of(misSocios.get(0));
+    }
+
+    Map<UUID, SocioEntity> porUid = new LinkedHashMap<>();
+    misSocios.forEach(socio -> porUid.put(socio.getUid(), socio));
+
+    List<SocioEntity> resueltos = new ArrayList<>();
+    for (UUID socioUid : solicitados.stream().distinct().collect(Collectors.toList())) {
+      SocioEntity socio = porUid.get(socioUid);
+      if (socio == null) {
+        throw new IllegalArgumentException("Esa ficha de socio no pertenece a tu cuenta.");
+      }
+      resueltos.add(socio);
+    }
+    return resueltos;
+  }
+
+  /**
+   * Fichas de socio del usuario autenticado, en orden estable. El orden importa: {@code socios}
+   * es un Set, así que sin ordenar el "primer socio" varía entre llamadas.
+   */
+  private List<SocioEntity> sociosDelUsuarioAutenticado() {
+    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail)
+        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+    return usuario.getSocios().stream()
+        .sorted(Comparator
+            .comparing(SocioEntity::getNumeroSocio, Comparator.nullsLast(Comparator.naturalOrder()))
+            .thenComparing(SocioEntity::getNombre, Comparator.nullsLast(Comparator.naturalOrder())))
+        .collect(Collectors.toList());
   }
 
   /**
@@ -210,22 +321,74 @@ public class EventoService {
     return EstadoInscripcion.EN_ESPERA;
   }
 
-  public void anularInscripcionSocio(UUID eventoId) {
-    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-    SocioEntity socio = usuarioRepository.findByEmailIgnoreCase(userEmail)
-        .flatMap(u -> u.getSocios().stream().findFirst())
-        .orElseThrow(() -> new IllegalStateException("Usuario sin socio principal."));
+  /**
+   * Anula la inscripción de una ficha de socio del usuario autenticado. En un multicarnet
+   * cualquiera de las fichas de la cuenta puede dar de baja a otra, ya que comparten login.
+   *
+   * @param socioUid ficha a dar de baja; puede ser null si el usuario tiene una única ficha
+   */
+  public void anularInscripcionSocio(UUID eventoId, UUID socioUid) {
+    SocioEntity socio = resolverSocioPropio(socioUid);
 
     EventoInscripcionEntity inscripcion =
         inscripcionRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
-            .orElseThrow(() -> new IllegalStateException("No estás inscrito en este evento."));
+            .orElseThrow(() -> new IllegalStateException(
+                socio.getNombre() + " no está inscrito en este evento."));
 
     EstadoInscripcion estadoAnulado = inscripcion.getEstado();
     inscripcionRepository.delete(inscripcion);
+    inscripcionRepository.flush();
 
     if (estadoAnulado == EstadoInscripcion.CONFIRMADA) {
       promoverListaEspera(eventoId);
     }
+  }
+
+  /** Localiza una ficha del usuario autenticado, rechazando uids que no sean suyos. */
+  private SocioEntity resolverSocioPropio(UUID socioUid) {
+    List<SocioEntity> misSocios = sociosDelUsuarioAutenticado();
+    if (misSocios.isEmpty()) {
+      throw new IllegalStateException("El usuario no tiene ninguna ficha de socio asociada.");
+    }
+    if (socioUid == null) {
+      if (misSocios.size() > 1) {
+        throw new IllegalArgumentException(
+            "Indica a quién quieres dar de baja: tu cuenta tiene varias fichas de socio.");
+      }
+      return misSocios.get(0);
+    }
+    return misSocios.stream()
+        .filter(socio -> socio.getUid().equals(socioUid))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException(
+            "Esa ficha de socio no pertenece a tu cuenta."));
+  }
+
+  /**
+   * Da de baja una inscripción desde el panel de gestión, tanto de un socio como de un no socio.
+   * Se avisa a la persona dada de baja y, si tenía plaza confirmada, el hueco liberado se asigna
+   * automáticamente al siguiente de la lista de espera, que recibe su aviso de plaza.
+   *
+   * @return número de personas promocionadas desde la lista de espera
+   */
+  public int eliminarInscripcion(UUID eventoId, UUID inscripcionId) {
+    EventoInscripcionEntity inscripcion = inscripcionRepository.findById(inscripcionId)
+        .orElseThrow(() -> new EntityNotFoundException(
+            "Inscripción no encontrada con ID: " + inscripcionId));
+
+    EventoEntity evento = inscripcion.getEvento();
+    if (evento == null || !evento.getUid().equals(eventoId)) {
+      throw new IllegalArgumentException("La inscripción no pertenece a este evento.");
+    }
+
+    EstadoInscripcion estadoAnulado = inscripcion.getEstado();
+    inscripcionRepository.delete(inscripcion);
+    inscripcionRepository.flush();
+
+    notificacionService.enviarBajaInscripcion(inscripcion, evento);
+
+    // Solo se libera hueco si ocupaba plaza; dar de baja a alguien en espera no promociona a nadie.
+    return estadoAnulado == EstadoInscripcion.CONFIRMADA ? promoverListaEspera(eventoId) : 0;
   }
 
   /**
@@ -289,6 +452,14 @@ public class EventoService {
 
   private boolean hayHueco(EventoEntity evento, long confirmadas) {
     return evento.getNumeroPlazas() == null || confirmadas < evento.getNumeroPlazas();
+  }
+
+  /** Plazas libres restantes; {@link Long#MAX_VALUE} si el evento no tiene límite de aforo. */
+  private long plazasLibresPara(EventoEntity evento, long confirmadas) {
+    if (evento.getNumeroPlazas() == null) {
+      return Long.MAX_VALUE;
+    }
+    return Math.max(0, evento.getNumeroPlazas() - confirmadas);
   }
 
   private int calcularPlazasLibres(EventoEntity evento, int confirmadas) {

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest } from '@/interfaces/evento-inscripcion.dto';
+import { EventoInscripcionDTO, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '@/interfaces/api-response.interface';
@@ -46,12 +46,17 @@ export class EventoService {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${uid}`);
   }
 
-  inscribir(eventoId: string): Observable<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>> {
-    return this.http.post<ApiResponse<'CONFIRMADA' | 'EN_ESPERA'>>(`${this.apiUrl}/${eventoId}/inscribir`, {});
+  /**
+   * Inscribe una o varias fichas de socio de la cuenta. Devuelve el estado resultante de cada una.
+   */
+  inscribir(eventoId: string, data: InscripcionSocioRequest): Observable<ApiResponse<SocioInscripcion[]>> {
+    return this.http.post<ApiResponse<SocioInscripcion[]>>(`${this.apiUrl}/${eventoId}/inscribir`, data);
   }
 
-  anularInscripcion(eventoId: string): Observable<ApiResponse<void>> {
-    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${eventoId}/anular`);
+  /** Anula la inscripción de una ficha concreta de la cuenta. */
+  anularInscripcion(eventoId: string, socioUid?: string): Observable<ApiResponse<void>> {
+    const params = socioUid ? new HttpParams().set('socioUid', socioUid) : undefined;
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${eventoId}/anular`, { params });
   }
 
   /**
@@ -63,6 +68,14 @@ export class EventoService {
 
   getInscripciones(eventoId: string): Observable<ApiResponse<InscripcionAdmin[]>> {
     return this.http.get<ApiResponse<InscripcionAdmin[]>>(`${this.apiUrl}/${eventoId}/inscripciones`);
+  }
+
+  /**
+   * Da de baja una inscripción desde gestión. Devuelve cuántas personas han pasado desde la
+   * lista de espera al hueco liberado.
+   */
+  eliminarInscripcion(eventoId: string, inscripcionId: string): Observable<ApiResponse<number>> {
+    return this.http.delete<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}`);
   }
 
   asignarPlazas(eventoId: string): Observable<ApiResponse<number>> {

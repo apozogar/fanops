@@ -3,7 +3,7 @@ package com.softwells.fanops.service;
 import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
-import com.softwells.fanops.model.SocioEntity;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,13 +41,6 @@ public class NotificacionService {
   @Value("${whatsapp.access-token:}")
   private String whatsappAccessToken;
 
-  public void enviarConfirmacionInscripcion(SocioEntity socio, EventoEntity evento,
-      EstadoInscripcion estado) {
-    String asunto = "Inscripción a " + evento.getNombreEvento();
-    String cuerpo = cuerpoInscripcion(evento, estado, publicBaseUrl);
-    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo, socio.getTelefono());
-  }
-
   public void enviarConfirmacionInscripcionPublica(EventoInscripcionEntity inscripcion,
       EventoEntity evento) {
     String asunto = "Inscripción a " + evento.getNombreEvento();
@@ -63,6 +56,56 @@ public class NotificacionService {
             + "¡Enhorabuena! Ha quedado una plaza libre para '" + evento.getNombreEvento()
             + "' (" + evento.getFechaEvento() + ") y tu inscripción ha sido confirmada.\n\n"
             + "Nos vemos allí. ¡Vamos mi Betis!";
+    enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
+        inscripcion.getTelefono());
+  }
+
+  /**
+   * Aviso único para una inscripción de uno o varios socios, detallando el estado de cada
+   * persona. En un multicarnet evita mandar un correo por hijo al mismo titular y, sobre todo,
+   * deja claro a quién se ha apuntado.
+   */
+  public void enviarResumenInscripcion(List<EventoInscripcionEntity> inscripciones,
+      EventoEntity evento) {
+    if (inscripciones == null || inscripciones.isEmpty()) {
+      return;
+    }
+
+    StringBuilder cuerpo = new StringBuilder("Hola,\n\n")
+        .append("Inscripción a '").append(evento.getNombreEvento()).append("' (")
+        .append(evento.getFechaEvento()).append("):\n\n");
+    boolean algunoEnEspera = false;
+    for (EventoInscripcionEntity inscripcion : inscripciones) {
+      boolean confirmada = inscripcion.getEstado() == EstadoInscripcion.CONFIRMADA;
+      algunoEnEspera |= !confirmada;
+      cuerpo.append("- ").append(inscripcion.getNombre()).append(": ")
+          .append(confirmada ? "PLAZA CONFIRMADA" : "LISTA DE ESPERA").append("\n");
+    }
+    if (algunoEnEspera) {
+      cuerpo.append("\nAvisaremos por email o WhatsApp en cuanto se libere una plaza.");
+    }
+    cuerpo.append("\n\nMás información: ")
+        .append(publicBaseUrl).append("/#/inscripcion/").append(evento.getUid());
+
+    String asunto = "Inscripción a " + evento.getNombreEvento();
+    // Se avisa al contacto de cada ficha, pero sin repetir destinatario: en un multicarnet los
+    // hijos suelen compartir el email y el teléfono del titular.
+    inscripciones.stream()
+        .map(i -> Map.entry(i.getEmail() != null ? i.getEmail() : "",
+            i.getTelefono() != null ? i.getTelefono() : ""))
+        .distinct()
+        .forEach(contacto -> enviar(contacto.getKey(), inscripciones.get(0).getNombre(), asunto,
+            cuerpo.toString(), contacto.getValue()));
+  }
+
+  /** Aviso a quien un administrador da de baja de un evento. */
+  public void enviarBajaInscripcion(EventoInscripcionEntity inscripcion, EventoEntity evento) {
+    String asunto = "Baja en " + evento.getNombreEvento();
+    String cuerpo =
+        "Hola " + inscripcion.getNombre() + ",\n\n"
+            + "Tu inscripción a '" + evento.getNombreEvento() + "' ("
+            + evento.getFechaEvento() + ") ha sido dada de baja por la organización.\n\n"
+            + "Si crees que se trata de un error, ponte en contacto con nosotros.";
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
         inscripcion.getTelefono());
   }

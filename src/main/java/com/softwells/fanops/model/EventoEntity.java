@@ -2,7 +2,6 @@ package com.softwells.fanops.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.softwells.fanops.enums.EstadoInscripcion;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,8 +56,6 @@ public class EventoEntity {
   @JsonProperty("isCurrentUserInscrito") // Forza este nombre en el JSON
   private boolean isCurrentUserInscrito;
 
-  @Transient
-  private EstadoInscripcion estadoInscripcionActual;
 
   @Transient
   private boolean inscripcionCerrada;

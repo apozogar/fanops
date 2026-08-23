@@ -225,6 +225,7 @@
                                 <th>Email</th>
                                 <th>Teléfono</th>
                                 <th>Inscripción</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-inscripcion>
@@ -238,10 +239,19 @@
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>
                                 <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
+                                <td class="text-center">
+                                    <button foButton variant="ghost" size="icon-sm"
+                                            class="rounded-full text-danger"
+                                            [disabled]="eliminandoInscripcion === inscripcion.uid"
+                                            (click)="eliminarInscripcion(inscripcion)"
+                                            pTooltip="Dar de baja" tooltipPosition="top"
+                                            aria-label="Dar de baja"
+                                    ><fo-icon name="eliminar" [size]="16" /></button>
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="empty">
-                            <tr><td colspan="5">No hay inscritos confirmados.</td></tr>
+                            <tr><td colspan="6">No hay inscritos confirmados.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>
@@ -258,6 +268,7 @@
                                 <th>Email</th>
                                 <th>Teléfono</th>
                                 <th>Alta en espera</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-inscripcion>
@@ -271,10 +282,19 @@
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>
                                 <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
+                                <td class="text-center">
+                                    <button foButton variant="ghost" size="icon-sm"
+                                            class="rounded-full text-danger"
+                                            [disabled]="eliminandoInscripcion === inscripcion.uid"
+                                            (click)="eliminarInscripcion(inscripcion)"
+                                            pTooltip="Quitar de la lista de espera" tooltipPosition="top"
+                                            aria-label="Quitar de la lista de espera"
+                                    ><fo-icon name="eliminar" [size]="16" /></button>
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="empty">
-                            <tr><td colspan="5">No hay nadie en lista de espera.</td></tr>
+                            <tr><td colspan="6">No hay nadie en lista de espera.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>

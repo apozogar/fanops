@@ -94,6 +94,7 @@ app:
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:
+  active: false
   from:
     address: ${MAIL_FROM_ADDRESS:noreply@fanops.local}
 

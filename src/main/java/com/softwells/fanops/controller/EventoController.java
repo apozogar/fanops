@@ -4,6 +4,8 @@ import com.softwells.fanops.controller.dto.ApiResponse;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
+import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
+import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
 import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.service.EventoService;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -77,14 +80,36 @@ public class EventoController {
     return ResponseEntity.ok(new ApiResponse<>(true, "Evento eliminado correctamente", null));
   }
 
+  /**
+   * Inscribe una o varias fichas de socio del usuario autenticado. En un multicarnet el cuerpo
+   * indica a quién se apunta; si el usuario tiene una sola ficha puede omitirse.
+   */
   @PostMapping("/{id}/inscribir")
   @PreAuthorize("isAuthenticated()")
-  public ResponseEntity<ApiResponse<EstadoInscripcion>> inscribir(@PathVariable UUID id) {
-    EstadoInscripcion estado = eventoService.inscribirSocio(id);
-    String mensaje = estado == EstadoInscripcion.CONFIRMADA
-        ? "Inscripción confirmada. ¡Nos vemos allí!"
-        : "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.";
-    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, estado));
+  public ResponseEntity<ApiResponse<List<SocioInscripcionDTO>>> inscribir(@PathVariable UUID id,
+      @RequestBody(required = false) InscripcionSocioRequest request) {
+    List<SocioInscripcionDTO> resultado = eventoService.inscribirSocios(id, request);
+    return ResponseEntity.ok(new ApiResponse<>(true, mensajeInscripcion(resultado), resultado));
+  }
+
+  private String mensajeInscripcion(List<SocioInscripcionDTO> resultado) {
+    long confirmadas = resultado.stream()
+        .filter(s -> s.getEstado() == EstadoInscripcion.CONFIRMADA)
+        .count();
+    long enEspera = resultado.size() - confirmadas;
+
+    if (resultado.size() == 1) {
+      return confirmadas == 1
+          ? "Inscripción confirmada. ¡Nos vemos allí!"
+          : "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.";
+    }
+    if (enEspera == 0) {
+      return confirmadas + " plazas confirmadas. ¡Nos vemos allí!";
+    }
+    if (confirmadas == 0) {
+      return "Os habéis apuntado. Estáis en lista de espera, os avisaremos cuando haya hueco.";
+    }
+    return confirmadas + " con plaza confirmada y " + enEspera + " en lista de espera.";
   }
 
   /**
@@ -99,10 +124,15 @@ public class EventoController {
         "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.", estado));
   }
 
+  /**
+   * Anula la inscripción de una ficha de socio del usuario. {@code socioUid} puede omitirse si
+   * la cuenta tiene una única ficha.
+   */
   @DeleteMapping("/{id}/anular")
   @PreAuthorize("isAuthenticated()")
-  public ResponseEntity<ApiResponse<Void>> anularInscripcion(@PathVariable UUID id) {
-    eventoService.anularInscripcionSocio(id);
+  public ResponseEntity<ApiResponse<Void>> anularInscripcion(@PathVariable UUID id,
+      @RequestParam(required = false) UUID socioUid) {
+    eventoService.anularInscripcionSocio(id, socioUid);
     return ResponseEntity.ok(new ApiResponse<>(true, "Inscripción anulada correctamente", null));
   }
 
@@ -111,6 +141,21 @@ public class EventoController {
       @PathVariable UUID id) {
     return ResponseEntity.ok(new ApiResponse<>(true, "Inscripciones recuperadas",
         eventoService.getInscripciones(id)));
+  }
+
+  /**
+   * Da de baja una inscripción desde gestión. Si ocupaba plaza confirmada, el hueco se asigna
+   * automáticamente al siguiente de la lista de espera.
+   */
+  @DeleteMapping("/{id}/inscripciones/{inscripcionId}")
+  public ResponseEntity<ApiResponse<Integer>> eliminarInscripcion(@PathVariable UUID id,
+      @PathVariable UUID inscripcionId) {
+    int promocionadas = eventoService.eliminarInscripcion(id, inscripcionId);
+    String mensaje = promocionadas > 0
+        ? "Inscripción eliminada. " + promocionadas
+            + " persona(s) han pasado desde la lista de espera."
+        : "Inscripción eliminada correctamente";
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, promocionadas));
   }
 
   /**
