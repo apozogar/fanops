@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
+/* La aplicación tiene un único tema, claro: nada añade ya la clase .app-dark, así que las
+   utilidades dark: que quedan en algunas plantillas heredadas no se activan nunca.
+   Esta redefinición debe quedarse: sin ella, dark: volvería a su significado por defecto
+   en Tailwind (prefers-color-scheme) y esas plantillas se pintarían oscuras a medias en
+   cuanto el sistema del usuario estuviera en modo oscuro. */
 @custom-variant dark (&:where(.app-dark, .app-dark *));
 
 @theme {

@@ -6,6 +6,7 @@ import { CarnetSocioComponent } from '@/pages/area-personal/carnetSocio/CarnetSo
 import { CuotasSocioComponent } from '@/pages/area-personal/cuotasSocio/CuotasSocioComponent';
 import { InscripcionPublicaComponent } from '@/pages/publico/inscripcion-publica/inscripcion-publica.component';
 import { InscripcionEventosComponent } from '@/pages/area-personal/inscripcion-eventos/inscripcion-eventos.component';
+import { penaPublicaResolver, sinPenaPublicaResolver } from '@/core/pena/pena-publica.resolver';
 import { adminGuard } from '@/guards/admin.guard';
 import { authGuard } from '@/guards/auth.guard';
 import { superAdminGuard } from '@/guards/superadmin.guard';
@@ -62,7 +63,39 @@ export const appRoutes: Routes = [
         ]
     },
     { path: 'notfound', component: Notfound },
-    { path: 'auth', loadChildren: () => import('@/pages/auth/auth.routes') },
+
+    /*
+     * Autenticación sin dominio de peña, entrando por la raíz de la aplicación. Sigue siendo
+     * válido: se muestra la marca genérica de FanOps y quien se registre cae en la peña por
+     * defecto, que es como funcionaba antes de existir los dominios por peña.
+     *
+     * El resolver descarta la peña que hubiera quedado cargada de una visita anterior, para que
+     * la pantalla no muestre la marca de una peña que no está en la URL.
+     */
+    {
+        path: 'auth',
+        resolve: { penaPublica: sinPenaPublicaResolver },
+        loadChildren: () => import('@/pages/auth/auth.routes')
+    },
     { path: 'inscripcion/:id', component: InscripcionPublicaComponent },
+
+    /*
+     * Dominio de peña: /mi-pena/auth/login.
+     *
+     * Va al final a propósito, justo antes del comodín: ':penaSlug' encaja con cualquier primer
+     * segmento, así que tiene que probarse después de todas las rutas concretas para que /socios
+     * siga siendo la pantalla de socios y no la peña llamada "socios". El backend refuerza lo
+     * mismo por el otro lado, reservando esos nombres al validar el dominio de una peña
+     * (PenaService.SLUGS_RESERVADOS).
+     */
+    {
+        path: ':penaSlug',
+        resolve: { penaPublica: penaPublicaResolver },
+        children: [
+            { path: '', pathMatch: 'full', redirectTo: 'auth/login' },
+            { path: 'auth', loadChildren: () => import('@/pages/auth/auth.routes') }
+        ]
+    },
+
     { path: '**', redirectTo: '/notfound' }
 ];

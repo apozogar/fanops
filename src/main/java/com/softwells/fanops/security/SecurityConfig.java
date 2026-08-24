@@ -36,33 +36,38 @@ public class SecurityConfig {
         .csrf(AbstractHttpConfigurer::disable)
         .authenticationProvider(authenticationProvider)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-        // Definir las reglas de autorización para las peticiones HTTP
+        /*
+         * Reglas de autorización.
+         *
+         * El reparto se apoya en el mismo invariante que SpaForwardingController: todo lo que
+         * cuelga de /api es API y todo lo demás es el frontend (index.html, los bundles y los
+         * assets). Por eso la regla general es al revés que antes: /api/** exige autenticación
+         * salvo lo explícitamente público, y el resto se sirve sin autenticar.
+         *
+         * El cambio es necesario, no una relajación: al quitar el enrutado por hash, una ruta
+         * como /mi-pena/auth/login llega al servidor como una petición real, y con
+         * anyRequest().authenticated() devolvía 401 en lugar de servir el frontend. Lo que se
+         * abre no es información: son ficheros estáticos que cualquiera puede descargar de todas
+         * formas, y el HTML del frontend, que sin un token válido no puede leer ningún dato.
+         *
+         * IMPORTANTE: si algún día se añade un controlador fuera de /api, hay que protegerlo
+         * aquí explícitamente; si no, quedará público al caer en la regla final.
+         */
         .authorizeHttpRequests(authz -> authz
 
-            // Permitir el acceso sin autenticación a estas rutas
+            // --- API pública (sin token) ---
             .requestMatchers(
-                "/",                  // Permitir acceso a la raíz
-                "/index.html",        // Archivos estáticos
-                "/media/**",          // Permitir acceso a la carpeta de media (fuentes, etc.)
-                "/assets/**",         // Carpeta de assets del frontend
-                "/auth/**",
+                "/api/auth/**",                       // Login, registro, recuperación de contraseña
+                "/api/pena/publica/**",               // Identidad de la peña por su dominio, para el login
                 "/api/eventos/*/inscripcion-publica", // Inscripción pública de no socios
-                "/api/eventos/*/info-publica",        // Info pública del evento para el formulario
-                "/v2/api-docs",
-                "/management/**",     // Permitir acceso a los endpoints de Actuator
-                "/v3/api-docs",
-                "/v3/api-docs/**",
-                "/swagger-resources",
-                "/swagger-resources/**",
-                "/configuration/ui",
-                "/configuration/security",
-                "/swagger-ui/**",
-                "/webjars/**",
-                "/swagger-ui.html",
-                "/*.*"
+                "/api/eventos/*/info-publica"         // Info pública del evento para el formulario
             ).permitAll()
-            // Ahora, cualquier otra petición solo necesita estar autenticada. La lógica de roles la movemos al controlador.
-            .anyRequest().authenticated()
+
+            // --- Resto de la API: hace falta token. El detalle de roles va en cada controlador. ---
+            .requestMatchers("/api/**").authenticated()
+
+            // --- Frontend, ficheros estáticos, Actuator y Swagger ---
+            .anyRequest().permitAll()
         )
         // Configurar la gestión de sesiones como STATELESS (una sola vez)
         .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

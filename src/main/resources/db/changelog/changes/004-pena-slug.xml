@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!--
+    Añade a "pena" el slug: el identificador de la peña en la URL
+    (https://fanops.example/mi-pena/auth/login). Es lo que permite saber a qué peña se accede
+    antes de tener sesión y, por tanto, a qué peña asociar a quien se registra.
+
+    Entornos ya desplegados: la tabla "pena" existe con filas → se añade la columna, se rellena a
+    partir del nombre, se resuelven las colisiones y solo entonces se marca NOT NULL y única. El
+    orden importa: con la restricción puesta antes del backfill, el UPDATE fallaría.
+
+    Entornos nuevos (BD vacía): "pena" todavía no existe cuando corre Liquibase, así que estos
+    changeSets se marcan como ejecutados sin hacer nada e Hibernate crea la tabla completa, con la
+    columna slug tal como la declara PenaEntity.
+  -->
+  <changeSet id="004-1-add-slug-to-pena" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="pena"/>
+      <not>
+        <columnExists tableName="pena" columnName="slug"/>
+      </not>
+    </preConditions>
+
+    <!-- Nullable de momento: hay que rellenarla antes de poder exigirla. -->
+    <addColumn tableName="pena">
+      <column name="slug" type="VARCHAR(60)"/>
+    </addColumn>
+
+    <!--
+      Backfill a partir del nombre, con la misma normalización que PenaService.normalizarSlug:
+      minúsculas, sin acentos, y todo lo que no sea letra o dígito convertido en un guion.
+
+      Se usa translate() y no la función unaccent() de PostgreSQL a propósito: unaccent vive en una
+      extensión que puede no estar instalada (y crearla requiere permisos de superusuario, que en
+      un Postgres gestionado como Neon no siempre se tienen).
+    -->
+    <sql>
+      UPDATE pena
+      SET slug = trim(both '-' from
+            regexp_replace(
+              lower(translate(nombre,
+                'áàäâãåéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÅÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ',
+                'aaaaaaeeeeiiiiooooouuuuncAAAAAAEEEEIIIIOOOOOUUUUNC')),
+              '[^a-z0-9]+', '-', 'g'))
+      WHERE slug IS NULL
+    </sql>
+
+    <!--
+      Red de seguridad para nombres que se normalizan al mismo slug, o a nada (un nombre escrito
+      solo con signos). Se desempata con el id, que es único por definición.
+    -->
+    <sql>
+      UPDATE pena p
+      SET slug = CASE WHEN p.slug IS NULL OR p.slug = '' THEN 'pena-' || p.id
+                      ELSE p.slug || '-' || p.id END
+      WHERE p.slug IS NULL
+         OR p.slug = ''
+         OR EXISTS (SELECT 1 FROM pena o WHERE o.slug = p.slug AND o.id &lt; p.id)
+    </sql>
+  </changeSet>
+
+  <!--
+    En un changeSet aparte para que las restricciones se apliquen aunque el anterior se haya
+    marcado como ejecutado sin hacer nada (BD nueva): allí la columna la crea Hibernate y estas
+    condiciones previas detectan que la restricción ya está puesta.
+  -->
+  <changeSet id="004-2-slug-obligatorio-y-unico" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <columnExists tableName="pena" columnName="slug"/>
+      <not>
+        <indexExists indexName="uk_pena_slug"/>
+      </not>
+    </preConditions>
+
+    <addNotNullConstraint tableName="pena" columnName="slug" columnDataType="VARCHAR(60)"/>
+    <createIndex tableName="pena" indexName="uk_pena_slug" unique="true">
+      <column name="slug"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>

@@ -209,26 +209,27 @@ export class EventosComponent implements OnInit {
     // ----------------------------------------------------------------
 
     /**
-     * Pone o retira la falta de un inscrito. Solo se marca a quien ha fallado: no hace falta
-     * confirmar uno a uno a los que sí vinieron, que son la mayoría.
+     * Pasa lista marcando a cada inscrito como presente o ausente. Se hace por persona en lugar
+     * de con un guardado global para que sea reversible al momento: si te equivocas, vuelves a
+     * pulsar el botón ya activo y la marca (y la falta, si la había) desaparece.
      */
-    alternarFalta(inscripcion: InscripcionAdmin) {
+    marcarAsistencia(inscripcion: InscripcionAdmin, asistencia: AsistenciaEvento) {
         const evento = this.eventoSeleccionado;
         if (!evento?.uid || this.marcandoAsistencia) return;
 
-        const tieneFalta = inscripcion.asistencia === 'NO_ASISTIO';
-        const destino: AsistenciaEvento = tieneFalta ? 'PENDIENTE' : 'NO_ASISTIO';
+        // Volver a pulsar el botón ya activo deja la persona sin pasar lista.
+        const destino: AsistenciaEvento = inscripcion.asistencia === asistencia ? 'PENDIENTE' : asistencia;
 
         this.marcandoAsistencia = inscripcion.uid;
         this.eventoService.marcarAsistencia(evento.uid, inscripcion.uid, destino).subscribe({
             next: (resp) => {
                 this.marcandoAsistencia = null;
                 this.messageService.add({
-                    severity: tieneFalta ? 'success' : 'warn',
-                    summary: tieneFalta ? 'Falta retirada' : 'Falta registrada',
-                    detail: tieneFalta
-                        ? inscripcion.nombre
-                        : `${inscripcion.nombre} acumula ${resp.data} falta(s)`
+                    severity: destino === 'NO_ASISTIO' ? 'warn' : 'success',
+                    summary: resp.message || 'Asistencia actualizada',
+                    detail: destino === 'NO_ASISTIO'
+                        ? `${inscripcion.nombre} acumula ${resp.data} falta(s)`
+                        : inscripcion.nombre
                 });
                 this.mostrarInscripciones(evento);
             },
@@ -237,10 +238,15 @@ export class EventosComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err.error?.message || 'No se pudo registrar la falta.'
+                    detail: err.error?.message || 'No se pudo registrar la asistencia.'
                 });
             }
         });
+    }
+
+    /** Inscritos a los que todavía no se ha pasado lista, para saber qué queda por revisar. */
+    get pendientesDeLista(): number {
+        return this.inscritos.filter(i => !i.asistencia || i.asistencia === 'PENDIENTE').length;
     }
 
     /** Retira una falta desde la pestaña de fallos, incluida la de una cancelación tardía. */

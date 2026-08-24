@@ -86,17 +86,17 @@ app:
   #   brevo -> API HTTP de Brevo, que sale por el 443. Es la única opción en el plan gratuito
   #            de Render, que bloquea los puertos SMTP (25, 465 y 587).
   email:
-    proveedor: ${APP_EMAIL_PROVEEDOR:smtp}
+    proveedor: ${APP_EMAIL_PROVEEDOR:brevo}
     remitente-nombre: ${MAIL_FROM_NAME:FanOps}
     brevo:
       url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
-      api-key: ${BREVO_API_KEY:}
+      api-key: ${BREVO_API_KEY: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}
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:
   active: ${MAIL_ACTIVE:true}
   from:
-    address: ${MAIL_FROM_ADDRESS:noreply@fanops.local}
+    address: ${MAIL_FROM_ADDRESS:albertopozogarcia@gmail.com}
 
 # Notificaciones por WhatsApp (Meta Business Cloud API)
 whatsapp:

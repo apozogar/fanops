@@ -214,7 +214,12 @@
 
         <p-accordion value="0">
             <p-accordion-panel value="0">
-                <p-accordion-header>Confirmados ({{ inscritos.length }})</p-accordion-header>
+                <p-accordion-header>
+                    Confirmados ({{ inscritos.length }})
+                    <span *ngIf="pendientesDeLista > 0" class="text-ink-muted text-sm ml-2">
+                        · {{ pendientesDeLista }} sin pasar lista
+                    </span>
+                </p-accordion-header>
                 <p-accordion-content>
                     <p-table [value]="inscritos" [rows]="10" [paginator]="true" [rowHover]="true"
                              dataKey="uid">
@@ -225,6 +230,7 @@
                                 <th>Email</th>
                                 <th>Teléfono</th>
                                 <th>Inscripción</th>
+                                <th class="text-center">Asistencia</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </ng-template>
@@ -245,17 +251,25 @@
                                 <td>{{ inscripcion.email }}</td>
                                 <td>{{ inscripcion.telefono }}</td>
                                 <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <!-- Solo se marca a quien ha fallado: no hay que confirmar uno a
-                                     uno a los que vinieron. Volver a pulsar retira la falta. -->
+                                <!-- Pasar lista: se marca a cada uno como presente o ausente.
+                                     Volver a pulsar el botón ya activo retira la marca. -->
                                 <td class="text-center whitespace-nowrap">
                                     <button foButton size="icon-sm" class="rounded-full"
+                                            [variant]="inscripcion.asistencia === 'ASISTIO' ? 'primary' : 'ghost'"
+                                            [disabled]="marcandoAsistencia === inscripcion.uid"
+                                            (click)="marcarAsistencia(inscripcion, 'ASISTIO')"
+                                            pTooltip="Vino" tooltipPosition="top"
+                                            [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' vino'"
+                                    ><fo-icon name="check" [size]="16" /></button>
+                                    <button foButton size="icon-sm" class="rounded-full ml-1"
                                             [variant]="inscripcion.asistencia === 'NO_ASISTIO' ? 'danger' : 'ghost'"
                                             [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="alternarFalta(inscripcion)"
-                                            [pTooltip]="inscripcion.asistencia === 'NO_ASISTIO' ? 'Retirar la falta' : 'Poner falta (no vino)'"
-                                            tooltipPosition="top"
-                                            [attr.aria-label]="inscripcion.asistencia === 'NO_ASISTIO' ? 'Retirar la falta' : 'Poner falta'"
-                                    ><fo-icon name="espera" [size]="16" /></button>
+                                            (click)="marcarAsistencia(inscripcion, 'NO_ASISTIO')"
+                                            pTooltip="No vino (genera falta)" tooltipPosition="top"
+                                            [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' no vino'"
+                                    ><fo-icon name="cerrar" [size]="16" /></button>
+                                </td>
+                                <td class="text-center whitespace-nowrap">
                                     <button foButton variant="ghost" size="icon-sm"
                                             class="rounded-full text-danger"
                                             [disabled]="eliminandoInscripcion === inscripcion.uid"
@@ -267,7 +281,7 @@
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="empty">
-                            <tr><td colspan="6">No hay inscritos confirmados.</td></tr>
+                            <tr><td colspan="7">No hay inscritos confirmados.</td></tr>
                         </ng-template>
                     </p-table>
                 </p-accordion-content>

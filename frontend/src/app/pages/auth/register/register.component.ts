@@ -1,24 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { RegisterRequest } from '@/models/register-request.model';
 import { FormsModule } from '@angular/forms';
-
-import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { MessageModule } from 'primeng/message';
 import { AuthService } from '@/pages/auth/auth.service';
-import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
-
+import { AuthShellComponent } from '@/pages/auth/auth-shell.component';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiInputDirective } from '@/ui/ui-input.directive';
+import { UiPasswordComponent } from '@/ui/ui-password.component';
+
 @Component({
     selector: 'app-register',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, RouterLink, FormsModule, ButtonModule, CheckboxModule, InputTextModule, PasswordModule, MessageModule, ThemeToggleComponent],
-    templateUrl: './register.component.html',
-    styles: ``
+    imports: [AuthShellComponent, UiButtonDirective, UiInputDirective, UiPasswordComponent, IconComponent, RouterLink, FormsModule],
+    templateUrl: './register.component.html'
 })
 export class RegisterComponent implements OnInit {
     registerData: RegisterRequest = {
@@ -34,6 +30,8 @@ export class RegisterComponent implements OnInit {
      */
     verificacionEnviada = false;
 
+    protected readonly penaPublica = inject(PenaPublicaService);
+
     constructor(
         private authService: AuthService,
         private router: Router
@@ -41,6 +39,14 @@ export class RegisterComponent implements OnInit {
 
     ngOnInit(): void {
         localStorage.removeItem('token');
+    }
+
+    /**
+     * Aviso en el propio campo de confirmación, en lugar de esperar al envío. Solo avisa cuando ya
+     * hay algo escrito en la confirmación: si no, marcaría en rojo un campo que aún no se ha tocado.
+     */
+    passwordsNoCoinciden(): boolean {
+        return !!this.confirmPassword && this.confirmPassword !== this.registerData.password;
     }
 
     register(): void {
@@ -56,7 +62,9 @@ export class RegisterComponent implements OnInit {
             return;
         }
 
-        this.authService.loginAfterRegister(this.registerData).subscribe({
+        // El dominio por el que se ha entrado decide la peña del socio nuevo. Sin él, el backend
+        // cae en la peña por defecto, que es lo que hacía antes con todo el mundo.
+        this.authService.loginAfterRegister({ ...this.registerData, penaSlug: this.penaPublica.slug() }).subscribe({
             next: (resultado) => {
                 if (resultado.requiereVerificacion) {
                     // Ese correo ya está en el listado de socios: la cuenta se crea al confirmar
@@ -68,9 +76,7 @@ export class RegisterComponent implements OnInit {
                 this.router.navigate(['/auth/complete-profile']);
             },
             error: (err) => {
-                // Manejo de errores del backend
                 if (err.status === 409) {
-                    // Conflict
                     this.error = 'El email ya está registrado.';
                 } else {
                     // Cuando el backend explica el motivo (por ejemplo, que no se ha podido

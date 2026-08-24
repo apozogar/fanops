@@ -35,6 +35,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -70,6 +71,7 @@ public class SocioService {
   private final RoleRepository roleRepository;
   private final PenaService penaService;
   private final UsuarioService usuarioService;
+  private final RoleHierarchy roleHierarchy;
 
   @Transactional
   public SocioEntity crear(SocioEntity socio) {
@@ -107,9 +109,10 @@ public class SocioService {
         .orElseGet(() -> roleRepository.save(new RoleEntity("ROLE_USER")));
     nuevoUsuario.setRoles(Set.of(userRole));
 
-    // El auto-registro público no permite elegir peña todavía: se asigna la peña por defecto.
-    PenaEntity penaPorDefecto = penaService.getDefaultPena();
-    nuevoUsuario.setPena(penaPorDefecto);
+    // La peña sale del dominio por el que se ha entrado (/mi-pena/auth/register). Sin él no hay
+    // forma de saberlo, y se cae a la peña por defecto como antes.
+    PenaEntity pena = resolverPenaDeRegistro(request.getPenaSlug());
+    nuevoUsuario.setPena(pena);
 
     UsuarioEntity usuario = usuarioRepository.save(nuevoUsuario);
 
@@ -124,8 +127,26 @@ public class SocioService {
     nuevoSocio.setExentoPago(false);
     nuevoSocio.setNumeroSocio(generarNumeroSocio());
     nuevoSocio.setUsuario(usuario);
-    nuevoSocio.setPena(penaPorDefecto);
+    nuevoSocio.setPena(pena);
     return socioRepository.save(nuevoSocio);
+  }
+
+  /**
+   * Peña a la que se asocia quien se registra.
+   *
+   * Un dominio que no existe se trata como error explícito y no se cae en silencio a la peña
+   * por defecto: si alguien llega con un enlace equivocado, dar de alta su ficha en otra peña
+   * es peor que decirle que el enlace no vale, porque el socio queda en un sitio donde nadie
+   * lo espera y hay que rehacerlo a mano.
+   *
+   * Sin dominio (alguien que entra por la raíz) sí se usa la peña por defecto, que es el
+   * comportamiento que había antes de existir los dominios por peña.
+   */
+  private PenaEntity resolverPenaDeRegistro(String penaSlug) {
+    if (penaSlug == null || penaSlug.isBlank()) {
+      return penaService.getDefaultPena();
+    }
+    return penaService.findBySlug(penaSlug);
   }
 
   @Transactional
@@ -203,7 +224,11 @@ public class SocioService {
     var authentication = SecurityContextHolder.getContext().getAuthentication();
     assert authentication != null;
     String currentUsername = authentication.getName();
-    boolean isAdmin = authentication.getAuthorities().stream()
+    // Se expanden las autoridades con la jerarquía de roles (ver SecurityConfig): el superadmin
+    // solo lleva ROLE_SUPERADMIN en el token, así que comparar el authority "a pelo" contra
+    // ROLE_ADMIN le dejaba fuera aunque la jerarquía diga que un superadmin es también admin.
+    boolean isAdmin = roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities())
+        .stream()
         .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
     if (!isAdmin && !socio.getEmail().equals(currentUsername)) {

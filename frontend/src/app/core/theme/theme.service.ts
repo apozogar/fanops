@@ -2,9 +2,14 @@ import { Injectable, signal } from '@angular/core';
 import { updatePrimaryPalette, updateSurfacePalette } from '@primeuix/themes';
 import { buildScale, ColorScale, DEFAULT_ACCENT, readableForegroundFor } from './color';
 
-const DARK_CLASS = 'app-dark';
-const TRANSITION_LOCK_CLASS = 'fo-theme-switching';
-const STORAGE_KEY_DARK = 'fanops.theme.dark';
+/**
+ * Clave de la preferencia de tema oscuro que guardaba la versión anterior. Se borra al arrancar
+ * para no dejar basura en el navegador de quien ya la tenía puesta.
+ */
+const STORAGE_KEY_DARK_OBSOLETA = 'fanops.theme.dark';
+
+/** Clase del tema oscuro retirado. Se limpia por si quedó puesta de una sesión anterior. */
+const DARK_CLASS_OBSOLETA = 'app-dark';
 
 /**
  * Escala neutra, espejo de --fo-neutral-* en theme.css. Se replica aquí para poder
@@ -26,41 +31,27 @@ const NEUTRAL_SCALE: ColorScale = {
 };
 
 /**
- * Único punto de control del aspecto de la aplicación: modo claro/oscuro y color de acento.
+ * Único punto de control del aspecto de la aplicación: el color de acento.
  *
  * El acento se toma del campo `color` de la peña, así que cada peña tiñe su propia app.
  * Escribe la escala como variables CSS en <html> (que sobreescriben los valores por defecto
  * de theme.css) y, además, la propaga a los tokens de PrimeNG para los widgets que quedan.
+ *
+ * La aplicación tiene un único tema, claro. El modo oscuro se retiró: mantenerlo obligaba a
+ * revisar cada pantalla en dos paletas y el resultado no era bueno. Las utilidades `dark:` que
+ * quedan en algunas plantillas son inertes, porque la variante que las activa
+ * (`@custom-variant dark` en tailwind.css) apunta a una clase que ya nunca se aplica.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-    /** true si está activo el tema oscuro. */
-    readonly isDark = signal<boolean>(false);
-
     /** Color de acento actual en hexadecimal. */
     readonly accent = signal<string>(DEFAULT_ACCENT);
 
     private primeNgSynced = false;
 
     constructor() {
-        this.isDark.set(this.readStoredDarkPreference());
-        this.applyDarkClass();
+        this.limpiarRestosDelTemaOscuro();
         this.applyAccent(this.accent());
-    }
-
-    toggleDark(): void {
-        this.setDark(!this.isDark());
-    }
-
-    setDark(dark: boolean): void {
-        this.isDark.set(dark);
-        this.applyDarkClass();
-
-        try {
-            localStorage.setItem(STORAGE_KEY_DARK, dark ? '1' : '0');
-        } catch {
-            // Modo privado o almacenamiento lleno: el tema simplemente no se recuerda.
-        }
     }
 
     /**
@@ -107,63 +98,19 @@ export class ThemeService {
         }
     }
 
-    private applyDarkClass(): void {
-        this.withoutTransitions(() => {
-            document.documentElement.classList.toggle(DARK_CLASS, this.isDark());
-        });
-        this.syncBrowserThemeColor();
-    }
-
     /**
-     * Aplica un cambio de tema con las transiciones desactivadas (ver .fo-theme-switching en
-     * base.scss). Al cambiar toda la paleta de golpe, las transiciones de color se quedaban
-     * colgadas y dejaban botones y superficies con el color del tema anterior.
+     * Deja el navegador en el único tema que existe ahora. Quien usara la aplicación con el tema
+     * oscuro activo tiene la clase puesta en <html> por el script anterior y la preferencia
+     * guardada; sin esta limpieza se quedaría con una interfaz oscura a medias que ya no se
+     * puede desactivar desde ningún sitio.
      */
-    private withoutTransitions(apply: () => void): void {
-        const root = document.documentElement;
-        root.classList.add(TRANSITION_LOCK_CLASS);
-        apply();
-        // Se fuerza el recálculo de estilos para que el cambio quede ya aplicado sin
-        // transición; después se vuelven a habilitar.
-        void root.offsetHeight;
+    private limpiarRestosDelTemaOscuro(): void {
+        document.documentElement.classList.remove(DARK_CLASS_OBSOLETA);
 
-        // Se usa setTimeout y no requestAnimationFrame: rAF no se ejecuta mientras la pestaña
-        // está oculta o no está pintando, y la clase se quedaría puesta dejando la aplicación
-        // sin transiciones. El recálculo forzado de arriba ya garantiza que no queda ninguna
-        // transición pendiente que pudiera arrancar al quitarla.
-        setTimeout(() => root.classList.remove(TRANSITION_LOCK_CLASS), 50);
-    }
-
-    /**
-     * Alinea el color de la barra del navegador en móvil con el tema activo. Sin esto, en un
-     * teléfono con el sistema en oscuro la barra saldría oscura sobre una app clara.
-     */
-    private syncBrowserThemeColor(): void {
-        const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-
-        if (!meta) {
-            return;
-        }
-
-        // Se lee del token en lugar de fijar el color a mano para que no se desincronice
-        // si cambian las superficies en theme.scss.
-        const surface = getComputedStyle(document.documentElement).getPropertyValue('--fo-surface').trim();
-
-        if (surface) {
-            meta.setAttribute('content', surface);
-        }
-    }
-
-    /**
-     * Preferencia guardada por el usuario. Si no hay ninguna, se arranca en tema claro: es el
-     * defecto de la aplicación, deliberadamente por encima de la preferencia del sistema.
-     */
-    private readStoredDarkPreference(): boolean {
         try {
-            return localStorage.getItem(STORAGE_KEY_DARK) === '1';
+            localStorage.removeItem(STORAGE_KEY_DARK_OBSOLETA);
         } catch {
-            // Modo privado o almacenamiento inaccesible: tema claro.
-            return false;
+            // Modo privado o almacenamiento inaccesible: da igual, la clase ya está quitada.
         }
     }
 }

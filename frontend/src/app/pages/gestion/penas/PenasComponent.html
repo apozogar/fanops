@@ -28,6 +28,7 @@
         <ng-template pTemplate="header">
             <tr>
                 <th scope="col">Nombre</th>
+                <th scope="col" class="hidden md:table-cell">Dominio</th>
                 <th scope="col" class="hidden md:table-cell">Cuota Adulto</th>
                 <th scope="col" class="hidden md:table-cell">Cuota Menor</th>
                 <th scope="col" class="hidden md:table-cell">IBAN</th>
@@ -37,6 +38,7 @@
         <ng-template pTemplate="body" let-pena>
             <tr>
                 <td>{{ pena.nombre }}</td>
+                <td class="hidden md:table-cell"><code class="text-xs text-muted-color">/{{ pena.slug }}</code></td>
                 <td class="hidden md:table-cell">{{ pena.cuotaAdulto }}</td>
                 <td class="hidden md:table-cell">{{ pena.cuotaMenor }}</td>
                 <td class="hidden md:table-cell">{{ pena.cuentaIban }}</td>
@@ -89,6 +91,14 @@
                             <small class="text-red-500">El nombre es obligatorio.</small>
                         }
                     </div>
+                    <div class="flex-auto">
+                        <label for="slug" class="block font-semibold mb-2">Dominio</label>
+                        <input type="text" pInputText id="slug" [(ngModel)]="pena.slug" class="w-full" placeholder="mi-pena" autocapitalize="none" spellcheck="false" />
+                        <small class="text-muted-color">Dirección de acceso de la peña: <code>/{{ pena.slug || 'mi-pena' }}/auth/login</code>. Si lo dejas vacío se genera a partir del nombre.</small>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
                         <label for="lema" class="block font-semibold mb-2">Lema</label>
                         <input type="text" pInputText id="lema" [(ngModel)]="pena.lema" class="w-full" />

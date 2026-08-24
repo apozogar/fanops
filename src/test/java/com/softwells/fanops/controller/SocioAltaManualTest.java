@@ -118,6 +118,8 @@ class SocioAltaManualTest {
     }
     PenaEntity pena = new PenaEntity();
     pena.setNombre("Peña de pruebas");
+    // El dominio es obligatorio y único desde que cada peña se identifica por la URL.
+    pena.setSlug("pena-de-pruebas");
     return penaRepository.save(pena);
   }
 }

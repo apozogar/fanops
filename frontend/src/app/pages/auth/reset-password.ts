@@ -1,55 +1,60 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { RippleModule } from 'primeng/ripple';
-import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
-import { AuthService } from './auth.service';
-
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { AuthShellComponent } from './auth-shell.component';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiPasswordComponent } from '@/ui/ui-password.component';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
+import { AuthService } from './auth.service';
+
 @Component({
     selector: 'app-reset-password',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, ButtonModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, ThemeToggleComponent],
+    imports: [AuthShellComponent, UiButtonDirective, UiPasswordComponent, IconComponent, FormsModule, RouterModule],
     template: `
-        <fo-theme-toggle [floating]="true" />
-        <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
-            <div class="flex flex-col items-center justify-center">
-                <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
-                    <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
-                        <div class="text-center mb-8">
-                            <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Restablecer Contraseña</div>
-                            <span class="text-muted-color font-medium">Introduce tu nueva contraseña</span>
+        @if (submitted) {
+            <fo-auth-shell icon="check-circulo" title="Contraseña actualizada" subtitle="Ya puedes entrar con tu contraseña nueva.">
+                <a foButton variant="primary" size="lg" class="w-full" [routerLink]="penaPublica.ruta('auth', 'login')">Ir a iniciar sesión</a>
+            </fo-auth-shell>
+        } @else {
+            <fo-auth-shell icon="llave" title="Elige una contraseña nueva" subtitle="Escríbela dos veces para evitar erratas.">
+                <form (ngSubmit)="resetPassword()">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="password" class="mb-1.5 block text-sm font-medium text-ink">Contraseña nueva</label>
+                            <fo-password inputId="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" [(ngModel)]="password" />
                         </div>
 
-                        @if (!submitted) {
-                            <div>
-                                <label for="password" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Nueva Contraseña</label>
-                                <p-password id="password" [(ngModel)]="password" placeholder="Nueva Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
-                                <label for="confirmPassword" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Contraseña</label>
-                                <p-password id="confirmPassword" [(ngModel)]="confirmPassword" placeholder="Confirmar Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
-                                @if (error) {
-                                    <div class="p-error text-center mb-4">{{ error }}</div>
-                                }
-                                <button foButton variant="primary" class="w-full" (click)="resetPassword()">Restablecer</button>
-                            </div>
-                        }
-
-                        @if (submitted) {
-                            <div class="text-center">
-                                <fo-icon name="check-circulo" class="text-primary" style="font-size: 3rem" />
-                                <h2 class="mt-4">¡Contraseña actualizada!</h2>
-                                <p>Tu contraseña ha sido actualizada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.</p>
-                                <button foButton variant="primary" class="w-full mt-4" routerLink="/auth/login">Ir a Iniciar Sesión</button>
-                            </div>
-                        }
+                        <div>
+                            <label for="confirmPassword" class="mb-1.5 block text-sm font-medium text-ink">Repetir contraseña</label>
+                            <fo-password inputId="confirmPassword" name="confirmPassword" placeholder="Repite la contraseña" autocomplete="new-password" [invalid]="passwordsNoCoinciden()" [(ngModel)]="confirmPassword" />
+                            @if (passwordsNoCoinciden()) {
+                                <p class="mt-1.5 text-xs text-danger">Las contraseñas no coinciden.</p>
+                            }
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
+
+                    @if (error) {
+                        <p class="mt-4 flex items-start gap-2 rounded-token bg-danger-soft px-3 py-2.5 text-sm text-danger-soft-fg" role="alert">
+                            <fo-icon name="error" [size]="17" class="mt-0.5" />
+                            <span>{{ error }}</span>
+                        </p>
+                    }
+
+                    <!-- Sin token no hay nada que restablecer: el botón se desactiva en lugar de
+                         dejar enviar para fallar después. -->
+                    <button foButton variant="primary" size="lg" type="submit" class="mt-6 w-full" [loading]="guardando" [disabled]="guardando || !token">
+                        <span>Guardar contraseña</span>
+                    </button>
+                </form>
+
+                <a authFooter [routerLink]="penaPublica.ruta('auth', 'login')" class="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink">
+                    <fo-icon name="atras" [size]="16" />
+                    Volver a iniciar sesión
+                </a>
+            </fo-auth-shell>
+        }
     `
 })
 export class ResetPassword implements OnInit {
@@ -57,43 +62,53 @@ export class ResetPassword implements OnInit {
     confirmPassword: string = '';
     error: string | null = null;
     submitted: boolean = false;
+    guardando: boolean = false;
     token: string | null = null;
 
+    protected readonly penaPublica = inject(PenaPublicaService);
     private authService = inject(AuthService);
     private route = inject(ActivatedRoute);
-    private router = inject(Router);
 
     ngOnInit(): void {
         this.route.queryParams.subscribe((params) => {
             this.token = params['token'];
             if (!this.token) {
-                this.error = 'Token no válido o caducado.';
+                this.error = 'El enlace no es válido o ha caducado. Solicita uno nuevo.';
             }
         });
     }
 
+    passwordsNoCoinciden(): boolean {
+        return !!this.confirmPassword && this.confirmPassword !== this.password;
+    }
+
     resetPassword(): void {
         this.error = null;
+
+        if (!this.token) {
+            this.error = 'El enlace no es válido o ha caducado. Solicita uno nuevo.';
+            return;
+        }
         if (!this.password || !this.confirmPassword) {
-            this.error = 'Por favor, introduce y confirma tu nueva contraseña.';
+            this.error = 'Introduce y confirma tu nueva contraseña.';
             return;
         }
         if (this.password !== this.confirmPassword) {
             this.error = 'Las contraseñas no coinciden.';
             return;
         }
-        if (this.token) {
-            this.authService.resetPassword(this.token, this.password).subscribe({
-                next: () => {
-                    this.submitted = true;
-                },
-                error: (err) => {
-                    console.error(err);
-                    this.error = 'El enlace ha caducado o no es válido. Por favor, solicita uno nuevo.';
-                }
-            });
-        } else {
-            this.error = 'Token no válido o caducado.';
-        }
+
+        this.guardando = true;
+        this.authService.resetPassword(this.token, this.password).subscribe({
+            next: () => {
+                this.guardando = false;
+                this.submitted = true;
+            },
+            error: (err) => {
+                this.guardando = false;
+                console.error(err);
+                this.error = 'El enlace ha caducado o no es válido. Por favor, solicita uno nuevo.';
+            }
+        });
     }
 }

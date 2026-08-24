@@ -1,53 +1,36 @@
-<fo-theme-toggle [floating]="true" />
-<div
-    class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
-    <div class="flex flex-col items-center justify-center">
-        <div
-            style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
-            <div class="w-full bg-surface-0 dark:bg-surface-<>900 py-20 </>px-8 sm:px-20"
-                 style="border-radius: 53px">
-                <div class="text-center mb-8">
-                    <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">
-                        ¡Bienvenido!
-                    </div>
-                    <span class="text-muted-color font-medium">Inicia sesión para continuar</span>
+<fo-auth-shell title="Inicia sesión" subtitle="Accede con tu cuenta para gestionar tu peña.">
+    <!-- ngSubmit y no (click) en el botón: así el teclado del móvil muestra "Ir" y envía el
+         formulario, que es lo que antes se parcheaba a mano con (keyup.enter) en cada campo. -->
+    <form (ngSubmit)="login()">
+        <div class="space-y-4">
+            <div>
+                <label for="email" class="mb-1.5 block text-sm font-medium text-ink">Email</label>
+                <input foInput id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="tu@email.com" [invalid]="!!error" [(ngModel)]="email" />
+            </div>
+
+            <div>
+                <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                    <label for="password" class="block text-sm font-medium text-ink">Contraseña</label>
+                    <a [routerLink]="penaPublica.ruta('auth', 'forgot-password')" class="text-sm font-medium text-accent hover:underline">¿La olvidaste?</a>
                 </div>
-
-                <div>
-                    <label for="email1"
-                           class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                    <input pInputText id="email1" type="text" placeholder="Dirección de email"
-                           class="w-full md:w-120 mb-8"
-                           [(ngModel)]="email" (keyup.enter)="login()"/>
-
-                    <label for="password"
-                           class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Contraseña</label>
-                    <p-password id="password" [(ngModel)]="password" placeholder="Contraseña"
-                                [toggleMask]="true"
-                                class="mb-4" [fluid]="true" [feedback]="false"
-                                [ngClass]="{'ng-invalid ng-dirty' : error}"
-                                (keyup.enter)="login()"></p-password>
-                    @if (error) {
-                        <p-message severity="error" size="small" variant="simple">{{ error }}
-                        </p-message>
-                    }
-
-                    <div class="flex items-center justify-between mt-2 mb-8 gap-8">
-                        <div class="flex items-center"></div>
-                        <div class="flex flex-col items-end justify-end">
-                            <a [routerLink]="['/auth/forgot-password']"
-                               class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">¿Olvidaste
-                                tu contraseña?</a>
-                            <a [routerLink]="['/auth/register']"
-                               class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">¿Quieres
-                                registrarte?</a>
-                        </div>
-                    </div>
-                    <button foButton variant="primary" class="w-full" [loading]="loading" [disabled]="loading"
-                            (click)="login()"
-                            (keyup.enter)="login()"><span>Iniciar Sesión</span></button>
-                </div>
+                <fo-password inputId="password" name="password" placeholder="Tu contraseña" autocomplete="current-password" [invalid]="!!error" [(ngModel)]="password" />
             </div>
         </div>
+
+        @if (error) {
+            <p class="mt-4 flex items-start gap-2 rounded-token bg-danger-soft px-3 py-2.5 text-sm text-danger-soft-fg" role="alert">
+                <fo-icon name="error" [size]="17" class="mt-0.5" />
+                <span>{{ error }}</span>
+            </p>
+        }
+
+        <button foButton variant="primary" size="lg" type="submit" class="mt-6 w-full" [loading]="loading" [disabled]="loading">
+            <span>Iniciar sesión</span>
+        </button>
+    </form>
+
+    <div authFooter class="text-sm text-ink-muted">
+        ¿Todavía no tienes cuenta?
+        <a [routerLink]="penaPublica.ruta('auth', 'register')" class="font-medium text-accent hover:underline">Regístrate</a>
     </div>
-</div>
+</fo-auth-shell>

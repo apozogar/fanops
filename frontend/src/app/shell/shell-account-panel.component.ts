@@ -2,7 +2,6 @@ import { Component, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@/pages/auth/auth.service';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
-import { ThemeService } from '@/core/theme/theme.service';
 import { PenaSwitcherComponent } from './pena-switcher.component';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
@@ -42,10 +41,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                 </div>
 
                 <div class="flex items-center gap-3 px-4 py-4">
-                    <span
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold uppercase text-accent-fg"
-                        aria-hidden="true"
-                    >
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold uppercase text-accent-fg" aria-hidden="true">
                         {{ initial() }}
                     </span>
                     <div class="min-w-0">
@@ -64,11 +60,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                 @if (overflowItems().length > 0) {
                     <div class="border-t border-line py-2">
                         @for (item of overflowItems(); track item.id) {
-                            <a
-                                [routerLink]="item.route"
-                                (click)="close.emit()"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover"
-                            >
+                            <a [routerLink]="item.route" (click)="close.emit()" class="flex items-center gap-3 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover">
                                 <fo-icon [name]="item.icon" class="text-ink-muted" />
                                 <span class="truncate">{{ item.label }}</span>
                             </a>
@@ -77,20 +69,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                 }
 
                 <div class="border-t border-line py-2">
-                    <button
-                        type="button"
-                        (click)="theme.toggleDark()"
-                        class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink transition-colors hover:bg-surface-hover"
-                    >
-                        <fo-icon [name]="theme.isDark() ? 'tema-oscuro' : 'tema-claro'" class="text-ink-muted" />
-                        <span>{{ theme.isDark() ? 'Tema claro' : 'Tema oscuro' }}</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        (click)="logout()"
-                        class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-danger transition-colors hover:bg-danger-soft"
-                    >
+                    <button type="button" (click)="logout()" class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-danger transition-colors hover:bg-danger-soft">
                         <fo-icon name="cerrar-sesion" />
                         <span>Cerrar sesión</span>
                     </button>
@@ -102,7 +81,6 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 export class ShellAccountPanelComponent {
     private readonly auth = inject(AuthService);
     protected readonly activePena = inject(ActivePenaService);
-    protected readonly theme = inject(ThemeService);
 
     readonly open = input<boolean>(false);
     /** Destinos que no caben en la barra de pestañas y se listan aquí. */

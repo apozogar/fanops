@@ -1,12 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { PasswordModule } from 'primeng/password';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { AuthShellComponent } from './auth-shell.component';
 import { IconComponent } from '@/ui/icon/icon.component';
-import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiPasswordComponent } from '@/ui/ui-password.component';
 import { VinculacionInfo } from '@/interfaces/vinculacion.interface';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { AuthService } from './auth.service';
 
 /**
@@ -17,66 +17,102 @@ import { AuthService } from './auth.service';
 @Component({
     selector: 'app-vincular-socio',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, PasswordModule, ProgressSpinnerModule, FormsModule, RouterModule, ThemeToggleComponent],
+    imports: [AuthShellComponent, UiButtonDirective, UiPasswordComponent, IconComponent, FormsModule, RouterModule],
     template: `
-        <fo-theme-toggle [floating]="true" />
-        <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
-            <div class="flex flex-col items-center justify-center">
-                <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
-                    <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px; max-width: 34rem">
-                        @if (cargando) {
-                            <div class="text-center">
-                                <p-progressSpinner />
-                            </div>
-                        } @else if (error) {
-                            <div class="text-center">
-                                <fo-icon name="error" [size]="48" class="text-pink-500" />
-                                <h2 class="mt-4 text-surface-900 dark:text-surface-0">No se puede vincular</h2>
-                                <p class="text-muted-color">{{ error }}</p>
-                                <button foButton variant="primary" class="w-full mt-4" routerLink="/auth/login">Ir a Iniciar Sesión</button>
-                            </div>
-                        } @else if (vinculado) {
-                            <div class="text-center">
-                                <fo-icon name="check-circulo" [size]="48" class="text-primary" />
-                                <h2 class="mt-4 text-surface-900 dark:text-surface-0">¡Cuenta vinculada!</h2>
-                                <p class="text-muted-color">Tu ficha de socio ya está asociada a esta cuenta. Te llevamos a la aplicación...</p>
-                            </div>
-                        } @else if (info) {
-                            <div class="text-center mb-8">
-                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Vincula tu ficha de socio</div>
-                                <span class="text-muted-color font-medium">Confirma que esta ficha es tuya</span>
-                            </div>
-
-                            <div class="mb-6 text-surface-700 dark:text-surface-200">
-                                <div><span class="text-muted-color">Socio:</span> <strong>{{ info.nombreSocio }}</strong> (nº {{ info.numeroSocio }})</div>
-                                @if (info.nombrePena) {
-                                    <div><span class="text-muted-color">Peña:</span> <strong>{{ info.nombrePena }}</strong></div>
-                                }
-                                <div><span class="text-muted-color">Email:</span> {{ info.email }}</div>
-                                @if (info.fichas > 1) {
-                                    <div class="mt-2 text-muted-color">Se vincularán también las {{ info.fichas - 1 }} ficha(s) restante(s) asociada(s) a este email.</div>
-                                }
-                            </div>
-
-                            @if (info.requierePassword) {
-                                <label for="password" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Contraseña</label>
-                                <p-password id="password" [(ngModel)]="password" placeholder="Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
-                                <label for="confirmPassword" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Contraseña</label>
-                                <p-password id="confirmPassword" [(ngModel)]="confirmPassword" placeholder="Confirmar Contraseña" [toggleMask]="true" styleClass="mb-4" [fluid]="true"></p-password>
-                            }
-
-                            @if (errorConfirmacion) {
-                                <div class="p-error text-center mb-4">{{ errorConfirmacion }}</div>
-                            }
-
-                            <button foButton variant="primary" class="w-full" [disabled]="confirmando" (click)="confirmar()">
-                                {{ confirmando ? 'Vinculando...' : 'Vincular mi ficha' }}
-                            </button>
-                        }
-                    </div>
+        @if (cargando) {
+            <fo-auth-shell title="Comprobando el enlace" subtitle="Un momento, estamos verificando tu invitación.">
+                <div class="flex items-center gap-3 text-sm text-ink-muted">
+                    <span class="fo-spinner" aria-hidden="true"></span>
+                    Cargando...
                 </div>
-            </div>
-        </div>
+            </fo-auth-shell>
+        } @else if (error) {
+            <fo-auth-shell icon="error" title="No se puede vincular" [subtitle]="error">
+                <a foButton variant="primary" size="lg" class="w-full" [routerLink]="penaPublica.ruta('auth', 'login')">Ir a iniciar sesión</a>
+            </fo-auth-shell>
+        } @else if (vinculado) {
+            <fo-auth-shell icon="check-circulo" title="¡Cuenta vinculada!" subtitle="Tu ficha de socio ya está asociada a esta cuenta. Te llevamos a la aplicación..."> </fo-auth-shell>
+        } @else if (info) {
+            <fo-auth-shell title="Vincula tu ficha de socio" subtitle="Confirma que esta ficha es tuya.">
+                <!-- Resumen de la ficha. Va en una lista de definición porque son pares
+                     etiqueta/valor, no un formulario. -->
+                <dl class="divide-y divide-line rounded-token border border-line bg-surface-2 px-3.5 text-sm">
+                    <div class="flex items-baseline justify-between gap-4 py-2.5">
+                        <dt class="text-ink-muted">Socio</dt>
+                        <dd class="text-right font-medium">
+                            {{ info.nombreSocio }} <span class="font-normal text-ink-muted">(nº {{ info.numeroSocio }})</span>
+                        </dd>
+                    </div>
+                    @if (info.nombrePena) {
+                        <div class="flex items-baseline justify-between gap-4 py-2.5">
+                            <dt class="text-ink-muted">Peña</dt>
+                            <dd class="text-right font-medium">{{ info.nombrePena }}</dd>
+                        </div>
+                    }
+                    <div class="flex items-baseline justify-between gap-4 py-2.5">
+                        <dt class="text-ink-muted">Email</dt>
+                        <dd class="min-w-0 break-all text-right font-medium">{{ info.email }}</dd>
+                    </div>
+                </dl>
+
+                @if (info.fichas > 1) {
+                    <p class="mt-3 flex items-start gap-2 rounded-token bg-info-soft px-3 py-2.5 text-sm text-info-soft-fg">
+                        <fo-icon name="info" [size]="17" class="mt-0.5" />
+                        <span>Se vincularán también las {{ info.fichas - 1 }} ficha(s) restante(s) asociada(s) a este email.</span>
+                    </p>
+                }
+
+                <form (ngSubmit)="confirmar()">
+                    @if (info.requierePassword) {
+                        <div class="mt-5 space-y-4">
+                            <div>
+                                <label for="password" class="mb-1.5 block text-sm font-medium text-ink">Contraseña</label>
+                                <fo-password inputId="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" [(ngModel)]="password" />
+                            </div>
+                            <div>
+                                <label for="confirmPassword" class="mb-1.5 block text-sm font-medium text-ink">Repetir contraseña</label>
+                                <fo-password inputId="confirmPassword" name="confirmPassword" placeholder="Repite la contraseña" autocomplete="new-password" [invalid]="passwordsNoCoinciden()" [(ngModel)]="confirmPassword" />
+                                @if (passwordsNoCoinciden()) {
+                                    <p class="mt-1.5 text-xs text-danger">Las contraseñas no coinciden.</p>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (errorConfirmacion) {
+                        <p class="mt-4 flex items-start gap-2 rounded-token bg-danger-soft px-3 py-2.5 text-sm text-danger-soft-fg" role="alert">
+                            <fo-icon name="error" [size]="17" class="mt-0.5" />
+                            <span>{{ errorConfirmacion }}</span>
+                        </p>
+                    }
+
+                    <button foButton variant="primary" size="lg" type="submit" class="mt-6 w-full" [loading]="confirmando" [disabled]="confirmando">
+                        <span>Vincular mi ficha</span>
+                    </button>
+                </form>
+            </fo-auth-shell>
+        }
+    `,
+    styles: `
+        /* Indicador de carga de la comprobación del enlace. Reutiliza la animación global
+           fo-spin definida en base.scss para el estado de carga de los botones. */
+        .fo-spinner {
+            display: inline-block;
+            width: 1.1rem;
+            height: 1.1rem;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: var(--fo-radius-full);
+            animation: fo-spin 0.6s linear infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fo-spinner {
+                animation: none;
+                border-right-color: currentColor;
+                opacity: 0.4;
+            }
+        }
     `
 })
 export class VincularSocio implements OnInit {
@@ -92,6 +128,7 @@ export class VincularSocio implements OnInit {
     /** Error recuperable del formulario de confirmación. */
     errorConfirmacion: string | null = null;
 
+    protected readonly penaPublica = inject(PenaPublicaService);
     private authService = inject(AuthService);
     private route = inject(ActivatedRoute);
     private router = inject(Router);
@@ -117,6 +154,10 @@ export class VincularSocio implements OnInit {
                 this.error = err?.error?.message ?? 'El enlace no es válido o ha caducado.';
             }
         });
+    }
+
+    passwordsNoCoinciden(): boolean {
+        return !!this.confirmPassword && this.confirmPassword !== this.password;
     }
 
     confirmar(): void {

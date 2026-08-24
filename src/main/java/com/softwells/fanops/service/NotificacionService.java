@@ -87,7 +87,7 @@ public class NotificacionService {
       cuerpo.append("\nAvisaremos por email o WhatsApp en cuanto se libere una plaza.");
     }
     cuerpo.append("\n\nMás información: ")
-        .append(publicBaseUrl).append("/#/inscripcion/").append(evento.getUid());
+        .append(publicBaseUrl).append("/inscripcion/").append(evento.getUid());
 
     String asunto = "Inscripción a " + evento.getNombreEvento();
     // Se avisa al contacto de cada ficha, pero sin repetir destinatario: en un multicarnet los
@@ -143,7 +143,7 @@ public class NotificacionService {
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,
       String baseUrl) {
-    String enlace = baseUrl + "/#/inscripcion/" + evento.getUid();
+    String enlace = baseUrl + "/inscripcion/" + evento.getUid();
     if (estado == EstadoInscripcion.CONFIRMADA) {
       return "Hola,\n\nTu inscripción a '" + evento.getNombreEvento() + "' ("
           + evento.getFechaEvento() + ") ha sido CONFIRMADA.\n\n"

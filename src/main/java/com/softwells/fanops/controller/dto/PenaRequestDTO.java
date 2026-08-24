@@ -13,6 +13,15 @@ public class PenaRequestDTO {
   @NotBlank(message = "El nombre de la peña es obligatorio")
   private String nombre;
 
+  /**
+   * Dominio de la peña en la URL: https://fanops.example/{slug}/auth/login.
+   *
+   * Opcional: si se deja vacío se deriva del nombre. Si se escribe, se normaliza (minúsculas, sin
+   * acentos, guiones) y se rechaza si ya lo usa otra peña o si colisiona con una ruta de la
+   * aplicación.
+   */
+  private String slug;
+
   private String iniciadorId;
   private String direccion1;
   private String direccion2;

@@ -4,9 +4,11 @@ import com.softwells.fanops.controller.dto.PenaRequestDTO;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.repository.PenaRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.text.Normalizer;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,16 @@ public class PenaService {
   public PenaEntity findById(Long id) {
     return repository.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("Pena no encontrada con ID: " + id));
+  }
+
+  /**
+   * Peña por su identificador en la URL. Se consulta sin sesión (login y registro), así que quien
+   * la use debe exponer solo los datos de identidad de la peña, nunca su ficha completa.
+   */
+  public PenaEntity findBySlug(String slug) {
+    String normalizado = normalizarSlug(slug);
+    return repository.findBySlugIgnoreCase(normalizado)
+        .orElseThrow(() -> new EntityNotFoundException("No hay ninguna peña con el dominio: " + slug));
   }
 
   public List<PenaEntity> findAll() {
@@ -129,8 +141,102 @@ public class PenaService {
     return valor;
   }
 
+  /**
+   * Palabras que no pueden ser el dominio de una peña porque colisionarían con una ruta del
+   * frontend o con un prefijo del servidor: la URL {@code /socios} tiene que seguir siendo la
+   * pantalla de gestión de socios, no la peña llamada "Socios".
+   *
+   * Debe mantenerse alineada con las rutas de primer nivel de app.routes.ts y con los prefijos
+   * excluidos en SpaForwardingController.
+   */
+  private static final Set<String> SLUGS_RESERVADOS = Set.of(
+      "api", "auth", "assets", "media", "management", "swagger-ui", "swagger-resources",
+      "configuration", "webjars", "index", "socios", "eventos", "penas", "cuotas", "informes",
+      "carnet-socio", "cuotas-socio", "inscripciones", "inscripcion", "notfound", "admin",
+      "public", "publica", "static");
+
+  /** Longitud máxima del slug. Debe coincidir con la de la columna en PenaEntity. */
+  private static final int LONGITUD_MAXIMA_SLUG = 60;
+
+  /**
+   * Normaliza un texto a un slug apto para la URL: sin acentos, en minúsculas y con todo lo que no
+   * sea letra o dígito convertido en un guion.
+   *
+   * La descomposición Unicode antes de quitar las marcas diacríticas es lo que hace que "Peña" dé
+   * "pena" y no "pea": la eñe se separa en "n" + tilde combinante, y solo se descarta la tilde.
+   */
+  public static String normalizarSlug(String texto) {
+    if (texto == null) {
+      return "";
+    }
+
+    String sinAcentos = Normalizer.normalize(texto.trim(), Normalizer.Form.NFD)
+        .replaceAll("\\p{M}+", "");
+
+    String slug = sinAcentos.toLowerCase(Locale.ROOT)
+        .replaceAll("[^a-z0-9]+", "-")
+        .replaceAll("^-+|-+$", "");
+
+    return slug.length() > LONGITUD_MAXIMA_SLUG ? slug.substring(0, LONGITUD_MAXIMA_SLUG)
+        .replaceAll("-+$", "") : slug;
+  }
+
+  /**
+   * Decide el slug definitivo de una peña.
+   *
+   * Si el superadmin lo ha escrito, se respeta (normalizado) y se valida: un slug que ya usa otra
+   * peña, o que colisiona con una ruta de la aplicación, es un error que hay que corregir, no algo
+   * que convenga arreglar por detrás. Si lo deja vacío se deriva del nombre y ahí sí se desempata
+   * automáticamente con un sufijo, porque el usuario no ha elegido nada.
+   *
+   * @param idActual id de la peña que se está editando, o {@code null} en un alta. Sirve para no
+   *                 considerar colisión el slug que la peña ya tenía.
+   */
+  private String resolverSlug(String slugSolicitado, String nombre, Long idActual) {
+    String propuesto = normalizarSlug(slugSolicitado);
+
+    if (!propuesto.isEmpty()) {
+      validarSlugDisponible(propuesto, idActual);
+      return propuesto;
+    }
+
+    String base = normalizarSlug(nombre);
+    if (base.isEmpty()) {
+      base = "pena";
+    }
+
+    String candidato = base;
+    int sufijo = 2;
+    while (estaOcupado(candidato, idActual)) {
+      candidato = base + "-" + sufijo++;
+    }
+    return candidato;
+  }
+
+  private void validarSlugDisponible(String slug, Long idActual) {
+    if (SLUGS_RESERVADOS.contains(slug)) {
+      throw new IllegalArgumentException("El dominio '" + slug
+          + "' está reservado por la aplicación. Elige otro.");
+    }
+    if (repository.findBySlugIgnoreCase(slug)
+        .filter(otra -> !otra.getId().equals(idActual))
+        .isPresent()) {
+      throw new IllegalArgumentException("El dominio '" + slug + "' ya lo usa otra peña.");
+    }
+  }
+
+  private boolean estaOcupado(String slug, Long idActual) {
+    if (SLUGS_RESERVADOS.contains(slug)) {
+      return true;
+    }
+    return repository.findBySlugIgnoreCase(slug)
+        .filter(otra -> !otra.getId().equals(idActual))
+        .isPresent();
+  }
+
   private void applyChanges(PenaEntity pena, PenaRequestDTO dto) {
     pena.setNombre(dto.getNombre());
+    pena.setSlug(resolverSlug(dto.getSlug(), dto.getNombre(), pena.getId()));
     pena.setIniciadorId(dto.getIniciadorId());
     pena.setDireccion1(dto.getDireccion1());
     pena.setDireccion2(dto.getDireccion2());

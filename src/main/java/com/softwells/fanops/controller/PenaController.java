@@ -1,6 +1,7 @@
 package com.softwells.fanops.controller;
 
 import com.softwells.fanops.controller.dto.ApiResponse;
+import com.softwells.fanops.controller.dto.PenaPublicaDto;
 import com.softwells.fanops.controller.dto.PenaRequestDTO;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.service.PenaService;
@@ -28,6 +29,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class PenaController {
 
   private final PenaService service;
+
+  /**
+   * Identidad de una peña por su dominio. Es el único endpoint de peñas accesible sin sesión: lo
+   * consultan el login y el registro para saber en qué peña se está entrando y poder mostrar su
+   * nombre, su logo y su color antes de que nadie se haya identificado.
+   *
+   * Devuelve un DTO reducido a propósito (ver PenaPublicaDto): la entidad completa lleva datos
+   * bancarios y la lista de socios.
+   */
+  @GetMapping("/publica/{slug}")
+  @PreAuthorize("permitAll()")
+  public ResponseEntity<ApiResponse<PenaPublicaDto>> findBySlug(@PathVariable("slug") String slug) {
+    PenaEntity pena = service.findBySlug(slug);
+    PenaPublicaDto dto = new PenaPublicaDto(pena.getNombre(), pena.getSlug(), pena.getLogo(),
+        pena.getLema(), pena.getColor());
+    return ResponseEntity.ok(new ApiResponse<>(true, "Peña recuperada", dto));
+  }
 
   @GetMapping("/{id}")
   @PreAuthorize("isAuthenticated()") // Cualquier usuario autenticado puede ver los datos de su peña

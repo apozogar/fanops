@@ -25,6 +25,20 @@ public class PenaEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
   private String nombre;
+
+  /**
+   * Identificador de la peña en la URL: {@code https://fanops.example/mi-pena/auth/login}.
+   *
+   * Es lo que permite saber a qué peña se está accediendo antes de tener sesión, y por tanto lo
+   * que decide a qué peña se asocia quien se registra. Sin él, el auto-registro público no tenía
+   * forma de saberlo y todo el mundo acababa en la peña por defecto.
+   *
+   * Solo minúsculas, dígitos y guiones (ver PenaService.normalizarSlug), y único en toda la
+   * aplicación, porque vive en el primer segmento de la ruta.
+   */
+  @Column(nullable = false, unique = true, length = 60)
+  private String slug;
+
   private String iniciadorId;
   private String direccion1;
   private String direccion2;

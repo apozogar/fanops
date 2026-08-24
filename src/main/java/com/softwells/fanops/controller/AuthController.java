@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -139,10 +139,10 @@ public class AuthController {
       String token = jwtService.generateToken(usuario);
 
       // Construimos el enlace de reseteo dinámicamente a partir del origen de la petición.
-      // El "/#/" es obligatorio porque el frontend enruta por hash (withHashLocation): sin él
-      // el enlace acaba en el login y se pierde el token.
+      // Ruta directa, sin "#": el frontend ya no enruta por hash y el servidor reenvía la ruta
+      // a index.html (ver SpaForwardingController).
       String resetLink =
-          origenFrontend(servletRequest) + "/#/auth/reset-password?token=" + token;
+          origenFrontend(servletRequest) + "/auth/reset-password?token=" + token;
 
       emailSender.enviar(usuario.getEmail(), null, "Solicitud de restablecimiento de contraseña",
           "Para restablecer tu contraseña, haz clic en el siguiente enlace: " + resetLink);

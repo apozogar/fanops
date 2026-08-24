@@ -2,7 +2,6 @@ import { Component, inject, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
 import { AuthService } from '@/pages/auth/auth.service';
-import { ThemeToggleComponent } from '@/ui/theme-toggle.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
 import { PenaSwitcherComponent } from './pena-switcher.component';
 
@@ -16,7 +15,7 @@ import { PenaSwitcherComponent } from './pena-switcher.component';
 @Component({
     selector: 'fo-shell-header',
     standalone: true,
-    imports: [RouterLink, ThemeToggleComponent, UiButtonDirective, PenaSwitcherComponent],
+    imports: [RouterLink, UiButtonDirective, PenaSwitcherComponent],
     template: `
         <header
             class="fixed inset-x-0 top-0 z-30 flex items-center gap-3 border-b border-line bg-surface"
@@ -40,23 +39,8 @@ import { PenaSwitcherComponent } from './pena-switcher.component';
                     </div>
                 }
 
-                <div class="hidden lg:block">
-                    <fo-theme-toggle />
-                </div>
-
-                <button
-                    type="button"
-                    foButton
-                    variant="ghost"
-                    size="icon"
-                    class="rounded-full"
-                    (click)="openAccount.emit()"
-                    aria-label="Abrir menú de cuenta"
-                >
-                    <span
-                        class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold uppercase text-accent-fg"
-                        aria-hidden="true"
-                    >
+                <button type="button" foButton variant="ghost" size="icon" class="rounded-full" (click)="openAccount.emit()" aria-label="Abrir menú de cuenta">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold uppercase text-accent-fg" aria-hidden="true">
                         {{ initial() }}
                     </span>
                 </button>

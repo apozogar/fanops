@@ -2,20 +2,19 @@ import { Component, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { DatePicker } from 'primeng/datepicker';
 import { SocioService } from '@/services/SocioService';
 import { Socio } from '@/interfaces/socio.interface';
 import { UsuarioService } from '@/services/UsuarioService';
-
+import { AuthShellComponent } from '@/pages/auth/auth-shell.component';
+import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiInputDirective } from '@/ui/ui-input.directive';
 @Component({
     selector: 'app-complete-profile',
     standalone: true,
-    imports: [UiButtonDirective, FormsModule, ButtonModule, InputTextModule, DatePicker, MessageModule, ProgressSpinnerModule],
+    imports: [AuthShellComponent, UiButtonDirective, UiInputDirective, IconComponent, FormsModule, DatePicker, ProgressSpinnerModule],
     templateUrl: './complete-profile.component.html'
 })
 export class CompleteProfileComponent implements OnInit {

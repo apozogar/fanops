@@ -23,7 +23,7 @@ export class AuthService {
     private penaService = inject(PenaService);
     private penaContextService = inject(PenaContextService);
 
-    private baseUrl = environment.apiUrl + '/auth';
+    private baseUrl = environment.apiUrl + '/api/auth';
 
     private currentUserSubject = new BehaviorSubject<User | null>(null);
     public currentUser = this.currentUserSubject.asObservable();

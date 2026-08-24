@@ -79,7 +79,7 @@ class VinculacionSocioFlowTest {
     SocioEntity familiar = crearSocioSinCuenta("Familiar De Prueba", numero + 1, pena);
 
     // 1. El registro no crea cuenta ni ficha: envía la invitación y lo dice al frontend.
-    mockMvc.perform(post("/auth/register")
+    mockMvc.perform(post("/api/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"nombre":"Titular De Prueba","email":"%s","password":"ClaveDePrueba123"}
@@ -99,7 +99,7 @@ class VinculacionSocioFlowTest {
     // 2. El enlace del correo lleva un token usable.
     String token = tokenDelCorreoEnviado();
 
-    mockMvc.perform(get("/auth/vinculacion").param("token", token))
+    mockMvc.perform(get("/api/auth/vinculacion").param("token", token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.email").value(EMAIL))
         .andExpect(jsonPath("$.data.numeroSocio").value(numero))
@@ -110,7 +110,7 @@ class VinculacionSocioFlowTest {
         .andExpect(jsonPath("$.data.requierePassword").value(false));
 
     // 3. Confirmar crea la cuenta, la deja con sesión iniciada y vincula las fichas existentes.
-    mockMvc.perform(post("/auth/vinculacion/confirmar")
+    mockMvc.perform(post("/api/auth/vinculacion/confirmar")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"token\":\"" + token + "\"}"))
         .andExpect(status().isOk())
@@ -126,7 +126,7 @@ class VinculacionSocioFlowTest {
     assertThat(socioRepository.findByUsuarioEmail(EMAIL)).hasSize(2);
 
     // 4. El enlace es de un solo uso.
-    mockMvc.perform(post("/auth/vinculacion/confirmar")
+    mockMvc.perform(post("/api/auth/vinculacion/confirmar")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"token\":\"" + token + "\"}"))
         .andExpect(status().isBadRequest())
@@ -138,7 +138,7 @@ class VinculacionSocioFlowTest {
   void registroNormalSigueFuncionando() throws Exception {
     penaDePruebas();
 
-    mockMvc.perform(post("/auth/register")
+    mockMvc.perform(post("/api/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"nombre":"Socio Nuevo","email":"test.registro.nuevo@fanops.local","password":"ClaveDePrueba123"}
@@ -156,9 +156,10 @@ class VinculacionSocioFlowTest {
 
     String cuerpo = captor.getValue();
     assertThat(cuerpo).isNotNull();
-    // El enlace tiene que llevar el "/#/": el frontend enruta por hash y sin él la pantalla de
-    // vinculación no se abre (se cae al login y se pierde el token).
-    assertThat(cuerpo).contains("/#/auth/vincular-socio?token=");
+    // El enlace va sin "#": el frontend enruta por ruta y el servidor la reenvía a index.html
+    // (ver SpaWebConfig). Si el prefijo no fuera el correcto, la pantalla de vinculación no
+    // se abriría y se perdería el token.
+    assertThat(cuerpo).contains("/auth/vincular-socio?token=");
 
     Matcher matcher = PATRON_TOKEN.matcher(cuerpo);
     assertThat(matcher.find()).as("el correo debe llevar el enlace con el token").isTrue();
@@ -184,6 +185,8 @@ class VinculacionSocioFlowTest {
     }
     PenaEntity pena = new PenaEntity();
     pena.setNombre("Peña de pruebas");
+    // El dominio es obligatorio y único desde que cada peña se identifica por la URL.
+    pena.setSlug("pena-de-pruebas");
     return penaRepository.save(pena);
   }
 }

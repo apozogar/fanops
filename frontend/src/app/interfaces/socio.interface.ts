@@ -3,6 +3,11 @@ import {Cuota} from "@/interfaces/cuota.interface";
 export interface Pena {
     id: number;
     nombre: string;
+    /**
+     * Dominio de la peña en la URL: /mi-pena/auth/login. Lo genera el backend a partir del
+     * nombre si no se indica, y es único en toda la aplicación.
+     */
+    slug?: string;
     logo?: string;
     lema?: string;
     color?: string;

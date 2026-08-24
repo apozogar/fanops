@@ -121,19 +121,6 @@
  * Cuotas, Inscripciones). Se mantiene el nombre para no tocar esas plantillas, pero
  * reimplementada sobre los tokens nuevos, con borde y padding responsive.
  */
-/*
- * Durante el cambio de tema se desactivan todas las transiciones.
- *
- * Sin esto, `transition-colors` intenta interpolar colores que vienen de una cadena de var()
- * que cambia de golpe al alternar el tema: las transiciones se quedaban colgadas en estado
- * "running" y los elementos conservaban el color del tema anterior hasta recargar la página.
- * Además, un cambio de tema instantáneo es lo esperado; no debe verse un fundido.
- */
-.fo-theme-switching *,
-.fo-theme-switching *::before,
-.fo-theme-switching *::after {
-    transition: none !important;
-}
 
 /*
  * Indicador de carga de los botones (la activa foButton con [loading]).
