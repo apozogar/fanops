@@ -96,7 +96,7 @@ app:
       api-key: ${BREVO_API_KEY:}
     resend:
       url: ${RESEND_API_URL:https://api.resend.com/emails}
-      api-key: ${RESEND_API_KEY:}
+      api-key: ${RESEND_API_KEY:re_BZEWwqM8_CC2tFM9LyaKYsjEiA7bDZ8Hn}
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:

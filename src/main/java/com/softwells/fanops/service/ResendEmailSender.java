@@ -44,7 +44,7 @@ public class ResendEmailSender implements EmailSender {
 
   @Override
   public void enviar(String destinatario, String nombreDestinatario, String asunto,
-      String cuerpo) {
+      String cuerpoTexto, String cuerpoHtml) {
     if (StringUtils.isBlank(apiKey)) {
       // Mejor fallar claro que dejar de enviar correos sin que nadie se entere.
       throw new EmailNoEnviadoException(
@@ -57,7 +57,7 @@ public class ResendEmailSender implements EmailSender {
           .uri(url)
           .header("Authorization", "Bearer " + apiKey)
           .contentType(MediaType.APPLICATION_JSON)
-          .body(cuerpoPeticion(destinatario, nombreDestinatario, asunto, cuerpo))
+          .body(cuerpoPeticion(destinatario, nombreDestinatario, asunto, cuerpoTexto, cuerpoHtml))
           .retrieve()
           .toBodilessEntity();
       log.info("Email enviado por la API de Resend a {} (asunto: {})", destinatario, asunto);
@@ -68,7 +68,7 @@ public class ResendEmailSender implements EmailSender {
   }
 
   private Map<String, Object> cuerpoPeticion(String destinatario, String nombreDestinatario,
-      String asunto, String cuerpo) {
+      String asunto, String cuerpoTexto, String cuerpoHtml) {
     String destinatarioCompleto =
         StringUtils.isNotBlank(nombreDestinatario) ? nombreDestinatario + " <" + destinatario + ">"
             : destinatario;
@@ -77,7 +77,10 @@ public class ResendEmailSender implements EmailSender {
     peticion.put("from", fromName + " <" + fromAddress + ">");
     peticion.put("to", List.of(destinatarioCompleto));
     peticion.put("subject", asunto);
-    peticion.put("text", cuerpo);
+    peticion.put("text", cuerpoTexto);
+    if (StringUtils.isNotBlank(cuerpoHtml)) {
+      peticion.put("html", cuerpoHtml);
+    }
     return peticion;
   }
 }

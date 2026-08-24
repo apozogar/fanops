@@ -55,6 +55,7 @@ public class VinculacionSocioService {
   private final RoleRepository roleRepository;
   private final PasswordEncoder passwordEncoder;
   private final EmailSender emailSender;
+  private final EmailTemplateService emailTemplateService;
 
   @Value("${app.public-base-url:http://localhost:5300}")
   private String publicBaseUrl;
@@ -259,11 +260,27 @@ public class VinculacionSocioService {
         .append("Si no has solicitado el registro, ignora este correo: no se hará ningún cambio ")
         .append("en tu ficha.\n");
 
+    String parrafoIntro = "Hola " + principal.getNombre()
+        + ", hemos recibido una solicitud de registro con este correo, y ya figura en el "
+        + "listado de socios de " + nombrePena + " (ficha nº " + principal.getNumeroSocio() + ")"
+        + (socios.size() > 1
+            ? ", junto con " + (socios.size() - 1) + " ficha(s) más asociada(s) a este email."
+            : ".");
+    String asunto = "Vincula tu cuenta con tu ficha de socio";
+    String html = emailTemplateService.renderizar(principal.getPena(), asunto,
+        List.of(
+            parrafoIntro,
+            "Para confirmar que eres tú y vincular tu ficha a tu nueva cuenta, pulsa el "
+                + "siguiente botón. El enlace caduca en " + horasValidez
+                + " horas y solo puede usarse una vez.",
+            "Si no has solicitado el registro, ignora este correo: no se hará ningún cambio en "
+                + "tu ficha."),
+        "Vincular mi cuenta", enlace);
+
     // Si el correo no sale, no dejamos la invitación creada: al propagarse el error la
     // transacción se deshace y quien lo ha pedido ve que ha fallado, en vez de quedarse
     // esperando un mensaje que no va a llegar.
-    emailSender.enviar(email, principal.getNombre(), "Vincula tu cuenta con tu ficha de socio",
-        cuerpo.toString());
+    emailSender.enviar(email, principal.getNombre(), asunto, cuerpo.toString(), html);
   }
 
   private String generarToken() {

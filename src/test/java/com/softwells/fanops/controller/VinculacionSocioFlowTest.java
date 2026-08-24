@@ -152,7 +152,7 @@ class VinculacionSocioFlowTest {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
     verify(emailSender, atLeastOnce())
         .enviar(eq(EMAIL), any(), eq("Vincula tu cuenta con tu ficha de socio"),
-            captor.capture());
+            captor.capture(), any());
 
     String cuerpo = captor.getValue();
     assertThat(cuerpo).isNotNull();

@@ -46,7 +46,7 @@ public class BrevoEmailSender implements EmailSender {
 
   @Override
   public void enviar(String destinatario, String nombreDestinatario, String asunto,
-      String cuerpo) {
+      String cuerpoTexto, String cuerpoHtml) {
     if (StringUtils.isBlank(apiKey)) {
       // Mejor fallar claro que dejar de enviar correos sin que nadie se entere.
       throw new EmailNoEnviadoException(
@@ -59,7 +59,7 @@ public class BrevoEmailSender implements EmailSender {
           .uri(url)
           .header(CABECERA_API_KEY, apiKey)
           .contentType(MediaType.APPLICATION_JSON)
-          .body(cuerpoPeticion(destinatario, nombreDestinatario, asunto, cuerpo))
+          .body(cuerpoPeticion(destinatario, nombreDestinatario, asunto, cuerpoTexto, cuerpoHtml))
           .retrieve()
           .toBodilessEntity();
       log.info("Email enviado por la API de Brevo a {} (asunto: {})", destinatario, asunto);
@@ -70,7 +70,7 @@ public class BrevoEmailSender implements EmailSender {
   }
 
   private Map<String, Object> cuerpoPeticion(String destinatario, String nombreDestinatario,
-      String asunto, String cuerpo) {
+      String asunto, String cuerpoTexto, String cuerpoHtml) {
     Map<String, String> receptor = new LinkedHashMap<>();
     receptor.put("email", destinatario);
     if (StringUtils.isNotBlank(nombreDestinatario)) {
@@ -81,7 +81,10 @@ public class BrevoEmailSender implements EmailSender {
     peticion.put("sender", Map.of("email", fromAddress, "name", fromName));
     peticion.put("to", List.of(receptor));
     peticion.put("subject", asunto);
-    peticion.put("textContent", cuerpo);
+    peticion.put("textContent", cuerpoTexto);
+    if (StringUtils.isNotBlank(cuerpoHtml)) {
+      peticion.put("htmlContent", cuerpoHtml);
+    }
     return peticion;
   }
 }

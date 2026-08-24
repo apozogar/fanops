@@ -15,10 +15,12 @@ import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.security.JwtService;
 import com.softwells.fanops.service.EmailSender;
+import com.softwells.fanops.service.EmailTemplateService;
 import com.softwells.fanops.service.SocioService;
 import com.softwells.fanops.service.UsuarioService;
 import com.softwells.fanops.service.VinculacionSocioService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +54,7 @@ public class AuthController {
   private final UsuarioRepository usuarioRepository;
   private final PasswordEncoder passwordEncoder;
   private final EmailSender emailSender;
+  private final EmailTemplateService emailTemplateService;
 
   @Value("${app.public-base-url:http://localhost:5300}")
   private String publicBaseUrl;
@@ -149,8 +152,16 @@ public class AuthController {
       String resetLink =
           origenFrontend(servletRequest) + "/auth/reset-password?token=" + token;
 
-      emailSender.enviar(usuario.getEmail(), null, "Solicitud de restablecimiento de contraseña",
-          "Para restablecer tu contraseña, haz clic en el siguiente enlace: " + resetLink);
+      String asunto = "Solicitud de restablecimiento de contraseña";
+      String textoPlano =
+          "Para restablecer tu contraseña, haz clic en el siguiente enlace: " + resetLink;
+      String html = emailTemplateService.renderizar(usuario.getPena(), "Restablece tu contraseña",
+          List.of(
+              "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.",
+              "Si no has sido tú quien lo ha pedido, puedes ignorar este correo: tu contraseña "
+                  + "seguirá siendo la misma."),
+          "Restablecer contraseña", resetLink);
+      emailSender.enviar(usuario.getEmail(), null, asunto, textoPlano, html);
     },
         // Sin cuenta todavía: si el email figura en el listado de socios, lo que necesita no es
         // recuperar la contraseña sino vincular su ficha, así que se le envía esa invitación.

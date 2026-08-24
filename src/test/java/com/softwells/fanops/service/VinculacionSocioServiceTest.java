@@ -59,13 +59,15 @@ class VinculacionSocioServiceTest {
   private PasswordEncoder passwordEncoder;
   @Mock
   private EmailSender emailSender;
+  @Mock
+  private EmailTemplateService emailTemplateService;
 
   private VinculacionSocioService service;
 
   @BeforeEach
   void setUp() {
     service = new VinculacionSocioService(vinculacionRepository, socioRepository, usuarioRepository,
-        roleRepository, passwordEncoder, emailSender);
+        roleRepository, passwordEncoder, emailSender, emailTemplateService);
     ReflectionTestUtils.setField(service, "publicBaseUrl", "https://fanops.test");
     ReflectionTestUtils.setField(service, "horasValidez", 48L);
 
