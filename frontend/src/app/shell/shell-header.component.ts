@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
 import { AuthService } from '@/pages/auth/auth.service';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { PenaSwitcherComponent } from './pena-switcher.component';
 
 /**
@@ -50,6 +51,7 @@ import { PenaSwitcherComponent } from './pena-switcher.component';
 })
 export class ShellHeaderComponent {
     protected readonly activePena = inject(ActivePenaService);
+    private readonly penaPublica = inject(PenaPublicaService);
     private readonly auth = inject(AuthService);
 
     readonly openAccount = output<void>();
@@ -62,8 +64,9 @@ export class ShellHeaderComponent {
         return this.activePena.pena()?.logo || 'assets/logo-fanops.png';
     }
 
-    protected homeRoute(): string {
-        return this.activePena.isSuperAdmin() ? '/penas' : '/carnet-socio';
+    /** Inicio dentro de la peña actual: el logo nunca debe sacarte de su dominio. */
+    protected homeRoute(): string[] {
+        return this.penaPublica.ruta(this.activePena.isSuperAdmin() ? 'penas' : 'carnet-socio');
     }
 
     /** Misma inicial que muestra el panel de cuenta: la del email del usuario. */

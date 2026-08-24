@@ -1,5 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { NavSection } from './navigation';
 
@@ -26,7 +27,7 @@ import { NavSection } from './navigation';
                     </h2>
                     @for (item of section.items; track item.id) {
                         <a
-                            [routerLink]="item.route"
+                            [routerLink]="penaPublica.ruta(item.route)"
                             routerLinkActive="!bg-accent-soft !text-accent-soft-fg !font-semibold"
                             class="flex items-center gap-3 rounded-token px-3 py-2.5 text-sm text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
                         >
@@ -40,5 +41,6 @@ import { NavSection } from './navigation';
     `
 })
 export class ShellSidebarComponent {
+    protected readonly penaPublica = inject(PenaPublicaService);
     readonly sections = input.required<NavSection[]>();
 }

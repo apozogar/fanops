@@ -22,15 +22,17 @@ services:
         value: https://fanops.onrender.com   # ajusta al dominio real
       # --- Correo saliente ---
       # El plan gratuito bloquea la salida a los puertos SMTP (25, 465 y 587), así que con
-      # 'plan: free' hay que enviar por la API HTTP de Brevo, que va por el 443. Si se sube el
-      # servicio a un plan de pago, se puede volver a SMTP poniendo APP_EMAIL_PROVEEDOR=smtp y
-      # rellenando las SMTP_*.
+      # 'plan: free' hay que enviar por una API HTTP (Resend o Brevo), que va por el 443. Si se
+      # sube el servicio a un plan de pago, se puede volver a SMTP poniendo
+      # APP_EMAIL_PROVEEDOR=smtp y rellenando las SMTP_*.
       - key: APP_EMAIL_PROVEEDOR
-        value: brevo
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false   # Resend > API Keys
       - key: BREVO_API_KEY
-        sync: false   # Brevo > SMTP & API > API keys
+        sync: false   # Brevo > SMTP & API > API keys (formato xkeysib-...; NO la SMTP key xsmtpsib-...)
       - key: MAIL_FROM_ADDRESS
-        sync: false   # remitente verificado en Brevo (dominio con SPF y DKIM, o remitente único)
+        sync: false   # onboarding@resend.dev para pruebas, o un remitente de un dominio verificado en Resend/Brevo
       - key: MAIL_FROM_NAME
         value: FanOps
       # Solo se usan con APP_EMAIL_PROVEEDOR=smtp
@@ -43,7 +45,7 @@ services:
       - key: SMTP_PASSWORD
         sync: false
       - key: MAIL_ACTIVE
-        value: "true"  # pon "true" si vuelves a APP_EMAIL_PROVEEDOR=smtp, si no el correo no sale
+        value: "false"  # pon "true" si vuelves a APP_EMAIL_PROVEEDOR=smtp, si no el correo no sale
       # --- Superadmin inicial (cámbialo tras el primer deploy) ---
       - key: APP_SUPERADMIN_EMAIL
         sync: false

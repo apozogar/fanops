@@ -17,6 +17,13 @@ export interface NavItem {
     shortLabel: string;
     /** Nombre del icono en el registro de la aplicación. */
     icon: FoIconName;
+    /**
+     * Segmento de la pantalla, SIN barra inicial y sin el dominio de la peña.
+     *
+     * Todas las pantallas cuelgan del dominio (`/mi-pena/socios`), así que el enlace final
+     * lo construye quien lo pinta con `penaPublica.ruta(item.route)`. Guardar aquí una ruta
+     * absoluta haría que la navegación perdiera la peña.
+     */
     route: string;
 }
 
@@ -33,21 +40,21 @@ const AREA_PERSONAL: NavSection = {
             label: 'Mi carnet',
             shortLabel: 'Carnet',
             icon: 'socio',
-            route: '/carnet-socio'
+            route: 'carnet-socio'
         },
         {
             id: 'cuotas',
             label: 'Mis cuotas',
             shortLabel: 'Cuotas',
             icon: 'euro',
-            route: '/cuotas-socio'
+            route: 'cuotas-socio'
         },
         {
             id: 'inscripciones',
             label: 'Inscripción a eventos',
             shortLabel: 'Inscribirme',
             icon: 'inscribirse',
-            route: '/inscripciones'
+            route: 'inscripciones'
         }
     ]
 };
@@ -60,14 +67,14 @@ const GESTION: NavSection = {
             label: 'Socios',
             shortLabel: 'Socios',
             icon: 'socios',
-            route: '/socios'
+            route: 'socios'
         },
         {
             id: 'eventos',
             label: 'Eventos',
             shortLabel: 'Eventos',
             icon: 'calendario',
-            route: '/eventos'
+            route: 'eventos'
         }
     ]
 };
@@ -80,7 +87,7 @@ const SUPERADMIN: NavSection = {
             label: 'Gestión de peñas',
             shortLabel: 'Peñas',
             icon: 'super-admin',
-            route: '/penas'
+            route: 'penas'
         }
     ]
 };

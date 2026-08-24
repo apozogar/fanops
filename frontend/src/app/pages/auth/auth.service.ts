@@ -10,6 +10,7 @@ import {jwtDecode} from "jwt-decode";
 import {User} from "@/interfaces/user";
 import {PenaService} from "@/services/pena.service";
 import {PenaContextService} from "@/services/pena-context.service";
+import {PenaPublicaService} from "@/core/pena/pena-publica.service";
 import {Pena} from "@/interfaces/socio.interface";
 import {ROLE_ADMIN, ROLE_SUPERADMIN} from "@/core/auth/roles";
 
@@ -22,6 +23,7 @@ export class AuthService {
     private router = inject(Router);
     private penaService = inject(PenaService);
     private penaContextService = inject(PenaContextService);
+    private penaPublica = inject(PenaPublicaService);
 
     private baseUrl = environment.apiUrl + '/api/auth';
 
@@ -110,6 +112,9 @@ export class AuthService {
                 localStorage.setItem('currentPena', JSON.stringify({
                     id: pena.id,
                     nombre: pena.nombre,
+                    // El slug se guarda porque de él sale el primer segmento de todas las URLs
+                    // de la aplicación: sin él, tras recargar no se podría reconstruir la ruta.
+                    slug: pena.slug,
                     logo: pena.logo,
                     lema: pena.lema,
                     color: pena.color
@@ -143,12 +148,17 @@ export class AuthService {
     logout()
         :
         void {
+        // El destino se calcula ANTES de limpiar: después ya no se sabría en qué peña se estaba.
+        const destino = this.penaPublica.ruta('auth', 'login');
+
         localStorage.removeItem('token');
         localStorage.removeItem('currentPena');
         this.currentUserSubject.next(null);
         this.currentPenaSubject.next(null);
         this.penaContextService.clear();
-        this.router.navigate(['/auth/login']);
+        // Se vuelve al login DE LA PEÑA, no al genérico: quien cierra sesión en su peña espera
+        // volver a entrar en la misma, con su marca. El slug se lee antes de limpiar nada.
+        this.router.navigate(destino);
     }
 
     /** true si el usuario autenticado es superadmin (gestiona todas las peñas, no una fija). */
@@ -198,13 +208,45 @@ export class AuthService {
 
     private loadPenaFromStorage(): void {
         const penaData = localStorage.getItem('currentPena');
-        if (penaData) {
-            try {
-                const pena: Pena = JSON.parse(penaData);
-                this.currentPenaSubject.next(pena);
-            } catch (error) {
-                console.error('Error al parsear la peña desde localStorage:', error);
-            }
+        if (!penaData) {
+            return;
         }
+
+        try {
+            const pena: Pena = JSON.parse(penaData);
+            this.currentPenaSubject.next(pena);
+
+            // Sesiones abiertas antes de que existieran los dominios por peña no tienen el slug
+            // guardado, y de él sale el primer segmento de todas las URLs. Se recarga la peña en
+            // lugar de obligar a volver a entrar.
+            if (!pena.slug && pena.id) {
+                this.refrescarPenaGuardada(pena.id);
+            }
+        } catch (error) {
+            console.error('Error al parsear la peña desde localStorage:', error);
+        }
+    }
+
+    /** Vuelve a pedir la peña y la reescribe en localStorage, ya con el slug. */
+    private refrescarPenaGuardada(id: number): void {
+        this.penaService.get(id.toString()).subscribe({
+            next: (respuesta) => {
+                const pena = respuesta.data;
+                if (!pena) {
+                    return;
+                }
+                this.currentPenaSubject.next(pena);
+                localStorage.setItem('currentPena', JSON.stringify({
+                    id: pena.id,
+                    nombre: pena.nombre,
+                    slug: pena.slug,
+                    logo: pena.logo,
+                    lema: pena.lema,
+                    color: pena.color
+                } as Pena));
+            },
+            // Sin conexión o con el token caducado se sigue con lo que había guardado.
+            error: () => undefined
+        });
     }
 }

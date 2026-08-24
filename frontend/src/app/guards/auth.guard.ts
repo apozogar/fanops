@@ -10,6 +10,9 @@ export const authGuard: CanActivateFn = (route, state) => {
     return true;
   }
 
-  router.navigate(['/auth/login']);
+  // Al login DE LA PEÑA por la que se intentaba entrar: el dominio está en la propia URL, así
+  // que quien llega con la sesión caducada se encuentra el login de su peña y no el genérico.
+  const slug = route.paramMap.get('penaSlug');
+  router.navigate(slug ? ['/', slug, 'auth', 'login'] : ['/auth/login']);
   return false;
 };

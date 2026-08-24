@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@/pages/auth/auth.service';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
 import { PenaSwitcherComponent } from './pena-switcher.component';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
 import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
@@ -60,7 +61,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                 @if (overflowItems().length > 0) {
                     <div class="border-t border-line py-2">
                         @for (item of overflowItems(); track item.id) {
-                            <a [routerLink]="item.route" (click)="close.emit()" class="flex items-center gap-3 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover">
+                            <a [routerLink]="penaPublica.ruta(item.route)" (click)="close.emit()" class="flex items-center gap-3 px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover">
                                 <fo-icon [name]="item.icon" class="text-ink-muted" />
                                 <span class="truncate">{{ item.label }}</span>
                             </a>
@@ -80,6 +81,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 })
 export class ShellAccountPanelComponent {
     private readonly auth = inject(AuthService);
+    protected readonly penaPublica = inject(PenaPublicaService);
     protected readonly activePena = inject(ActivePenaService);
 
     readonly open = input<boolean>(false);

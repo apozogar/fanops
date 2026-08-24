@@ -1,5 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
 
@@ -24,7 +25,7 @@ import { NavItem } from './navigation';
                 @for (item of items(); track item.id) {
                     <li class="min-w-0 flex-1">
                         <a
-                            [routerLink]="item.route"
+                            [routerLink]="penaPublica.ruta(item.route)"
                             routerLinkActive="!text-accent"
                             #link="routerLinkActive"
                             [attr.aria-current]="link.isActive ? 'page' : null"
@@ -52,6 +53,7 @@ import { NavItem } from './navigation';
     `
 })
 export class ShellBottomNavComponent {
+    protected readonly penaPublica = inject(PenaPublicaService);
     readonly items = input.required<NavItem[]>();
     /** Muestra una pestaña "Más" que abre el panel con el resto de destinos. */
     readonly hasMore = input<boolean>(false);

@@ -1,10 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService } from '@/pages/auth/auth.service';
 import { PenaContextService } from '@/services/pena-context.service';
+import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { PenaService } from '@/services/pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
 import { PageReloader } from '@/core/platform/page-reloader.service';
 import { Pena } from '@/interfaces/socio.interface';
+
+/** Primer segmento de la ruta: el dominio de la peña. */
+const PRIMER_SEGMENTO = /^\/[^/?#]+/;
 
 /**
  * Peña "activa": aquella cuyos datos se están viendo.
@@ -19,8 +24,10 @@ export class ActivePenaService {
     private readonly auth = inject(AuthService);
     private readonly penaService = inject(PenaService);
     private readonly penaContext = inject(PenaContextService);
+    private readonly penaPublica = inject(PenaPublicaService);
     private readonly theme = inject(ThemeService);
     private readonly reloader = inject(PageReloader);
+    private readonly router = inject(Router);
 
     private readonly _pena = signal<Pena | null>(null);
     private readonly _options = signal<Pena[]>([]);
@@ -74,10 +81,13 @@ export class ActivePenaService {
     /**
      * Cambia la peña de trabajo del superadmin.
      *
-     * Se persiste la elección ANTES de recargar: al volver a arrancar, la cabecera X-Pena-Id
-     * ya se envía con la peña nueva y las pantallas piden los datos de esa peña. Si el id no
-     * corresponde a ninguna peña conocida no se hace nada, para no dejar el contexto apuntando
-     * a algo inexistente.
+     * Cambia también el dominio de la URL, porque el dominio ES el contexto de peña: dejarlo
+     * apuntando a la anterior haría que un recargado o un enlace copiado volvieran a la peña de
+     * antes. Se persiste la elección y se navega al dominio nuevo, sustituyendo solo el primer
+     * segmento para quedarse en la misma pantalla.
+     *
+     * Si el id no corresponde a ninguna peña conocida no se hace nada, para no dejar el contexto
+     * apuntando a algo inexistente.
      */
     select(penaId: number | null): void {
         const pena = penaId === null ? null : (this._options().find((candidate) => candidate.id === penaId) ?? null);
@@ -94,8 +104,14 @@ export class ActivePenaService {
         this.apply(pena);
 
         // Las páginas cargan sus datos en ngOnInit, así que un cambio de peña necesita que
-        // vuelvan a pedirlos. Recargar es tosco pero garantiza que no quede ningún dato de la
-        // peña anterior en pantalla; es una acción poco frecuente y solo del superadmin.
+        // vuelvan a pedirlos. Se navega al dominio nuevo y se recarga: tosco, pero garantiza que
+        // no quede ningún dato de la peña anterior en pantalla. Es una acción poco frecuente y
+        // solo del superadmin.
+        if (pena?.slug) {
+            this.reloader.reemplazarPrimerSegmento(pena.slug);
+            return;
+        }
+
         this.reloader.reload();
     }
 
@@ -123,19 +139,32 @@ export class ActivePenaService {
                 const penas = response.data ?? [];
                 this._options.set(penas);
 
-                const selectedId = this.penaContext.getSelectedPenaId();
-                let pena = penas.find((candidate) => candidate.id === selectedId) ?? null;
+                // El dominio de la URL manda: es lo que hace que /otra-pena/socios muestre
+                // realmente los socios de esa peña, y que un enlace compartido entre
+                // superadmins abra la peña que dice y no la que cada uno tuviera guardada.
+                const slugEnLaUrl = this.penaPublica.slug();
+                let pena = slugEnLaUrl ? (penas.find((candidate) => candidate.slug?.toLowerCase() === slugEnLaUrl.toLowerCase()) ?? null) : null;
 
-                // Sin selección previa se activa la primera peña, para que las pantallas de
-                // gestión funcionen desde el primer momento en vez de fallar con "selecciona
-                // una peña". Se persiste la elección pero NO se recarga: estamos en el
-                // arranque, y llamar a select() aquí provocaría un bucle de recargas.
+                // Sin dominio en la URL se cae en la que estuviera seleccionada.
+                if (!pena) {
+                    const selectedId = this.penaContext.getSelectedPenaId();
+                    pena = penas.find((candidate) => candidate.id === selectedId) ?? null;
+                }
+
+                // Y si tampoco había, la primera, para que las pantallas de gestión funcionen
+                // desde el primer momento en vez de fallar con "selecciona una peña". Se
+                // persiste la elección pero NO se recarga: estamos en el arranque, y llamar a
+                // select() aquí provocaría un bucle de recargas.
                 if (!pena && penas.length > 0) {
                     pena = penas[0];
+                }
+
+                if (pena) {
                     this.penaContext.setSelectedPenaId(pena.id);
                 }
 
                 this.apply(pena);
+                this.corregirDominioEnLaUrl(pena);
                 this._loading.set(false);
             },
             error: () => {
@@ -143,6 +172,28 @@ export class ActivePenaService {
                 this._loading.set(false);
             }
         });
+    }
+
+    /**
+     * Ajusta el dominio de la URL a la peña que se está mostrando de verdad.
+     *
+     * Solo hace algo cuando no coinciden, que pasa si el superadmin escribe un dominio que no
+     * existe: sin esto, la URL decía una peña y la pantalla mostraba otra. Se reemplaza en el
+     * historial y sin recargar, porque en este punto las pantallas aún no han pedido sus datos.
+     */
+    private corregirDominioEnLaUrl(pena: Pena | null): void {
+        const slugCorrecto = pena?.slug;
+        if (!slugCorrecto) {
+            return;
+        }
+
+        const slugEnLaUrl = this.penaPublica.slug();
+        if (slugEnLaUrl?.toLowerCase() === slugCorrecto.toLowerCase()) {
+            return;
+        }
+
+        const urlCorregida = this.router.url.replace(PRIMER_SEGMENTO, `/${slugCorrecto}`);
+        this.router.navigateByUrl(urlCorregida, { replaceUrl: true });
     }
 
     private apply(pena: Pena | null): void {

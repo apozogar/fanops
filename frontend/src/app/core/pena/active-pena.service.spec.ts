@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ActivePenaService } from './active-pena.service';
+import { provideRouter } from '@angular/router';
 import { PageReloader } from '@/core/platform/page-reloader.service';
+import { PenaPublicaService } from './pena-publica.service';
 import { PenaContextService } from '@/services/pena-context.service';
 import { PenaService } from '@/services/pena.service';
 import { ThemeService } from '@/core/theme/theme.service';
@@ -9,8 +11,8 @@ import { AuthService } from '@/pages/auth/auth.service';
 import { Pena } from '@/interfaces/socio.interface';
 
 const PENAS: Pena[] = [
-    { id: 7, nombre: 'Peña Siete', color: '#008835' },
-    { id: 8, nombre: 'Peña Ocho', color: '#123456' }
+    { id: 7, nombre: 'Peña Siete', slug: 'pena-siete', color: '#008835' },
+    { id: 8, nombre: 'Peña Ocho', slug: 'pena-ocho', color: '#123456' }
 ];
 
 class AuthStub {
@@ -37,8 +39,12 @@ class PenaServiceStub {
 
 class ReloaderSpy {
     veces = 0;
+    segmentos: string[] = [];
     reload() {
         this.veces++;
+    }
+    reemplazarPrimerSegmento(segmento: string) {
+        this.segmentos.push(segmento);
     }
 }
 
@@ -48,6 +54,7 @@ describe('ActivePenaService (superadmin)', () => {
     let reloader: ReloaderSpy;
     let penaService: PenaServiceStub;
     let auth: AuthStub;
+    let penaPublica: PenaPublicaService;
 
     beforeEach(() => {
         localStorage.clear();
@@ -55,10 +62,20 @@ describe('ActivePenaService (superadmin)', () => {
         penaService = new PenaServiceStub();
 
         TestBed.configureTestingModule({
-            providers: [ActivePenaService, PenaContextService, ThemeService, { provide: AuthService, useClass: AuthStub }, { provide: PenaService, useValue: penaService }, { provide: PageReloader, useValue: reloader }]
+            providers: [
+                ActivePenaService,
+                PenaContextService,
+                ThemeService,
+                PenaPublicaService,
+                provideRouter([]),
+                { provide: AuthService, useClass: AuthStub },
+                { provide: PenaService, useValue: penaService },
+                { provide: PageReloader, useValue: reloader }
+            ]
         });
 
         auth = TestBed.inject(AuthService) as unknown as AuthStub;
+        penaPublica = TestBed.inject(PenaPublicaService);
         servicio = TestBed.inject(ActivePenaService);
         contexto = TestBed.inject(PenaContextService);
     });
@@ -82,7 +99,8 @@ describe('ActivePenaService (superadmin)', () => {
         expect(reloader.veces).toBe(0);
     });
 
-    it('al cambiar de peña persiste el id nuevo antes de recargar', () => {
+    it('al cambiar de peña persiste el id nuevo y navega al dominio de la peña nueva', () => {
+        penaPublica.fijarSlug('pena-siete');
         servicio.init();
         expect(contexto.getSelectedPenaId()).toBe(7);
 
@@ -90,7 +108,9 @@ describe('ActivePenaService (superadmin)', () => {
 
         expect(contexto.getSelectedPenaId()).toBe(8);
         expect(servicio.pena()?.id).toBe(8);
-        expect(reloader.veces).toBe(1);
+        // El dominio ES el contexto de peña: dejarlo apuntando a la anterior haría que un
+        // recargado o un enlace copiado volvieran a la peña de antes.
+        expect(reloader.segmentos).toEqual(['pena-ocho']);
     });
 
     it('no recarga si se vuelve a elegir la peña que ya estaba activa', () => {
@@ -109,6 +129,27 @@ describe('ActivePenaService (superadmin)', () => {
 
         expect(contexto.getSelectedPenaId()).toBe(7);
         expect(reloader.veces).toBe(0);
+    });
+
+    it('el dominio de la URL manda sobre la peña que estuviera seleccionada', () => {
+        // Un enlace compartido entre superadmins tiene que abrir la peña que dice el enlace, no
+        // la que cada uno tuviera guardada de su última sesión.
+        contexto.setSelectedPenaId(7);
+        penaPublica.fijarSlug('pena-ocho');
+
+        servicio.init();
+
+        expect(servicio.pena()?.id).toBe(8);
+        expect(contexto.getSelectedPenaId()).toBe(8);
+    });
+
+    it('sin dominio en la URL respeta la peña seleccionada', () => {
+        contexto.setSelectedPenaId(8);
+        penaPublica.fijarSlug(null);
+
+        servicio.init();
+
+        expect(servicio.pena()?.id).toBe(8);
     });
 
     it('al cerrar sesión olvida la peña activa y sus opciones', () => {
