@@ -2,6 +2,8 @@ package com.softwells.fanops.service;
 
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.FaltaEventoDTO;
+import com.softwells.fanops.controller.dto.HistorialEventoSocioDto;
+import com.softwells.fanops.controller.dto.HistorialSocioDto;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
@@ -20,6 +22,7 @@ import com.softwells.fanops.repository.CuotaRepository;
 import com.softwells.fanops.repository.EventoInscripcionRepository;
 import com.softwells.fanops.repository.EventoRepository;
 import com.softwells.fanops.repository.FaltaEventoRepository;
+import com.softwells.fanops.repository.SocioRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
@@ -47,6 +50,7 @@ public class EventoService {
   private final UsuarioRepository usuarioRepository;
   private final CuotaRepository cuotaRepository;
   private final FaltaEventoRepository faltaRepository;
+  private final SocioRepository socioRepository;
   private final NotificacionService notificacionService;
 
   /** Penalización por falta si la peña no la tiene configurada. */
@@ -563,6 +567,70 @@ public class EventoService {
         })
         .sorted(Comparator.comparing(FaltaEventoDTO::getFechaRegistro))
         .collect(Collectors.toList());
+  }
+
+  /**
+   * Historial de eventos de un socio junto con su recuento de faltas.
+   *
+   * <p>Se arma desde sus inscripciones y se le añaden las faltas que no tengan inscripción
+   * detrás: anular fuera de plazo borra la inscripción, así que de esos eventos solo sobrevive la
+   * falta y de otro modo no aparecerían en el historial.
+   */
+  @Transactional(readOnly = true)
+  public HistorialSocioDto getHistorialSocio(UUID socioUid) {
+    SocioEntity socio = socioRepository.findById(socioUid)
+        .orElseThrow(() -> new EntityNotFoundException("Socio no encontrado con ID: " + socioUid));
+
+    // Una falta por evento: en un mismo evento no puede haber a la vez ausencia y anulación,
+    // porque anular borra la inscripción a la que se le pasaría lista.
+    Map<UUID, FaltaEventoEntity> faltasPorEvento = new LinkedHashMap<>();
+    for (FaltaEventoEntity falta :
+        faltaRepository.findBySocioUidOrderByFechaRegistroDesc(socioUid)) {
+      faltasPorEvento.putIfAbsent(falta.getEvento().getUid(), falta);
+    }
+
+    List<HistorialEventoSocioDto> filas = new ArrayList<>();
+    for (EventoInscripcionEntity inscripcion : inscripcionRepository.findBySocioUid(socioUid)) {
+      EventoEntity evento = inscripcion.getEvento();
+      // Se saca del mapa: lo que quede al final son las faltas sin inscripción.
+      FaltaEventoEntity falta = faltasPorEvento.remove(evento.getUid());
+      filas.add(filaHistorial(evento, falta)
+          .estado(inscripcion.getEstado())
+          .asistencia(inscripcion.getAsistencia())
+          .fechaInscripcion(inscripcion.getFechaInscripcion())
+          .build());
+    }
+    for (FaltaEventoEntity falta : faltasPorEvento.values()) {
+      filas.add(filaHistorial(falta.getEvento(), falta).build());
+    }
+
+    filas.sort(Comparator.comparing(HistorialEventoSocioDto::getFechaEvento).reversed());
+
+    return HistorialSocioDto.builder()
+        .socioUid(socio.getUid())
+        .numeroSocio(socio.getNumeroSocio())
+        .nombre(socio.getNombre())
+        .faltasAcumuladas(filas.stream().filter(f -> f.getFaltaUid() != null).count())
+        .faltasPendientes(filas.stream().filter(f -> f.getPenalizacionesRestantes() > 0).count())
+        .eventosConPlaza(
+            filas.stream().filter(f -> f.getEstado() == EstadoInscripcion.CONFIRMADA).count())
+        .eventosAsistidos(
+            filas.stream().filter(f -> f.getAsistencia() == AsistenciaEvento.ASISTIO).count())
+        .eventos(filas)
+        .build();
+  }
+
+  /** Parte común de una fila del historial: el evento y la falta que arrastre, si la hay. */
+  private HistorialEventoSocioDto.HistorialEventoSocioDtoBuilder filaHistorial(EventoEntity evento,
+      FaltaEventoEntity falta) {
+    return HistorialEventoSocioDto.builder()
+        .eventoUid(evento.getUid())
+        .nombreEvento(evento.getNombreEvento())
+        .fechaEvento(evento.getFechaEvento())
+        .faltaUid(falta != null ? falta.getUid() : null)
+        .motivoFalta(falta != null ? falta.getMotivo() : null)
+        .fechaFalta(falta != null ? falta.getFechaRegistro() : null)
+        .penalizacionesRestantes(falta != null ? falta.getPenalizacionesRestantes() : 0);
   }
 
   /**

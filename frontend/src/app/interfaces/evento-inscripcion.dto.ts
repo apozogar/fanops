@@ -76,3 +76,33 @@ export interface InscripcionAdmin {
   /** Inscripciones futuras que le irán forzadas a lista de espera. */
   penalizacionesPendientes: number;
 }
+/**
+ * Un evento en el historial de un socio. Los campos de inscripción son nulos cuando la fila viene
+ * solo de una falta: anular fuera de plazo borra la inscripción y de ese evento solo queda ella.
+ */
+export interface HistorialEventoSocio {
+  eventoUid: string;
+  nombreEvento: string;
+  fechaEvento: string;
+  estado?: EstadoInscripcion | null;
+  asistencia?: AsistenciaEvento | null;
+  fechaInscripcion?: string | null;
+  /** Falta que arrastra de este evento, si la tiene. Es lo que se perdona. */
+  faltaUid?: string | null;
+  motivoFalta?: MotivoFalta | null;
+  fechaFalta?: string | null;
+  penalizacionesRestantes: number;
+}
+
+/** Historial de eventos de un socio con su recuento de faltas. */
+export interface HistorialSocio {
+  socioUid: string;
+  numeroSocio?: number | null;
+  nombre: string;
+  faltasAcumuladas: number;
+  faltasPendientes: number;
+  eventosConPlaza: number;
+  eventosAsistidos: number;
+  /** Del más reciente al más antiguo. */
+  eventos: HistorialEventoSocio[];
+}

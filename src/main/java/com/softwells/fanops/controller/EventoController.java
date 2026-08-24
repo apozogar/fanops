@@ -3,6 +3,7 @@ package com.softwells.fanops.controller;
 import com.softwells.fanops.controller.dto.ApiResponse;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.FaltaEventoDTO;
+import com.softwells.fanops.controller.dto.HistorialSocioDto;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
@@ -183,6 +184,17 @@ public class EventoController {
       case PENDIENTE -> "Marca de asistencia retirada";
     };
     return ResponseEntity.ok(new ApiResponse<>(true, mensaje, faltas));
+  }
+
+  /**
+   * Historial de eventos de un socio con sus faltas: a qué se apuntó, a qué fue y qué le queda
+   * por pagar en penalizaciones. Es lo que abre el modal del listado de socios.
+   */
+  @GetMapping("/socios/{socioUid}/historial")
+  public ResponseEntity<ApiResponse<HistorialSocioDto>> getHistorialSocio(
+      @PathVariable UUID socioUid) {
+    return ResponseEntity.ok(new ApiResponse<>(true, "Historial recuperado",
+        eventoService.getHistorialSocio(socioUid)));
   }
 
   /** Retira una falta, ya sea por estar justificada o por un error al pasar lista. */

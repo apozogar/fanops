@@ -13,7 +13,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -90,4 +92,30 @@ public class SocioEntity {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "pena_id")
   private PenaEntity pena;
+
+  // ----------------------------------------------------------------
+  // Campos calculados para el listado de gestión (no se persisten)
+  // ----------------------------------------------------------------
+  // La cuenta de usuario no viaja en el JSON del socio (@JsonBackReference), así que lo que
+  // gestión necesita saber de ella se resume aquí en tres banderas.
+
+  /** true si la ficha tiene ya una cuenta de usuario asociada. */
+  @Transient
+  private boolean tieneUsuario;
+
+  /** true si esa cuenta está habilitada para entrar. */
+  @Transient
+  private boolean usuarioActivo;
+
+  /** Último inicio de sesión de su cuenta. Null: tiene cuenta pero nunca ha entrado. */
+  @Transient
+  private LocalDateTime ultimoAcceso;
+
+  /** Faltas del socio en toda su historia, hayan penalizado ya o no. */
+  @Transient
+  private long faltasAcumuladas;
+
+  /** Faltas que todavía le forzarán a lista de espera en próximas inscripciones. */
+  @Transient
+  private long faltasPendientes;
 }

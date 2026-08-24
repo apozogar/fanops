@@ -5,10 +5,12 @@ import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.security.PenaContextHolder;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +20,16 @@ public class UsuarioService {
 
   private final UsuarioRepository usuarioRepository;
   private final PenaService penaService;
+
+  /**
+   * Deja constancia de que la cuenta acaba de entrar en la aplicación. Se llama tras un login
+   * correcto y tras confirmar una vinculación, que también deja la sesión iniciada. Es
+   * deliberadamente silencioso: que no se pueda sellar el acceso no debe impedir entrar.
+   */
+  @Transactional
+  public void registrarAcceso(String email) {
+    usuarioRepository.registrarAcceso(email, LocalDateTime.now());
+  }
 
   public UsuarioEntity obtenerUsuarioAutenticado() {
     String userEmail = Objects.requireNonNull(

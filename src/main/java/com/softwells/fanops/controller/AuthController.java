@@ -16,6 +16,7 @@ import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.security.JwtService;
 import com.softwells.fanops.service.EmailSender;
 import com.softwells.fanops.service.SocioService;
+import com.softwells.fanops.service.UsuarioService;
 import com.softwells.fanops.service.VinculacionSocioService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final SocioService socioService;
+  private final UsuarioService usuarioService;
   private final VinculacionSocioService vinculacionSocioService;
   private final AuthenticationManager authenticationManager;
   private final UserDetailsService userDetailsService;
@@ -71,6 +73,7 @@ public class AuthController {
           new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
       final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
       final String jwt = jwtService.generateToken(userDetails);
+      usuarioService.registrarAcceso(request.getEmail());
       return ResponseEntity.ok(new AuthResponse(jwt));
     } catch (AuthenticationException e) {
       // Si las credenciales son incorrectas, devolvemos un 401 Unauthorized
@@ -129,6 +132,8 @@ public class AuthController {
       @RequestBody ConfirmarVinculacionRequest request) {
     UsuarioEntity usuario =
         vinculacionSocioService.confirmar(request.getToken(), request.getPassword());
+    // La confirmación deja la sesión iniciada, así que cuenta como acceso igual que un login.
+    usuarioService.registrarAcceso(usuario.getEmail());
     return ResponseEntity.ok(new AuthResponse(jwtService.generateToken(usuario)));
   }
 

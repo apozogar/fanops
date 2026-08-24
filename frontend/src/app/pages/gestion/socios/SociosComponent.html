@@ -135,7 +135,9 @@
                 <th scope="col" class="hidden md:table-cell">Teléfono</th>
                 <th scope="col" class="hidden md:table-cell">Email</th>
                 <th scope="col" class="hidden md:table-cell">Estado</th>
-                <th scope="col" style="min-width: 130px">Acciones</th>
+                <th scope="col" class="hidden lg:table-cell">Acceso</th>
+                <th scope="col" class="hidden lg:table-cell" style="width: 110px">Faltas</th>
+                <th scope="col" style="min-width: 160px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-socio>
@@ -147,7 +149,26 @@
                 <td class="hidden md:table-cell">
                     <p-tag [severity]="socio.activo ? 'success' : 'danger'" [value]="socio.activo ? 'Activo' : 'Inactivo'" />
                 </td>
-                <td style="min-width: 130px">
+                <!-- Estado de la cuenta: sin cuenta, bloqueada, creada pero sin estrenar, o en uso. -->
+                <td class="hidden lg:table-cell">
+                    <p-tag [severity]="accesoSeverity(socio)" [value]="accesoTexto(socio)" />
+                    @if (socio.ultimoAcceso) {
+                    <div class="text-xs text-muted-color mt-1">{{ socio.ultimoAcceso | date: 'dd/MM/yyyy HH:mm' }}</div>
+                    }
+                </td>
+                <td class="hidden lg:table-cell">
+                    @if (socio.faltasAcumuladas) {
+                    <p-tag
+                        [severity]="socio.faltasPendientes ? 'danger' : 'warn'"
+                        [value]="faltasTexto(socio)"
+                        [pTooltip]="socio.faltasPendientes ? 'Aún le penalizan en las próximas inscripciones' : 'Ya cumplió la penalización'"
+                        tooltipPosition="top"
+                    />
+                    } @else {
+                    <span class="text-muted-color">—</span>
+                    }
+                </td>
+                <td style="min-width: 160px">
                     <div class="flex items-center gap-1.5">
                     <button
                         foButton
@@ -159,6 +180,16 @@
                         tooltipPosition="top"
                         aria-label="Ver cuotas"
                     ><fo-icon name="euro" [size]="16" /></button>
+                    <button
+                        foButton
+                        variant="ghost"
+                        size="icon-sm"
+                        class="rounded-full"
+                        (click)="abrirHistorial(socio)"
+                        pTooltip="Eventos y faltas"
+                        tooltipPosition="top"
+                        aria-label="Ver historial de eventos y faltas"
+                    ><fo-icon name="calendario" [size]="16" /></button>
                     <button
                         foButton
                         variant="ghost"
@@ -188,7 +219,7 @@
 
 <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-<p-dialog [(visible)]="socioDialog" [style]="{ width: '650px' }" header="Detalles del Socio" [modal]="true">
+<p-dialog [(visible)]="socioDialog" [style]="{ width: '650px' }" [breakpoints]="{ '960px': '95vw' }" header="Detalles del Socio" [modal]="true">
     <ng-template #content>
         <div class="flex flex-col gap-6 w-full">
             <!-- Información Básica -->
@@ -324,9 +355,107 @@
 </p-dialog>
 
 <!-- Modal para mostrar las cuotas -->
-<p-dialog [(visible)]="cuotasDialog" [style]="{ width: '750px' }" header="Historial de Cuotas" [modal]="true">
+<p-dialog [(visible)]="cuotasDialog" [style]="{ width: '750px' }" [breakpoints]="{ '960px': '95vw' }" header="Historial de Cuotas" [modal]="true">
     <ng-template pTemplate="content">
         <app-cuotas-socio-table [cuotas]="cuotasSocio"></app-cuotas-socio-table>
+    </ng-template>
+</p-dialog>
+
+<!-- Modal de historial de eventos y faltas del socio -->
+<p-dialog
+    [(visible)]="historialDialog"
+    [style]="{ width: '900px' }"
+    [breakpoints]="{ '960px': '95vw' }"
+    [modal]="true"
+    [header]="historial ? 'Eventos de ' + historial.nombre : 'Eventos del socio'"
+>
+    <ng-template pTemplate="content">
+        @if (historialCargando) {
+        <div class="text-muted-color py-6 text-center">Cargando historial…</div>
+        } @else if (historial) {
+        <!-- Resumen arriba: lo primero que se quiere saber es cuántas faltas acumula y si
+             todavía le penalizan. Las cuatro tarjetas tienen la misma estructura (rótulo y
+             número, sin pies de texto) para que midan igual también con dos por fila en móvil. -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            <div class="card mb-0 h-full !p-3 md:!p-4">
+                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Faltas acumuladas</span>
+                <div class="font-medium text-xl md:text-2xl" [class.text-red-500]="historial.faltasAcumuladas > 0">{{ historial.faltasAcumuladas }}</div>
+            </div>
+            <div class="card mb-0 h-full !p-3 md:!p-4" pTooltip="Cada una manda una inscripción a lista de espera" tooltipPosition="top">
+                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Faltas activas</span>
+                <div class="font-medium text-xl md:text-2xl" [class.text-orange-500]="historial.faltasPendientes > 0">{{ historial.faltasPendientes }}</div>
+            </div>
+            <div class="card mb-0 h-full !p-3 md:!p-4">
+                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Eventos con plaza</span>
+                <div class="font-medium text-xl md:text-2xl">{{ historial.eventosConPlaza }}</div>
+            </div>
+            <div class="card mb-0 h-full !p-3 md:!p-4">
+                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Asistencias</span>
+                <div class="font-medium text-xl md:text-2xl text-primary">{{ historial.eventosAsistidos }}</div>
+            </div>
+        </div>
+
+        <p-table [value]="historial.eventos" [rows]="8" [paginator]="historial.eventos.length > 8" dataKey="eventoUid" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th scope="col">Evento</th>
+                    <th scope="col" class="hidden md:table-cell" style="width: 120px">Fecha</th>
+                    <th scope="col" class="hidden md:table-cell" style="width: 190px">Resultado</th>
+                    <th scope="col" class="hidden md:table-cell" style="width: 150px">Falta</th>
+                    <th scope="col" style="width: 70px">Perdonar</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-fila>
+                <tr>
+                    <td>
+                        <div class="font-medium">{{ fila.nombreEvento }}</div>
+                        <!-- En móvil no caben cinco columnas: fecha, resultado y falta se apilan
+                             bajo el nombre del evento en vez de perderse. -->
+                        <div class="md:hidden mt-1.5 flex flex-wrap items-center gap-2">
+                            <span class="text-xs text-muted-color">{{ fila.fechaEvento | date: 'dd/MM/yyyy' }}</span>
+                            <p-tag [severity]="resultadoEventoSeverity(fila)" [value]="resultadoEventoTexto(fila)" />
+                            @if (fila.faltaUid) {
+                            <span class="text-xs text-red-500 font-medium">{{ faltaTexto(fila) }}</span>
+                            }
+                        </div>
+                    </td>
+                    <td class="hidden md:table-cell">{{ fila.fechaEvento | date: 'dd/MM/yyyy' }}</td>
+                    <td class="hidden md:table-cell"><p-tag [severity]="resultadoEventoSeverity(fila)" [value]="resultadoEventoTexto(fila)" /></td>
+                    <td class="hidden md:table-cell">
+                        @if (fila.faltaUid) {
+                        <div class="flex flex-col">
+                            <span class="text-red-500 font-medium text-sm">{{ faltaTexto(fila) }}</span>
+                            <span class="text-xs text-muted-color">{{ fila.fechaFalta | date: 'dd/MM/yyyy' }}</span>
+                        </div>
+                        } @else {
+                        <span class="text-muted-color">—</span>
+                        }
+                    </td>
+                    <td style="width: 70px">
+                        @if (fila.faltaUid) {
+                        <button
+                            foButton
+                            variant="ghost"
+                            size="icon-sm"
+                            class="rounded-full"
+                            [loading]="perdonando === fila.faltaUid"
+                            [disabled]="perdonando !== null"
+                            (click)="perdonarFalta(fila)"
+                            pTooltip="Perdonar la falta"
+                            tooltipPosition="top"
+                            aria-label="Perdonar la falta"
+                        ><fo-icon name="confirmar" [size]="16" /></button>
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="5" class="text-center text-muted-color py-6">Este socio no se ha inscrito todavía a ningún evento.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
     </ng-template>
 </p-dialog>
 

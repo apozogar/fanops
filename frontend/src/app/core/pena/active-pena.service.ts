@@ -44,12 +44,31 @@ export class ActivePenaService {
      * usuario autenticado disponible.
      */
     init(): void {
+        this.olvidarAlCerrarSesion();
+
         if (this.auth.isSuperAdmin()) {
             this.loadOptionsForSuperAdmin();
             return;
         }
 
         this.auth.currentPena.subscribe((pena) => this.apply(pena));
+    }
+
+    /**
+     * Descarta la peña activa cuando se cierra la sesión.
+     *
+     * Se escucha el usuario y no la peña porque para un superadmin la peña del usuario es siempre
+     * nula (no pertenece a ninguna): la suya sale del selector, así que mirar `currentPena` no
+     * distinguiría "sin sesión" de "superadmin". Sin esto, la peña seleccionada sobrevivía al
+     * logout y quedaba a la vista en el color de la interfaz y en el título de la pestaña.
+     */
+    private olvidarAlCerrarSesion(): void {
+        this.auth.currentUser.subscribe((usuario) => {
+            if (usuario === null) {
+                this._options.set([]);
+                this.apply(null);
+            }
+        });
     }
 
     /**

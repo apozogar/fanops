@@ -53,8 +53,8 @@
                 <th>Nombre</th>
                 <th>Fecha</th>
                 <th>Fin inscripción</th>
-                <th>Ubicación</th>
-                <th>Coste Estimado</th>
+<!--                <th>Ubicación</th>-->
+<!--                <th>Coste Estimado</th>-->
                 <th>Confirmados</th>
                 <th>En espera</th>
                 <th>Acciones</th>
@@ -74,8 +74,8 @@
                         <span class="text-muted-color">—</span>
                     </ng-template>
                 </td>
-                <td>{{ evento.ubicacion }}</td>
-                <td>{{ evento.costeTotalEstimado | currency:'EUR' }}</td>
+<!--                <td>{{ evento.ubicacion }}</td>-->
+<!--                <td>{{ evento.costeTotalEstimado | currency:'EUR' }}</td>-->
                 <td>
                     <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
                            [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—')"></p-tag>

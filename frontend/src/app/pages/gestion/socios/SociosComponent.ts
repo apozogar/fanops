@@ -22,6 +22,8 @@ import {
     CuotasSocioTableComponent
 } from "@/components/cuotas-socio-table/cuotas-socio-table.component";
 import {Role} from "@/interfaces/role.interface";
+import {EventoService} from "@/services/evento.service";
+import {HistorialEventoSocio, HistorialSocio} from "@/interfaces/evento-inscripcion.dto";
 import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros.component";
 import {UiButtonDirective} from "@/ui/ui-button.directive";
 import {IconComponent} from "@/ui/icon/icon.component";
@@ -64,6 +66,13 @@ export class SociosComponent implements OnInit {
 
     estadistica?: EstadisticasSocio;
 
+    /** Modal de historial de eventos y faltas del socio. */
+    historialDialog: boolean = false;
+    historial?: HistorialSocio;
+    historialCargando: boolean = false;
+    /** Falta con el perdón en vuelo: alimenta el indicador del botón y evita el doble envío. */
+    perdonando: string | null = null;
+
     // Para manejar el checkbox de admin
     isAdmin: boolean = false;
     private adminRole?: Role;
@@ -71,6 +80,7 @@ export class SociosComponent implements OnInit {
 
     constructor(
         private readonly socioService: SocioService,
+        private readonly eventoService: EventoService,
         private readonly messageService: MessageService,
         private readonly confirmationService: ConfirmationService
     ) {
@@ -214,6 +224,124 @@ export class SociosComponent implements OnInit {
         });
     }
 
+
+    // ----------------------------------------------------------------
+    // Acceso a la aplicación
+    // ----------------------------------------------------------------
+
+    /**
+     * Texto de la columna "Acceso". Distingue tres situaciones que se confunden con facilidad:
+     * no tener cuenta, tenerla bloqueada, y tenerla pero no haber entrado nunca. La última es la
+     * interesante para gestión: son los socios a los que hay que echar una mano para entrar.
+     */
+    accesoTexto(socio: any): string {
+        if (!socio.tieneUsuario) return 'Sin cuenta';
+        if (!socio.usuarioActivo) return 'Cuenta bloqueada';
+        if (!socio.ultimoAcceso) return 'Nunca ha entrado';
+        return 'Ha entrado';
+    }
+
+    accesoSeverity(socio: any): 'success' | 'warn' | 'danger' | 'secondary' {
+        if (!socio.tieneUsuario) return 'secondary';
+        if (!socio.usuarioActivo) return 'danger';
+        if (!socio.ultimoAcceso) return 'warn';
+        return 'success';
+    }
+
+    // ----------------------------------------------------------------
+    // Faltas e historial de eventos
+    // ----------------------------------------------------------------
+
+    /** Faltas del socio, señalando entre paréntesis las que todavía le penalizan. */
+    faltasTexto(socio: any): string {
+        const total = socio.faltasAcumuladas ?? 0;
+        const pendientes = socio.faltasPendientes ?? 0;
+        return pendientes > 0 ? `${total} (${pendientes} activa${pendientes > 1 ? 's' : ''})` : `${total}`;
+    }
+
+    abrirHistorial(socio: any): void {
+        this.historial = undefined;
+        this.historialCargando = true;
+        this.historialDialog = true;
+        this.eventoService.getHistorialSocio(socio.uid).subscribe({
+            next: (response) => {
+                this.historial = response.data;
+                this.historialCargando = false;
+            },
+            error: (err) => {
+                this.historialCargando = false;
+                this.historialDialog = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudo cargar el historial del socio.'
+                });
+            }
+        });
+    }
+
+    /**
+     * Perdona la falta de un evento. Además de dejar de penalizar, devuelve la asistencia a
+     * pendiente, para que no quede marcado como ausente alguien a quien se le ha perdonado.
+     */
+    perdonarFalta(fila: HistorialEventoSocio): void {
+        if (!fila.faltaUid || this.perdonando) {
+            return;
+        }
+        const faltaUid = fila.faltaUid;
+        this.confirmationService.confirm({
+            message: `¿Perdonar la falta de "${fila.nombreEvento}"? Dejará de penalizarle en sus próximas inscripciones.`,
+            header: 'Perdonar falta',
+            accept: () => {
+                this.perdonando = faltaUid;
+                this.eventoService.quitarFalta(faltaUid).pipe(finalize(() => (this.perdonando = null))).subscribe({
+                    next: () => {
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: 'Falta perdonada',
+                            detail: fila.nombreEvento
+                        });
+                        // El listado muestra el contador de faltas, así que hay que refrescarlo
+                        // junto con el propio historial.
+                        if (this.historial) {
+                            this.abrirHistorial({uid: this.historial.socioUid});
+                        }
+                        this.cargarSocios(this.filtroActivo ?? undefined);
+                    },
+                    error: (err) => {
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: err.error?.message || 'No se pudo perdonar la falta.'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    /** Estado de la falta de un evento: si todavía castiga y con cuántas inscripciones. */
+    faltaTexto(fila: HistorialEventoSocio): string {
+        return fila.penalizacionesRestantes > 0 ? `Penaliza (${fila.penalizacionesRestantes})` : 'Ya cumplida';
+    }
+
+    /** Cómo le fue al socio en ese evento, en una sola etiqueta. */
+    resultadoEventoTexto(fila: HistorialEventoSocio): string {
+        if (fila.motivoFalta === 'CANCELACION_TARDIA') return 'Anuló fuera de plazo';
+        if (fila.asistencia === 'NO_ASISTIO') return 'No se presentó';
+        if (fila.asistencia === 'ASISTIO') return 'Asistió';
+        if (fila.estado === 'EN_ESPERA') return 'En lista de espera';
+        if (fila.estado === 'CONFIRMADA') return 'Con plaza, sin pasar lista';
+        return '—';
+    }
+
+    resultadoEventoSeverity(fila: HistorialEventoSocio): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+        if (fila.motivoFalta === 'CANCELACION_TARDIA' || fila.asistencia === 'NO_ASISTIO') return 'danger';
+        if (fila.asistencia === 'ASISTIO') return 'success';
+        if (fila.estado === 'EN_ESPERA') return 'warn';
+        if (fila.estado === 'CONFIRMADA') return 'info';
+        return 'secondary';
+    }
 
     obtenerEstatidicas(): void {
         this.socioService.obtenerEstadisticas().subscribe((data) => {

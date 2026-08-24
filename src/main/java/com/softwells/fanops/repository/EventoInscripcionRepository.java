@@ -19,6 +19,9 @@ public interface EventoInscripcionRepository
 
   Optional<EventoInscripcionEntity> findByEventoUidAndSocioUid(UUID eventoUid, UUID socioUid);
 
+  /** Todas las inscripciones de un socio, para su historial de eventos. */
+  List<EventoInscripcionEntity> findBySocioUid(UUID socioUid);
+
   boolean existsByEventoUidAndSocioUid(UUID eventoUid, UUID socioUid);
 
   boolean existsByEventoUidAndEmailIgnoreCase(UUID eventoUid, String email);

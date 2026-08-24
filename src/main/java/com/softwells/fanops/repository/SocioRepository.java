@@ -36,6 +36,14 @@ public interface SocioRepository extends JpaRepository<SocioEntity, UUID> {
 
   List<SocioEntity> findByPenaId(Long penaId);
 
+  /**
+   * Igual que {@link #findByPenaId(Long)} pero con la cuenta de usuario ya cargada. El listado de
+   * gestión muestra por cada socio si tiene cuenta y cuándo entró por última vez, y sin el fetch
+   * eso serían tantas consultas como filas.
+   */
+  @Query("SELECT s FROM SocioEntity s LEFT JOIN FETCH s.usuario WHERE s.pena.id = :penaId")
+  List<SocioEntity> findByPenaIdConUsuario(@Param("penaId") Long penaId);
+
   long countByPenaId(Long penaId);
 
   List<SocioEntity> findByActivoAndPenaId(boolean activo, Long penaId);
@@ -49,7 +57,7 @@ public interface SocioRepository extends JpaRepository<SocioEntity, UUID> {
   long countByFechaNacimientoBeforeOrEqualsAndPenaId(@Param("fecha") LocalDate fecha,
       @Param("penaId") Long penaId);
 
-  @Query("SELECT DISTINCT s FROM SocioEntity s JOIN s.cuotas c "
+  @Query("SELECT DISTINCT s FROM SocioEntity s JOIN s.cuotas c LEFT JOIN FETCH s.usuario "
       + "WHERE c.estado IN :estados AND s.pena.id = :penaId")
   List<SocioEntity> findSociosConCuotasEnEstadosAndPenaId(
       @Param("estados") List<EstadoCuota> estados, @Param("penaId") Long penaId);

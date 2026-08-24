@@ -47,6 +47,19 @@ export interface Socio {
     accionistaBetis: boolean;
     observaciones?: string;
     cuotas: Cuota[];
+
+    // --- Calculados por el backend para el listado de gestión (solo lectura) ---
+
+    /** true si la ficha tiene ya una cuenta de usuario asociada. */
+    tieneUsuario?: boolean;
+    /** true si esa cuenta está habilitada para entrar. */
+    usuarioActivo?: boolean;
+    /** Último inicio de sesión. Null con cuenta creada significa que nunca ha entrado. */
+    ultimoAcceso?: string | null;
+    /** Faltas de toda su historia, hayan penalizado ya o no. */
+    faltasAcumuladas?: number;
+    /** Faltas que todavía le forzarán a lista de espera. */
+    faltasPendientes?: number;
 }
 
 export interface EstadisticasSocio {

@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,6 +32,13 @@ public class UsuarioEntity implements UserDetails {
 
   @Column(nullable = false)
   private boolean activo = true;
+
+  /**
+   * Último inicio de sesión correcto. Null significa que la cuenta existe pero nunca se ha
+   * llegado a entrar con ella: es la diferencia entre "tiene usuario" y "usa la aplicación", que
+   * es lo que se mira desde el listado de socios para saber a quién hay que ayudar a entrar.
+   */
+  private LocalDateTime ultimoAcceso;
 
   @JsonManagedReference
   @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

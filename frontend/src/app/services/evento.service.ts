@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AsistenciaEvento, EventoInscripcionDTO, FaltaEvento, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
+import { AsistenciaEvento, EventoInscripcionDTO, FaltaEvento, HistorialSocio, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '@/interfaces/api-response.interface';
@@ -87,6 +87,11 @@ export class EventoService {
   marcarAsistencia(eventoId: string, inscripcionId: string, asistencia: AsistenciaEvento): Observable<ApiResponse<number>> {
     const params = new HttpParams().set('asistencia', asistencia);
     return this.http.put<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}/asistencia`, null, { params });
+  }
+
+  /** Historial de eventos de un socio con sus faltas, para el modal del listado de socios. */
+  getHistorialSocio(socioUid: string): Observable<ApiResponse<HistorialSocio>> {
+    return this.http.get<ApiResponse<HistorialSocio>>(`${this.apiUrl}/socios/${socioUid}/historial`);
   }
 
   /** Retira una falta (justificada o marcada por error). */

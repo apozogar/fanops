@@ -64,9 +64,9 @@ export class EventosComponent implements OnInit {
     /** Inscripción con un cambio de asistencia o de falta en vuelo. */
     marcandoAsistencia: string | null = null;
 
-    private eventoService = inject(EventoService);
-    private messageService = inject(MessageService);
-    private confirmationService = inject(ConfirmationService);
+    private readonly eventoService = inject(EventoService);
+    private readonly messageService = inject(MessageService);
+    private readonly confirmationService = inject(ConfirmationService);
 
     public numEventos = 0;
     public numEventosPendientes = 0;
@@ -163,7 +163,7 @@ export class EventosComponent implements OnInit {
 
     copiarEnlacePublico(evento: Evento) {
         if (!evento.uid) return;
-        const enlace = window.location.origin + '/#/inscripcion/' + evento.uid;
+        const enlace = window.location.origin + '/inscripcion/' + evento.uid;
         navigator.clipboard?.writeText(enlace).then(() => {
             this.messageService.add({
                 severity: 'success',

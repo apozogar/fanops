@@ -16,6 +16,12 @@ const PENAS: Pena[] = [
 class AuthStub {
     superAdmin = true;
     currentPena = new BehaviorSubject<Pena | null>(null).asObservable();
+    /**
+     * Sesión abierta. Se expone el sujeto para que un test pueda empujar null y simular el
+     * cierre de sesión, que es lo que hace a ActivePenaService olvidar la peña activa.
+     */
+    currentUserSubject = new BehaviorSubject<unknown>({ email: 'superadmin@fanops.local' });
+    currentUser = this.currentUserSubject.asObservable();
     isSuperAdmin() {
         return this.superAdmin;
     }
@@ -25,9 +31,7 @@ class PenaServiceStub {
     respuesta: Pena[] = PENAS;
     fallar = false;
     listAll() {
-        return this.fallar
-            ? throwError(() => new Error('boom'))
-            : of({ success: true, message: '', data: this.respuesta });
+        return this.fallar ? throwError(() => new Error('boom')) : of({ success: true, message: '', data: this.respuesta });
     }
 }
 
@@ -43,6 +47,7 @@ describe('ActivePenaService (superadmin)', () => {
     let contexto: PenaContextService;
     let reloader: ReloaderSpy;
     let penaService: PenaServiceStub;
+    let auth: AuthStub;
 
     beforeEach(() => {
         localStorage.clear();
@@ -50,16 +55,10 @@ describe('ActivePenaService (superadmin)', () => {
         penaService = new PenaServiceStub();
 
         TestBed.configureTestingModule({
-            providers: [
-                ActivePenaService,
-                PenaContextService,
-                ThemeService,
-                { provide: AuthService, useClass: AuthStub },
-                { provide: PenaService, useValue: penaService },
-                { provide: PageReloader, useValue: reloader }
-            ]
+            providers: [ActivePenaService, PenaContextService, ThemeService, { provide: AuthService, useClass: AuthStub }, { provide: PenaService, useValue: penaService }, { provide: PageReloader, useValue: reloader }]
         });
 
+        auth = TestBed.inject(AuthService) as unknown as AuthStub;
         servicio = TestBed.inject(ActivePenaService);
         contexto = TestBed.inject(PenaContextService);
     });
@@ -110,6 +109,19 @@ describe('ActivePenaService (superadmin)', () => {
 
         expect(contexto.getSelectedPenaId()).toBe(7);
         expect(reloader.veces).toBe(0);
+    });
+
+    it('al cerrar sesión olvida la peña activa y sus opciones', () => {
+        servicio.init();
+        expect(servicio.pena()?.id).toBe(7);
+
+        // Cerrar sesión: AuthService empuja null en el usuario.
+        auth.currentUserSubject.next(null);
+
+        // Para un superadmin la peña sale del selector, no del usuario, así que sin esto
+        // sobrevivía al logout y se seguía viendo en el color de la interfaz y en el título.
+        expect(servicio.pena()).toBeNull();
+        expect(servicio.options()).toEqual([]);
     });
 
     it('si una selección guardada ya no existe, cae en la primera peña disponible', () => {

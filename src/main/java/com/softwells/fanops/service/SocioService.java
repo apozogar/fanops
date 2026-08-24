@@ -12,6 +12,8 @@ import com.softwells.fanops.model.RoleEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
+import com.softwells.fanops.repository.FaltaEventoRepository;
+import com.softwells.fanops.repository.FaltaEventoRepository.ResumenFaltasSocio;
 import com.softwells.fanops.repository.RoleRepository;
 import com.softwells.fanops.repository.SocioRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
@@ -22,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -66,6 +69,7 @@ public class SocioService {
 
   private final SocioRepository socioRepository;
   private final CuotaRepository cuotaRepository;
+  private final FaltaEventoRepository faltaEventoRepository;
   private final PasswordEncoder passwordEncoder;
   private final UsuarioRepository usuarioRepository;
   private final RoleRepository roleRepository;
@@ -239,7 +243,29 @@ public class SocioService {
 
   public List<SocioEntity> obtenerTodos() {
     Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
-    return socioRepository.findByPenaId(penaId);
+    return conDatosDeGestion(socioRepository.findByPenaIdConUsuario(penaId), penaId);
+  }
+
+  /**
+   * Rellena los campos calculados que el listado de gestión muestra por fila: el estado de la
+   * cuenta de usuario (si la tiene, si está activa y cuándo entró por última vez) y el recuento
+   * de faltas. Las faltas se traen agrupadas de una vez para no lanzar una consulta por socio.
+   */
+  private List<SocioEntity> conDatosDeGestion(List<SocioEntity> socios, Long penaId) {
+    Map<UUID, ResumenFaltasSocio> faltas = faltaEventoRepository.resumenPorPena(penaId).stream()
+        .collect(Collectors.toMap(ResumenFaltasSocio::getSocioUid, resumen -> resumen));
+
+    for (SocioEntity socio : socios) {
+      UsuarioEntity usuario = socio.getUsuario();
+      socio.setTieneUsuario(usuario != null);
+      socio.setUsuarioActivo(usuario != null && usuario.isActivo());
+      socio.setUltimoAcceso(usuario != null ? usuario.getUltimoAcceso() : null);
+
+      ResumenFaltasSocio resumen = faltas.get(socio.getUid());
+      socio.setFaltasAcumuladas(resumen != null ? resumen.getTotal() : 0);
+      socio.setFaltasPendientes(resumen != null ? resumen.getPendientes() : 0);
+    }
+    return socios;
   }
 
   public List<SocioEntity> obtenerSociosActivos() {
@@ -468,6 +494,7 @@ public class SocioService {
   public List<SocioEntity> obtenerSociosConImpagos() {
     List<EstadoCuota> estadosImpagados = List.of(EstadoCuota.RECHAZADA, EstadoCuota.VENCIDA);
     Long penaId = usuarioService.obtenerPenaDelUsuarioAutenticado().getId();
-    return socioRepository.findSociosConCuotasEnEstadosAndPenaId(estadosImpagados, penaId);
+    return conDatosDeGestion(
+        socioRepository.findSociosConCuotasEnEstadosAndPenaId(estadosImpagados, penaId), penaId);
   }
 }
