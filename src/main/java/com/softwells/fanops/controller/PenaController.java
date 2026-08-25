@@ -5,15 +5,10 @@ import com.softwells.fanops.controller.dto.PenaPublicaDto;
 import com.softwells.fanops.controller.dto.PenaRequestDTO;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.service.PenaService;
-import com.softwells.fanops.service.PenaService.LogoPena;
 import jakarta.validation.Valid;
-import java.net.URI;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -50,24 +45,6 @@ public class PenaController {
     PenaPublicaDto dto = new PenaPublicaDto(pena.getNombre(), pena.getSlug(), pena.getLogo(),
         pena.getLema(), pena.getColor());
     return ResponseEntity.ok(new ApiResponse<>(true, "Peña recuperada", dto));
-  }
-
-  /**
-   * Logo de la peña como imagen HTTP real (no como data URI), para que se pueda referenciar
-   * desde el HTML de los correos: los clientes de correo no cargan imágenes {@code data:}
-   * embebidas, solo URLs de verdad. Ver {@link PenaService#obtenerLogo}.
-   */
-  @GetMapping("/publica/{slug}/logo")
-  @PreAuthorize("permitAll()")
-  public ResponseEntity<byte[]> logo(@PathVariable("slug") String slug) {
-    LogoPena logo = service.obtenerLogo(slug);
-    if (logo.esUrlExterna()) {
-      return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(logo.url())).build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(logo.contentType()))
-        .cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
-        .body(logo.bytes());
   }
 
   @GetMapping("/{id}")

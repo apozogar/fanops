@@ -3,12 +3,11 @@ package com.softwells.fanops.service;
 import com.softwells.fanops.model.PenaEntity;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Genera el HTML de los correos con la identidad visual de la peña (nombre, logo y color),
- * para que quien lo recibe vea claramente de qué peña viene, no de "FanOps" a secas.
+ * Genera el HTML de los correos con la identidad visual de la peña (nombre y color), para que
+ * quien lo recibe vea claramente de qué peña viene, no de "FanOps" a secas.
  *
  * <p>Es solo maquetación con estilos inline y tablas, porque es lo único que se renderiza de
  * forma fiable en la mayoría de clientes de correo (Gmail, Outlook...). Todas las
@@ -20,14 +19,6 @@ public class EmailTemplateService {
 
   /** Color de acento cuando la peña no tiene uno configurado. */
   private static final String COLOR_POR_DEFECTO = "#2f6f4f";
-
-  /**
-   * Base pública de la API, para construir la URL del logo (ver {@link #urlLogo}). No puede
-   * apuntar a localhost en producción: si el correo se abre desde el móvil de quien lo recibe,
-   * esa URL tiene que ser accesible desde fuera, no solo desde la máquina que corre el backend.
-   */
-  @Value("${app.public-base-url:http://localhost:5300}")
-  private String publicBaseUrl;
 
   /**
    * @param pena       peña cuya identidad se muestra en la cabecera, o {@code null} si el correo
@@ -44,11 +35,6 @@ public class EmailTemplateService {
             : COLOR_POR_DEFECTO;
     String nombrePena =
         pena != null && StringUtils.isNotBlank(pena.getNombre()) ? pena.getNombre() : "FanOps";
-    // No se referencia pena.getLogo() directamente: se guarda como data URI en base64, y Gmail
-    // (entre otros) bloquea las imágenes "data:" embebidas en el HTML del correo, solo carga
-    // URLs de verdad. Por eso se apunta al endpoint que sirve el logo como imagen HTTP real.
-    String logo =
-        pena != null && StringUtils.isNotBlank(pena.getLogo()) ? urlLogo(pena.getSlug()) : null;
 
     StringBuilder html = new StringBuilder();
     html.append("<!doctype html><html lang=\"es\"><body style=\"margin:0;padding:0;")
@@ -63,13 +49,8 @@ public class EmailTemplateService {
     html.append("<tr><td style=\"background-color:").append(escapeAttr(color))
         .append(";height:6px;line-height:6px;font-size:0;\">&nbsp;</td></tr>");
 
-    // Cabecera: logo (si tiene) y nombre de la peña.
+    // Cabecera: nombre de la peña.
     html.append("<tr><td style=\"padding:32px 32px 8px 32px;text-align:center;\">");
-    if (StringUtils.isNotBlank(logo)) {
-      html.append("<img src=\"").append(escapeAttr(logo)).append("\" alt=\"")
-          .append(escapeHtml(nombrePena))
-          .append("\" style=\"max-height:56px;max-width:220px;margin-bottom:12px;\">");
-    }
     html.append("<div style=\"font-size:13px;font-weight:bold;letter-spacing:0.5px;")
         .append("color:").append(escapeAttr(color)).append(";text-transform:uppercase;\">")
         .append(escapeHtml(nombrePena)).append("</div>");
@@ -114,9 +95,5 @@ public class EmailTemplateService {
 
   private String escapeAttr(String texto) {
     return texto == null ? "" : texto.replace("\"", "&quot;");
-  }
-
-  private String urlLogo(String slug) {
-    return publicBaseUrl + "/api/pena/publica/" + slug + "/logo";
   }
 }
