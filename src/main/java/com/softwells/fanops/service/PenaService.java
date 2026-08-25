@@ -52,6 +52,54 @@ public class PenaService {
         .orElseThrow(() -> new EntityNotFoundException("No hay ninguna peña con el dominio: " + slug));
   }
 
+  /**
+   * Logo de la peña listo para servirse como imagen HTTP real.
+   *
+   * Existe porque el logo se guarda como data URI en base64 (ver {@link #validarLogo}), y eso
+   * funciona bien en la propia app (login, carnet), pero los clientes de correo (Gmail el primero)
+   * bloquean las imágenes {@code data:} embebidas en el HTML del correo: solo cargan imágenes que
+   * sean una URL de verdad. Por eso los correos referencian este endpoint en vez del data URI.
+   *
+   * @return los bytes y el tipo MIME si el logo es un data URI, o la URL si es una de las
+   *     antiguas (ver {@link #validarLogo}), para que el controlador redirija a ella
+   */
+  @Transactional(readOnly = true)
+  public LogoPena obtenerLogo(String slug) {
+    PenaEntity pena = findBySlug(slug);
+    String logo = pena.getLogo();
+    if (logo == null || logo.isBlank()) {
+      throw new EntityNotFoundException("La peña '" + slug + "' no tiene logo.");
+    }
+
+    String valor = logo.trim();
+    if (!valor.startsWith("data:")) {
+      return LogoPena.deUrl(valor);
+    }
+
+    var matcher = PATRON_DATA_URI.matcher(valor);
+    if (!matcher.matches()) {
+      throw new EntityNotFoundException("El logo de la peña '" + slug + "' no es válido.");
+    }
+    byte[] bytes = Base64.getMimeDecoder().decode(matcher.group(2));
+    return LogoPena.deBytes(bytes, matcher.group(1).toLowerCase());
+  }
+
+  /** Resultado de {@link #obtenerLogo}: o bien los bytes de la imagen, o una URL a la que redirigir. */
+  public record LogoPena(byte[] bytes, String contentType, String url) {
+
+    public static LogoPena deBytes(byte[] bytes, String contentType) {
+      return new LogoPena(bytes, contentType, null);
+    }
+
+    public static LogoPena deUrl(String url) {
+      return new LogoPena(null, null, url);
+    }
+
+    public boolean esUrlExterna() {
+      return url != null;
+    }
+  }
+
   public List<PenaEntity> findAll() {
     return repository.findAll();
   }

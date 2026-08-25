@@ -3,6 +3,7 @@ package com.softwells.fanops.service;
 import com.softwells.fanops.model.PenaEntity;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,6 +22,14 @@ public class EmailTemplateService {
   private static final String COLOR_POR_DEFECTO = "#2f6f4f";
 
   /**
+   * Base pública de la API, para construir la URL del logo (ver {@link #urlLogo}). No puede
+   * apuntar a localhost en producción: si el correo se abre desde el móvil de quien lo recibe,
+   * esa URL tiene que ser accesible desde fuera, no solo desde la máquina que corre el backend.
+   */
+  @Value("${app.public-base-url:http://localhost:5300}")
+  private String publicBaseUrl;
+
+  /**
    * @param pena       peña cuya identidad se muestra en la cabecera, o {@code null} si el correo
    *                   no está asociado a ninguna (se usa entonces la marca genérica de FanOps)
    * @param titulo     título destacado dentro de la tarjeta del correo
@@ -35,7 +44,11 @@ public class EmailTemplateService {
             : COLOR_POR_DEFECTO;
     String nombrePena =
         pena != null && StringUtils.isNotBlank(pena.getNombre()) ? pena.getNombre() : "FanOps";
-    String logo = pena != null ? pena.getLogo() : null;
+    // No se referencia pena.getLogo() directamente: se guarda como data URI en base64, y Gmail
+    // (entre otros) bloquea las imágenes "data:" embebidas en el HTML del correo, solo carga
+    // URLs de verdad. Por eso se apunta al endpoint que sirve el logo como imagen HTTP real.
+    String logo =
+        pena != null && StringUtils.isNotBlank(pena.getLogo()) ? urlLogo(pena.getSlug()) : null;
 
     StringBuilder html = new StringBuilder();
     html.append("<!doctype html><html lang=\"es\"><body style=\"margin:0;padding:0;")
@@ -101,5 +114,9 @@ public class EmailTemplateService {
 
   private String escapeAttr(String texto) {
     return texto == null ? "" : texto.replace("\"", "&quot;");
+  }
+
+  private String urlLogo(String slug) {
+    return publicBaseUrl + "/api/pena/publica/" + slug + "/logo";
   }
 }
