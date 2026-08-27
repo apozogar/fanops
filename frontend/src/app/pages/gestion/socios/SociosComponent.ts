@@ -1,9 +1,9 @@
-import {Component, OnInit} from '@angular/core';
+import {Component, OnInit, ViewChild} from '@angular/core';
 import {finalize} from 'rxjs';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MessageService, ConfirmationService} from 'primeng/api';
-import {TableModule} from 'primeng/table';
+import {Table, TableModule} from 'primeng/table';
 import {InputTextModule} from 'primeng/inputtext';
 import {ToastModule} from 'primeng/toast';
 import {ToolbarModule} from 'primeng/toolbar';
@@ -28,6 +28,7 @@ import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros
 import {UiButtonDirective} from "@/ui/ui-button.directive";
 import {IconComponent} from "@/ui/icon/icon.component";
 import {UiPasswordComponent} from "@/ui/ui-password.component";
+import {coincideBusqueda} from "@/core/busqueda/busqueda-flexible";
 
 @Component({
     selector: 'app-socios',
@@ -51,7 +52,15 @@ import {UiPasswordComponent} from "@/ui/ui-password.component";
     templateUrl: './SociosComponent.html'
 })
 export class SociosComponent implements OnInit {
+    @ViewChild('dt') tabla?: Table;
+
     socios: any[] = [];
+
+    /** Lo que se pinta en la tabla: los socios que pasan la búsqueda del cuadro de texto. */
+    sociosFiltrados: any[] = [];
+
+    /** Texto del buscador. Se compara palabra a palabra, sin importar el orden ni los acentos. */
+    terminoBusqueda: string = '';
     socio: any = {};
     socioDialog: boolean = false;
     loading: boolean = false;
@@ -109,6 +118,7 @@ export class SociosComponent implements OnInit {
             next: (response) => {
                 this.filtroActivo = filtro || null;
                 this.socios = response.data; // Asumiendo que la respuesta ya viene procesada
+                this.aplicarBusqueda();
                 this.loading = false;
             },
             error: () => {
@@ -125,6 +135,38 @@ export class SociosComponent implements OnInit {
     limpiarFiltros(): void {
         this.filtroActivo = null;
         this.cargarSocios();
+    }
+
+    /**
+     * Recalcula la lista visible al teclear en el buscador y vuelve a la primera página,
+     * porque si no la tabla se queda en una página que ya no existe.
+     */
+    buscar(termino: string): void {
+        this.terminoBusqueda = termino;
+        this.aplicarBusqueda();
+        if (this.tabla) {
+            this.tabla.first = 0;
+        }
+    }
+
+    limpiarBusqueda(): void {
+        this.buscar('');
+    }
+
+    /**
+     * Filtra por número de socio, nombre, teléfono, email y DNI. Cada palabra del buscador
+     * puede caer en un campo distinto y en cualquier orden, así que "Alberto Pozo" encuentra
+     * a "Pozo Garcia, Alberto".
+     */
+    private aplicarBusqueda(): void {
+        const termino = this.terminoBusqueda;
+        if (!termino?.trim()) {
+            this.sociosFiltrados = this.socios;
+            return;
+        }
+        this.sociosFiltrados = this.socios.filter((socio) =>
+            coincideBusqueda([socio.numeroSocio, socio.nombre, socio.telefono, socio.email, socio.dni], termino)
+        );
     }
 
     cargarRoles(): void {

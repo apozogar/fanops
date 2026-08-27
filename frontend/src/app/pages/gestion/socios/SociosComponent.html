@@ -100,7 +100,17 @@
                     <p-inputicon>
                         <fo-icon name="buscar" />
                     </p-inputicon>
-                    <input pInputText type="text" (input)="dt.filterGlobal($event.target.value, 'contains')" placeholder="Buscar..." />
+                    <!-- Búsqueda por palabras: "Alberto Pozo" encuentra a "Pozo Garcia, Alberto". -->
+                    <input
+                        pInputText
+                        type="text"
+                        [ngModel]="terminoBusqueda"
+                        (ngModelChange)="buscar($event)"
+                        [ngModelOptions]="{ standalone: true }"
+                        placeholder="Buscar por nombre, número, DNI, teléfono o email..."
+                        aria-label="Buscar socios"
+                        class="w-full sm:w-80"
+                    />
                 </p-iconfield>
                 <button foButton variant="info" (click)="cobrosDialog = true">
                     <fo-icon name="banco" />
@@ -117,13 +127,12 @@
 
     <p-table
         #dt
-        [value]="socios"
+        [value]="sociosFiltrados"
         [rows]="10"
         [paginator]="true"
         [loading]="loading"
         [rowHover]="true"
         dataKey="uid"
-        [globalFilterFields]="['numeroSocio', 'nombre', 'telefono', 'email']"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} socios"
         [showCurrentPageReport]="true"
         class="mt-4"
@@ -221,6 +230,23 @@
                         aria-label="Eliminar socio"
                     ><fo-icon name="eliminar" [size]="16" /></button>
                     </div>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="8" class="text-center py-6">
+                    @if (terminoBusqueda.trim()) {
+                    <div class="flex flex-col items-center gap-3">
+                        <span class="text-muted-color">Ningún socio coincide con <b>{{ terminoBusqueda }}</b>.</span>
+                        <button foButton variant="secondary" size="sm" (click)="limpiarBusqueda()">
+                            <fo-icon name="cerrar" [size]="16" />
+                            <span>Limpiar búsqueda</span>
+                        </button>
+                    </div>
+                    } @else {
+                    <span class="text-muted-color">No hay socios que mostrar.</span>
+                    }
                 </td>
             </tr>
         </ng-template>
