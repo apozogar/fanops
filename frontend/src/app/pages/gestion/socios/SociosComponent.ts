@@ -27,6 +27,7 @@ import {HistorialEventoSocio, HistorialSocio} from "@/interfaces/evento-inscripc
 import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros.component";
 import {UiButtonDirective} from "@/ui/ui-button.directive";
 import {IconComponent} from "@/ui/icon/icon.component";
+import {UiPasswordComponent} from "@/ui/ui-password.component";
 
 @Component({
     selector: 'app-socios',
@@ -44,7 +45,7 @@ import {IconComponent} from "@/ui/icon/icon.component";
         CheckboxModule,
         DatePickerModule,
         Textarea, IconField, InputIcon, Tooltip, CuotasSocioTableComponent, GestionCobrosComponent,
-        UiButtonDirective, IconComponent
+        UiButtonDirective, IconComponent, UiPasswordComponent
 
     ],
     templateUrl: './SociosComponent.html'
@@ -72,6 +73,16 @@ export class SociosComponent implements OnInit {
     historialCargando: boolean = false;
     /** Falta con el perdón en vuelo: alimenta el indicador del botón y evita el doble envío. */
     perdonando: string | null = null;
+
+    /** Modal para crear la cuenta de acceso del socio o cambiarle la contraseña. */
+    cuentaDialog: boolean = false;
+    cuentaSocio: any = null;
+    cuentaPassword: string = '';
+    cuentaPasswordRepetida: string = '';
+    cuentaAdmin: boolean = false;
+    cuentaError: string | null = null;
+    /** Alta de cuenta en vuelo: alimenta el indicador del botón y evita el doble envío. */
+    guardandoCuenta: boolean = false;
 
     // Para manejar el checkbox de admin
     isAdmin: boolean = false;
@@ -224,6 +235,89 @@ export class SociosComponent implements OnInit {
         });
     }
 
+
+    // ----------------------------------------------------------------
+    // Cuenta de acceso
+    // ----------------------------------------------------------------
+
+    /**
+     * Abre el alta manual de la cuenta. Existe para los socios que no se van a registrar por su
+     * cuenta: en lugar de esperar a que confirmen el correo de vinculación, el administrador les
+     * pone una contraseña y se la comunica por el canal que use la peña.
+     */
+    abrirCuenta(socio: any): void {
+        this.cuentaSocio = socio;
+        this.cuentaPassword = '';
+        this.cuentaPasswordRepetida = '';
+        this.cuentaAdmin = false;
+        this.cuentaError = null;
+        this.cuentaDialog = true;
+    }
+
+    /** El modal sirve para crear la cuenta y para cambiar la contraseña; esto decide cuál de las dos. */
+    get cuentaEsNueva(): boolean {
+        return !this.cuentaSocio?.tieneUsuario;
+    }
+
+    passwordsCuentaNoCoinciden(): boolean {
+        return !!this.cuentaPasswordRepetida && this.cuentaPasswordRepetida !== this.cuentaPassword;
+    }
+
+    /**
+     * Contraseña provisional pensada para dictarse: sin los caracteres que se confunden al leerla
+     * en voz alta o por teléfono (l/1, O/0), que es como va a llegar hasta el socio.
+     */
+    generarPassword(): void {
+        const alfabeto = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const aleatorios = new Uint32Array(12);
+        crypto.getRandomValues(aleatorios);
+        const generada = Array.from(aleatorios, (n) => alfabeto[n % alfabeto.length]).join('');
+        this.cuentaPassword = generada;
+        this.cuentaPasswordRepetida = generada;
+        this.cuentaError = null;
+    }
+
+    guardarCuenta(): void {
+        if (this.guardandoCuenta || !this.cuentaSocio) {
+            return;
+        }
+        this.cuentaError = null;
+
+        if (!this.cuentaSocio.email) {
+            this.cuentaError = 'El socio no tiene email. Añádelo a su ficha antes de crearle la cuenta.';
+            return;
+        }
+        if (!this.cuentaPassword || this.cuentaPassword.length < 8) {
+            this.cuentaError = 'La contraseña debe tener al menos 8 caracteres.';
+            return;
+        }
+        if (this.cuentaPassword !== this.cuentaPasswordRepetida) {
+            this.cuentaError = 'Las contraseñas no coinciden.';
+            return;
+        }
+
+        const esNueva = this.cuentaEsNueva;
+        this.guardandoCuenta = true;
+        this.socioService
+            .establecerCuenta(this.cuentaSocio.uid, this.cuentaPassword, this.cuentaAdmin)
+            .pipe(finalize(() => (this.guardandoCuenta = false)))
+            .subscribe({
+                next: (response) => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: esNueva ? 'Cuenta creada' : 'Contraseña actualizada',
+                        detail: response.message
+                    });
+                    this.cuentaDialog = false;
+                    this.cuentaPassword = '';
+                    this.cuentaPasswordRepetida = '';
+                    this.cargarSocios(this.filtroActivo ?? undefined);
+                },
+                error: (err) => {
+                    this.cuentaError = err.error?.message || 'No se pudo crear la cuenta del socio.';
+                }
+            });
+    }
 
     // ----------------------------------------------------------------
     // Acceso a la aplicación

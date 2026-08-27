@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -31,6 +32,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.commons.text.WordUtils;
 import org.apache.poi.ss.usermodel.Row;
@@ -67,6 +69,12 @@ public class SocioService {
   private static final int COL_ACCIONISTA_BETIS = 10;
   private static final int COL_DOMICILIACION = 12;
 
+  /** Longitud mínima de la contraseña, la misma que se pide en el registro público. */
+  private static final int MIN_LONGITUD_PASSWORD = 8;
+
+  private static final String ROLE_USER = "ROLE_USER";
+  private static final String ROLE_ADMIN = "ROLE_ADMIN";
+
   private final SocioRepository socioRepository;
   private final CuotaRepository cuotaRepository;
   private final FaltaEventoRepository faltaEventoRepository;
@@ -75,6 +83,7 @@ public class SocioService {
   private final RoleRepository roleRepository;
   private final PenaService penaService;
   private final UsuarioService usuarioService;
+  private final VinculacionSocioService vinculacionSocioService;
   private final RoleHierarchy roleHierarchy;
 
   @Transactional
@@ -153,6 +162,119 @@ public class SocioService {
     return penaService.findBySlug(penaSlug);
   }
 
+  // ----------------------------------------------------------------
+  // Alta manual de la cuenta de acceso
+  // ----------------------------------------------------------------
+
+  /** true si la ficha ya tiene cuenta de usuario, para distinguir "crear" de "cambiar". */
+  @Transactional(readOnly = true)
+  public boolean tieneCuentaDeAcceso(UUID socioId) {
+    return socioRepository.findById(socioId)
+        .orElseThrow(() -> new EntityNotFoundException("Socio no encontrado"))
+        .getUsuario() != null;
+  }
+
+  /**
+   * Crea la cuenta de acceso de una ficha de socio con una contraseña elegida por el
+   * administrador, o le cambia la contraseña si ya la tenía.
+   *
+   * <p>El camino normal para tener cuenta es que la persona se registre y confirme el enlace
+   * enviado a su correo (ver {@link VinculacionSocioService}), que es lo que demuestra que ese
+   * buzón es suyo. Esta vía existe para los socios que no van a hacerlo: gente sin correo
+   * operativo o poca soltura con la aplicación. Al fijar la contraseña un tercero, la comunicación
+   * de esa contraseña queda fuera de la aplicación (se le dice en persona, por teléfono o por el
+   * canal que use la peña), y conviene que la persona la cambie después desde su perfil.
+   *
+   * @param admin true para que la cuenta pueda además gestionar la peña
+   * @return la ficha ya vinculada a su cuenta
+   */
+  @Transactional
+  public SocioEntity establecerCuentaAcceso(UUID socioId, String passwordEnClaro, boolean admin) {
+    SocioEntity socio = socioRepository.findById(socioId)
+        .orElseThrow(() -> new EntityNotFoundException("Socio no encontrado"));
+
+    // La peña de trabajo acota la operación igual que en el resto de gestión: un admin no puede
+    // dar acceso a fichas de otra peña, aunque acierte con el identificador.
+    PenaEntity penaTrabajo = usuarioService.obtenerPenaDelUsuarioAutenticado();
+    if (socio.getPena() == null
+        || !Objects.equals(socio.getPena().getId(), penaTrabajo.getId())) {
+      throw new AccessDeniedException("Ese socio no pertenece a la peña que estás gestionando.");
+    }
+
+    if (StringUtils.isBlank(socio.getEmail())) {
+      throw new IllegalArgumentException(
+          "El socio no tiene email, y el email es lo que identifica a la cuenta. Añádelo a su "
+              + "ficha antes de crearle el acceso.");
+    }
+    if (passwordEnClaro == null || passwordEnClaro.length() < MIN_LONGITUD_PASSWORD) {
+      throw new IllegalArgumentException(
+          "La contraseña debe tener al menos " + MIN_LONGITUD_PASSWORD + " caracteres.");
+    }
+
+    UsuarioEntity usuario = socio.getUsuario();
+    boolean fichaSinCuenta = usuario == null;
+    if (usuario == null) {
+      // Puede haber ya una cuenta con ese email sin estar atada a esta ficha: otra ficha de la
+      // familia que comparte buzón, o alguien que se registró antes de figurar como socio. Se
+      // reutiliza, porque crear otra rompería la unicidad del email.
+      usuario = usuarioRepository.findByEmailIgnoreCase(socio.getEmail()).orElse(null);
+    }
+    if (usuario == null) {
+      usuario = new UsuarioEntity();
+      usuario.setEmail(socio.getEmail());
+      usuario.setPena(socio.getPena());
+      usuario.setRoles(rolesDeCuenta(admin));
+    }
+
+    usuario.setPassword(passwordEncoder.encode(passwordEnClaro));
+    // Si estaba bloqueada, ponerle contraseña sin reactivarla dejaría a la persona sin poder
+    // entrar con la contraseña que se le acaba de dar.
+    usuario.setActivo(true);
+    // Los roles solo se fijan al crear la cuenta. Sobre una cuenta que ya existía no se tocan:
+    // cambiar una contraseña no debe cambiar permisos de pasada, y menos quitarle el rol de
+    // administrador a alguien que lo tenía. Eso se hace desde el formulario del socio.
+    UsuarioEntity guardado = usuarioRepository.save(usuario);
+
+    if (fichaSinCuenta) {
+      // Se vinculan también las demás fichas de la misma peña con ese email y sin cuenta
+      // (familias que comparten buzón), igual que hace la vinculación por correo.
+      List<SocioEntity> fichas = socioRepository
+          .findByEmailIgnoreCaseAndUsuarioIsNull(socio.getEmail()).stream()
+          .filter(ficha -> ficha.getPena() != null
+              && Objects.equals(ficha.getPena().getId(), penaTrabajo.getId()))
+          .toList();
+      fichas.forEach(ficha -> ficha.setUsuario(guardado));
+      socio.setUsuario(guardado);
+      socioRepository.saveAll(fichas);
+      socioRepository.save(socio);
+
+      // Ya hay cuenta, así que cualquier invitación de vinculación pendiente para ese correo
+      // sobra: al confirmarla fallaría diciendo que la cuenta ya existe.
+      vinculacionSocioService.anularInvitacionesPendientes(socio.getEmail());
+      log.info("Cuenta de acceso creada por un administrador para {} ficha(s) de socio.",
+          Math.max(fichas.size(), 1));
+    }
+
+    socio.setTieneUsuario(true);
+    socio.setUsuarioActivo(true);
+    socio.setUltimoAcceso(guardado.getUltimoAcceso());
+    return socio;
+  }
+
+  /** Roles de una cuenta recién creada, según el interruptor de administrador. */
+  private Set<RoleEntity> rolesDeCuenta(boolean admin) {
+    Set<RoleEntity> roles = new HashSet<>();
+    roles.add(rolPorNombre(ROLE_USER));
+    if (admin) {
+      roles.add(rolPorNombre(ROLE_ADMIN));
+    }
+    return roles;
+  }
+
+  private RoleEntity rolPorNombre(String nombre) {
+    return roleRepository.findByName(nombre)
+        .orElseGet(() -> roleRepository.save(new RoleEntity(nombre)));
+  }
   @Transactional
   public SocioEntity actualizar(UUID id, SocioEntity socioData) {
     SocioEntity existente = obtenerPorId(id);

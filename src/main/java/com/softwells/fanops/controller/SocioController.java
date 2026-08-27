@@ -2,6 +2,7 @@ package com.softwells.fanops.controller;
 
 import com.softwells.fanops.controller.dto.ApiResponse;
 import com.softwells.fanops.controller.dto.CarnetDto;
+import com.softwells.fanops.controller.dto.CuentaSocioRequest;
 import com.softwells.fanops.controller.dto.SocioStatsDto;
 import com.softwells.fanops.model.CuotaEntity;
 import com.softwells.fanops.model.SocioEntity;
@@ -55,6 +56,25 @@ public class SocioController {
     SocioEntity socioActualizado = socioService.actualizarMiSocio(id, socioData);
     return ResponseEntity.ok(
         new ApiResponse<>(true, "Tu perfil ha sido actualizado.", socioActualizado));
+  }
+
+  /**
+   * Da acceso a la aplicación a un socio: crea su cuenta con la contraseña que indique el
+   * administrador, o le cambia la contraseña si ya tenía cuenta. Pensado para los socios que no se
+   * van a registrar por su cuenta, ya que el camino normal es el registro con confirmación por
+   * correo.
+   */
+  @PostMapping("/{id}/cuenta")
+  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+  public ResponseEntity<ApiResponse<SocioEntity>> establecerCuenta(@PathVariable UUID id,
+      @RequestBody CuentaSocioRequest request) {
+    boolean teniaCuenta = socioService.tieneCuentaDeAcceso(id);
+    SocioEntity socio =
+        socioService.establecerCuentaAcceso(id, request.getPassword(), request.isAdmin());
+    String mensaje = teniaCuenta
+        ? "Contraseña actualizada. Ya puede entrar con su email y la contraseña nueva."
+        : "Cuenta creada. Ya puede entrar con su email y la contraseña indicada.";
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, socio));
   }
 
   @DeleteMapping("/{id}")

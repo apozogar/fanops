@@ -26,10 +26,15 @@
 
     <p-toolbar class="mb-6">
         <ng-template #start>
-            <button foButton variant="primary" (click)="abrirNuevo()">
-                <fo-icon name="anadir" />
-                <span>Nuevo Evento</span>
-            </button>
+            <div class="flex flex-wrap gap-2">
+                <button foButton variant="secondary" size="icon" (click)="cargarEventos()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
+                    <fo-icon name="refrescar" />
+                </button>
+                <button foButton variant="primary" (click)="abrirNuevo()">
+                    <fo-icon name="anadir" />
+                    <span>Nuevo Evento</span>
+                </button>
+            </div>
         </ng-template>
 
         <ng-template #center>

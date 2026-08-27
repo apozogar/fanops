@@ -39,6 +39,7 @@ Frontend (desde `frontend/`):
 - **Inscripción a eventos**: el socio prioritario con hueco → `CONFIRMADA`; el resto (socios sin cuota al día y no socios del enlace público) → `EN_ESPERA`.
   - Cuando se anula una inscripción confirmada o el admin ejecuta `asignar-plazas`, se promocionan los de espera (prioridad: socios al día, luego por fecha de inscripción).
   - El plazo de inscripción por evento se guarda en `EventoEntity.fechaLimiteInscripcion`; fuera de plazo no se admiten inscripciones.
+- **Cuenta de acceso de un socio**: el camino normal es que la persona se registre y confirme el enlace de vinculación enviado a su correo (`VinculacionSocioService`). Desde el listado de socios, un admin puede además crearla a mano con una contraseña (`POST /api/socios/{id}/cuenta`), para socios que no van a registrarse; ahí los roles solo se fijan al crear la cuenta, nunca al cambiar una contraseña.
 - La peña es **singleton** (ID 1), usado en cuotas, remesas SEPA y carnet.
 - El flujo SEPA genera cuotas y remesas `pain.008`; los retornos se procesan desde `/api/cobros`.
 

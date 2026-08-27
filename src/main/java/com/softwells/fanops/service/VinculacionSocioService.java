@@ -190,6 +190,20 @@ public class VinculacionSocioService {
     return guardado;
   }
 
+  /**
+   * Invalida las invitaciones vivas de ese correo. Se llama cuando la cuenta se crea por otra vía
+   * (por ejemplo, un administrador la da de alta a mano desde el listado de socios): el enlace
+   * pendiente ya no lleva a ninguna parte y dejarlo activo solo sirve para confundir a quien lo
+   * abra días después.
+   */
+  public void anularInvitacionesPendientes(String email) {
+    if (StringUtils.isBlank(email)) {
+      return;
+    }
+    vinculacionRepository.deleteAll(
+        vinculacionRepository.findByEmailIgnoreCaseAndFechaUsoIsNull(email));
+  }
+
   private VinculacionSocioEntity obtenerInvitacionValida(String token) {
     if (StringUtils.isBlank(token)) {
       throw new IllegalArgumentException("El enlace no es válido.");

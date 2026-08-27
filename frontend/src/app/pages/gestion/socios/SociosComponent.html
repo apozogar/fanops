@@ -137,7 +137,7 @@
                 <th scope="col" class="hidden md:table-cell">Estado</th>
                 <th scope="col" class="hidden lg:table-cell">Acceso</th>
                 <th scope="col" class="hidden lg:table-cell" style="width: 110px">Faltas</th>
-                <th scope="col" style="min-width: 160px">Acciones</th>
+                <th scope="col" style="min-width: 200px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-socio>
@@ -168,7 +168,7 @@
                     <span class="text-muted-color">—</span>
                     }
                 </td>
-                <td style="min-width: 160px">
+                <td style="min-width: 200px">
                     <div class="flex items-center gap-1.5">
                     <button
                         foButton
@@ -190,6 +190,16 @@
                         tooltipPosition="top"
                         aria-label="Ver historial de eventos y faltas"
                     ><fo-icon name="calendario" [size]="16" /></button>
+                    <button
+                        foButton
+                        variant="ghost"
+                        size="icon-sm"
+                        class="rounded-full"
+                        (click)="abrirCuenta(socio)"
+                        [pTooltip]="socio.tieneUsuario ? 'Cambiar su contraseña' : 'Crear su cuenta de acceso'"
+                        tooltipPosition="top"
+                        [attr.aria-label]="socio.tieneUsuario ? 'Cambiar la contraseña del socio' : 'Crear la cuenta de acceso del socio'"
+                    ><fo-icon name="llave" [size]="16" /></button>
                     <button
                         foButton
                         variant="ghost"
@@ -461,3 +471,86 @@
 
 <!-- Modal de Gestión de Cobros -->
 <app-gestion-cobros [(visible)]="cobrosDialog"></app-gestion-cobros>
+
+<!-- Alta manual de la cuenta de acceso: para los socios que no se van a registrar ellos mismos -->
+<p-dialog
+    [(visible)]="cuentaDialog"
+    [style]="{ width: '480px' }"
+    [breakpoints]="{ '960px': '95vw' }"
+    [header]="cuentaEsNueva ? 'Crear cuenta de acceso' : 'Cambiar contraseña'"
+    [modal]="true"
+>
+    <ng-template pTemplate="content">
+        <div class="flex flex-col gap-5">
+            <div>
+                <div class="font-semibold">{{ cuentaSocio?.nombre }}</div>
+                <div class="text-sm text-muted-color">
+                    @if (cuentaSocio?.email) {
+                    Entrará con <span class="font-medium">{{ cuentaSocio.email }}</span>
+                    } @else { Sin email en la ficha }
+                </div>
+            </div>
+
+            @if (!cuentaSocio?.email) {
+            <p class="flex items-start gap-2 rounded-token bg-danger-soft px-3 py-2.5 text-sm text-danger-soft-fg" role="alert">
+                <fo-icon name="error" [size]="17" class="mt-0.5" />
+                <span>El email identifica la cuenta, así que hay que añadirlo a su ficha antes de crearle el acceso.</span>
+            </p>
+            } @else {
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <label for="cuentaPassword" class="font-semibold">Contraseña</label>
+                    <button foButton variant="ghost" size="sm" type="button" (click)="generarPassword()">
+                        <fo-icon name="refrescar" [size]="15" />
+                        <span>Generar</span>
+                    </button>
+                </div>
+                <fo-password inputId="cuentaPassword" name="cuentaPassword" placeholder="Mínimo 8 caracteres" autocomplete="new-password" [(ngModel)]="cuentaPassword" />
+            </div>
+
+            <div>
+                <label for="cuentaPasswordRepetida" class="block font-semibold mb-2">Repetir contraseña</label>
+                <fo-password
+                    inputId="cuentaPasswordRepetida"
+                    name="cuentaPasswordRepetida"
+                    placeholder="Repite la contraseña"
+                    autocomplete="new-password"
+                    [invalid]="passwordsCuentaNoCoinciden()"
+                    [(ngModel)]="cuentaPasswordRepetida"
+                />
+                @if (passwordsCuentaNoCoinciden()) {
+                <p class="mt-1.5 text-xs text-danger">Las contraseñas no coinciden.</p>
+                }
+            </div>
+
+            <!-- El rol solo se decide al crear la cuenta: cambiar una contraseña no debe cambiar
+                 permisos de paso. Eso se hace desde el formulario del socio. -->
+            @if (cuentaEsNueva) {
+            <div class="flex items-center gap-2">
+                <p-checkbox [(ngModel)]="cuentaAdmin" [binary]="true" inputId="cuentaAdmin"></p-checkbox>
+                <label for="cuentaAdmin" class="font-semibold">Además puede gestionar la peña</label>
+            </div>
+            }
+
+            <p class="text-xs text-muted-color">
+                Apunta la contraseña antes de guardar: no vuelve a mostrarse. Comunícasela al socio y dile que la cambie desde su perfil.
+            </p>
+            }
+
+            @if (cuentaError) {
+            <p class="flex items-start gap-2 rounded-token bg-danger-soft px-3 py-2.5 text-sm text-danger-soft-fg" role="alert">
+                <fo-icon name="error" [size]="17" class="mt-0.5" />
+                <span>{{ cuentaError }}</span>
+            </p>
+            }
+        </div>
+    </ng-template>
+
+    <ng-template #footer>
+        <button foButton variant="ghost" [disabled]="guardandoCuenta" (click)="cuentaDialog = false"><span>Cancelar</span></button>
+        <button foButton variant="primary" [loading]="guardandoCuenta" [disabled]="guardandoCuenta || !cuentaSocio?.email" (click)="guardarCuenta()">
+            <fo-icon name="llave" />
+            <span>{{ cuentaEsNueva ? 'Crear cuenta' : 'Cambiar contraseña' }}</span>
+        </button>
+    </ng-template>
+</p-dialog>

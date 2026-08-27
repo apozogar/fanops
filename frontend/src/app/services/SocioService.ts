@@ -44,6 +44,14 @@ export class SocioService {
         return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/api/socios/${uid}`);
     }
 
+    /**
+     * Crea la cuenta de acceso del socio con la contraseña indicada, o le cambia la contraseña si
+     * ya la tenía. Es la vía manual para los socios que no se registran por su cuenta.
+     */
+    establecerCuenta(uid: string, password: string, admin: boolean): Observable<ApiResponse<Socio>> {
+        return this.http.post<ApiResponse<Socio>>(`${this.apiUrl}/api/socios/${uid}/cuenta`, {password, admin});
+    }
+
     getCuotasSocio(uid: string): Observable<ApiResponse<any[]>> {
         return this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/api/socios/${uid}/cuotas`);
     }
