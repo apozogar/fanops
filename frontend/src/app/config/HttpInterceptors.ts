@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import {Injectable, Injector, inject} from '@angular/core';
 import {
     HttpRequest,
     HttpHandler,
@@ -14,11 +14,21 @@ import {PenaContextService} from "@/services/pena-context.service";
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
-    constructor(private authService: AuthService) {
+    /*
+     * AuthService se resuelve al vuelo y no por constructor a propósito. Inyectarlo aquí crea un
+     * ciclo de dependencias (NG0200): para construir HttpClient hay que construir sus
+     * HTTP_INTERCEPTORS, y AuthService necesita a su vez HttpClient. Pidiéndolo dentro de
+     * intercept() la resolución ocurre en la primera petición, cuando HttpClient ya existe.
+     */
+    private readonly injector = inject(Injector);
+
+    private get authService(): AuthService {
+        return this.injector.get(AuthService);
     }
 
     intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-        const token = this.authService.getToken();
+        const authService = this.authService;
+        const token = authService.getToken();
         let requestToHandle = request;
 
         // 1. Clonar la solicitud y agregar el token si existe
@@ -38,7 +48,7 @@ export class AuthInterceptor implements HttpInterceptor {
                 // permiso expulsaba al login.
                 if (error.status === 401) {
                     console.error('Sesión no válida o caducada. Cerrando sesión...');
-                    this.authService.logout();
+                    authService.logout();
                 }
 
                 // Re-lanza el error para que sea manejado por el componente o servicio que hizo la llamada

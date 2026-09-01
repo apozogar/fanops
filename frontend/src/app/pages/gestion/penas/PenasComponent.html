@@ -27,21 +27,17 @@
     >
         <ng-template pTemplate="header">
             <tr>
-                <th scope="col">Nombre</th>
+                <th scope="col">Logo</th>
+                <th scope="col" class="hidden md:table-cell">Nombre</th>
                 <th scope="col" class="hidden md:table-cell">Dominio</th>
-                <th scope="col" class="hidden md:table-cell">Cuota Adulto</th>
-                <th scope="col" class="hidden md:table-cell">Cuota Menor</th>
-                <th scope="col" class="hidden md:table-cell">IBAN</th>
                 <th scope="col" style="min-width: 110px">Acciones</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-pena>
             <tr>
+                <td class="hidden md:table-cell"><img src="{{ pena.logo }}" width="36px" /></td>
                 <td>{{ pena.nombre }}</td>
                 <td class="hidden md:table-cell"><code class="text-xs text-muted-color">/{{ pena.slug }}</code></td>
-                <td class="hidden md:table-cell">{{ pena.cuotaAdulto }}</td>
-                <td class="hidden md:table-cell">{{ pena.cuotaMenor }}</td>
-                <td class="hidden md:table-cell">{{ pena.cuentaIban }}</td>
                 <td style="min-width: 110px">
                     <div class="flex items-center gap-1.5">
                         <button

@@ -1,5 +1,6 @@
 package com.softwells.fanops.service;
 
+import com.softwells.fanops.controller.dto.ApuntarSorteoResultado;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.FaltaEventoDTO;
 import com.softwells.fanops.controller.dto.HistorialEventoSocioDto;
@@ -8,6 +9,8 @@ import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
+import com.softwells.fanops.controller.dto.SolicitudCarnetRequest;
+import com.softwells.fanops.controller.dto.SorteoCarnetDTO;
 import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.enums.EstadoCuota;
 import com.softwells.fanops.enums.EstadoInscripcion;
@@ -52,6 +55,8 @@ public class EventoService {
   private final FaltaEventoRepository faltaRepository;
   private final SocioRepository socioRepository;
   private final NotificacionService notificacionService;
+  private final FichasUsuarioService fichasUsuarioService;
+  private final SorteoCarnetService sorteoCarnetService;
 
   /** Penalización por falta si la peña no la tiene configurada. */
   private static final int PENALIZACION_POR_FALTA_DEFECTO = 1;
@@ -76,14 +81,16 @@ public class EventoService {
     evento.setNumEnEspera((int) espera);
     evento.setPlazasLibres(calcularPlazasLibres(evento, (int) confirmadas));
     evento.setInscripcionCerrada(inscripcionCerrada(evento));
+    evento.setSorteoCelebrado(sorteoCarnetService.estaCelebrado(evento.getUid()));
   }
 
   public List<EventoInscripcionDTO> findAllForInscripcion() {
     List<SocioEntity> misSocios = sociosDelUsuarioAutenticado();
 
     return eventoRepository.findAll().stream()
-        .map(evento -> EventoMapper.toInscripcionDTO(evento, completarInfoUsuario(evento,
-            misSocios)))
+        .map(evento -> EventoMapper.toInscripcionDTO(evento,
+            completarInfoUsuario(evento, misSocios),
+            sorteoCarnetService.resumen(evento, misSocios)))
         .sorted(Comparator.comparing(EventoInscripcionDTO::getFechaEvento))
         .collect(Collectors.toList());
   }
@@ -158,7 +165,9 @@ public class EventoService {
   // ----------------------------------------------------------------
 
   public EventoEntity save(EventoEntity evento) {
-    return eventoRepository.save(evento);
+    EventoEntity guardado = eventoRepository.save(evento);
+    sorteoCarnetService.sincronizar(guardado);
+    return guardado;
   }
 
   /**
@@ -175,10 +184,15 @@ public class EventoService {
     eventoExistente.setUbicacion(eventoDetails.getUbicacion());
     eventoExistente.setDescripcion(eventoDetails.getDescripcion());
     eventoExistente.setNumeroPlazas(eventoDetails.getNumeroPlazas());
+    eventoExistente.setCostePlaza(eventoDetails.getCostePlaza());
+    eventoExistente.setCosteCarnet(eventoDetails.getCosteCarnet());
     eventoExistente.setCosteTotalEstimado(eventoDetails.getCosteTotalEstimado());
     eventoExistente.setCosteTotalReal(eventoDetails.getCosteTotalReal());
+    eventoExistente.setPlazasCarnet(eventoDetails.getPlazasCarnet());
+    eventoExistente.setFechaSorteoCarnet(eventoDetails.getFechaSorteoCarnet());
 
     EventoEntity guardado = eventoRepository.save(eventoExistente);
+    sorteoCarnetService.sincronizar(guardado);
 
     if (seAmplioElAforo(plazasAnteriores, guardado.getNumeroPlazas())) {
       promoverListaEspera(id);
@@ -195,6 +209,9 @@ public class EventoService {
   }
 
   public void delete(UUID id) {
+    // El sorteo y sus solicitudes cuelgan del evento por clave ajena: sin borrarlos antes,
+    // Postgres rechaza el borrado del evento.
+    sorteoCarnetService.eliminarDeEvento(id);
     eventoRepository.deleteById(id);
   }
 
@@ -227,11 +244,22 @@ public class EventoService {
       }
     }
 
+    return inscribir(evento, aInscribir, request != null && request.isSoloSiEntranTodos());
+  }
+
+  /**
+   * Reparte plazas entre las fichas indicadas, que ya vienen validadas. Lo comparten la
+   * inscripción normal y la del sorteo de carnets: entrar en el bombo apunta también al evento,
+   * y tiene que hacerlo con las mismas reglas (penalizaciones incluidas).
+   */
+  private List<SocioInscripcionDTO> inscribir(EventoEntity evento, List<SocioEntity> aInscribir,
+      boolean soloSiEntranTodos) {
+    UUID eventoId = evento.getUid();
     long confirmadas = inscripcionRepository.countByEventoUidAndEstado(eventoId,
         EstadoInscripcion.CONFIRMADA);
     // Con "solo si entramos todos" el grupo no se parte: si no caben todos, ninguno coge plaza.
     boolean entranTodos = plazasLibresPara(evento, confirmadas) >= aInscribir.size();
-    boolean confirmarAlguno = !(request != null && request.isSoloSiEntranTodos() && !entranTodos);
+    boolean confirmarAlguno = !(soloSiEntranTodos && !entranTodos);
 
     List<EventoInscripcionEntity> creadas = new ArrayList<>();
     for (SocioEntity socio : aInscribir) {
@@ -275,37 +303,50 @@ public class EventoService {
   }
 
   /**
+   * Mete en el bombo del carnet a las fichas indicadas y las apunta también al evento.
+   *
+   * <p>Son dos cosas distintas pero una sola decisión: quien entra al sorteo va al partido, y
+   * pedirle dos acciones para lo mismo solo consigue que la mitad se quede sin apuntar. La
+   * inscripción sigue las reglas de siempre, así que si el evento está completo la plaza queda en
+   * lista de espera aunque el carnet acabe tocándole.
+   *
+   * <p>La orquestación vive aquí, y no en el servicio del sorteo, porque es este el que sabe
+   * repartir plazas; al revés habría dependencia circular entre los dos.
+   *
+   * @return el sorteo ya actualizado y la plaza que ha sacado cada ficha
+   */
+  public ApuntarSorteoResultado apuntarAlSorteoCarnet(UUID eventoId,
+      SolicitudCarnetRequest request) {
+    List<SocioEntity> fichas = fichasUsuarioService.resolver(
+        request != null ? request.getSocioUids() : null, "apuntar al sorteo");
+
+    EventoEntity evento = findEvento(eventoId);
+    validarInscripcionAbierta(evento);
+
+    SorteoCarnetDTO sorteo = sorteoCarnetService.solicitar(eventoId, fichas);
+
+    // A quien ya estuviera inscrito no se le toca la plaza: volver a inscribirle gastaría otra
+    // penalización y, si el evento se ha llenado desde entonces, le mandaría a la lista de espera
+    // habiendo tenido plaza.
+    List<SocioEntity> sinInscribir = fichas.stream()
+        .filter(socio -> !inscripcionRepository.existsByEventoUidAndSocioUid(eventoId,
+            socio.getUid()))
+        .collect(Collectors.toList());
+    List<SocioInscripcionDTO> inscripciones = sinInscribir.isEmpty()
+        ? List.of()
+        : inscribir(evento, sinInscribir, request != null && request.isSoloSiEntranTodos());
+
+    return new ApuntarSorteoResultado(sorteo, inscripciones);
+  }
+
+  /**
    * Resuelve y valida los socios de la petición. Todos deben pertenecer al usuario autenticado,
    * que es lo que impide apuntar a fichas ajenas pasando uids a mano. Si no se indica ninguno y
    * el usuario tiene una sola ficha, se asume esa.
    */
   private List<SocioEntity> resolverSociosSolicitados(InscripcionSocioRequest request) {
-    List<SocioEntity> misSocios = sociosDelUsuarioAutenticado();
-    if (misSocios.isEmpty()) {
-      throw new IllegalStateException("El usuario no tiene ninguna ficha de socio asociada.");
-    }
-
-    List<UUID> solicitados = request != null ? request.getSocioUids() : null;
-    if (solicitados == null || solicitados.isEmpty()) {
-      if (misSocios.size() > 1) {
-        throw new IllegalArgumentException(
-            "Indica a quién quieres inscribir: tu cuenta tiene varias fichas de socio.");
-      }
-      return List.of(misSocios.get(0));
-    }
-
-    Map<UUID, SocioEntity> porUid = new LinkedHashMap<>();
-    misSocios.forEach(socio -> porUid.put(socio.getUid(), socio));
-
-    List<SocioEntity> resueltos = new ArrayList<>();
-    for (UUID socioUid : solicitados.stream().distinct().collect(Collectors.toList())) {
-      SocioEntity socio = porUid.get(socioUid);
-      if (socio == null) {
-        throw new IllegalArgumentException("Esa ficha de socio no pertenece a tu cuenta.");
-      }
-      resueltos.add(socio);
-    }
-    return resueltos;
+    return fichasUsuarioService.resolver(request != null ? request.getSocioUids() : null,
+        "inscribir");
   }
 
   /**
@@ -313,14 +354,7 @@ public class EventoService {
    * es un Set, así que sin ordenar el "primer socio" varía entre llamadas.
    */
   private List<SocioEntity> sociosDelUsuarioAutenticado() {
-    String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-    UsuarioEntity usuario = usuarioRepository.findByEmailIgnoreCase(userEmail)
-        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-    return usuario.getSocios().stream()
-        .sorted(Comparator
-            .comparing(SocioEntity::getNumeroSocio, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(SocioEntity::getNombre, Comparator.nullsLast(Comparator.naturalOrder())))
-        .collect(Collectors.toList());
+    return fichasUsuarioService.misFichas();
   }
 
   /**
@@ -728,11 +762,7 @@ public class EventoService {
   }
 
   private boolean inscripcionCerrada(EventoEntity evento) {
-    if (evento.getFechaEvento() != null && evento.getFechaEvento().isBefore(LocalDate.now())) {
-      return true;
-    }
-    return evento.getFechaLimiteInscripcion() != null
-        && LocalDateTime.now().isAfter(evento.getFechaLimiteInscripcion());
+    return evento.plazoInscripcionCerrado();
   }
 
   private boolean hayHueco(EventoEntity evento, long confirmadas) {

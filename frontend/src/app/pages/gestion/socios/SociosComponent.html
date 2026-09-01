@@ -287,7 +287,7 @@
                     </div>
                     <div class="flex-auto">
                         <label for="fechaNacimiento" class="block font-semibold mb-2">Fecha Nacimiento*</label>
-                        <p-datepicker id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
+                        <p-datepicker appendTo="body" id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
                     </div>
                 </div>
             </div>
@@ -368,7 +368,7 @@
                     </div>
                     <div class="flex-auto">
                         <label for="fechaAlta" class="block font-semibold mb-2">Fecha Alta*</label>
-                        <p-datepicker [(ngModel)]="socio.fechaAlta" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
+                        <p-datepicker appendTo="body" [(ngModel)]="socio.fechaAlta" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
                     </div>
                 </div>
             </div>

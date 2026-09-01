@@ -1,0 +1,234 @@
+/*
+ * El bombo. La animación es solo puesta en escena: el resultado ya venía decidido del servidor,
+ * así que aquí no hay nada que dependa de tiempos ni de azar.
+ */
+
+.escenario {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Bombo                                                             */
+/* ---------------------------------------------------------------- */
+
+.bombo {
+  position: relative;
+  width: min(260px, 80vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 6px solid var(--fo-border-strong);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), transparent 55%),
+    var(--fo-surface-2);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.bombo-cristal {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1.6rem;
+  width: 100%;
+  height: 100%;
+}
+
+.bombo.girando .bombo-cristal {
+  animation: bombo-girar 0.75s ease-in-out infinite;
+}
+
+.bombo.girando .bola {
+  animation: bola-saltar 0.55s ease-in-out infinite;
+}
+
+.bombo-resto {
+  position: absolute;
+  bottom: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--fo-text-muted);
+}
+
+@keyframes bombo-girar {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+@keyframes bola-saltar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ---------------------------------------------------------------- */
+/* Bolas                                                             */
+/* ---------------------------------------------------------------- */
+
+.bola {
+  display: inline-grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--fo-text);
+  background: linear-gradient(160deg, var(--fo-surface), var(--fo-neutral-200));
+  border: 1px solid var(--fo-border-strong);
+  box-shadow: inset -2px -3px 5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: transform 0.45s ease, opacity 0.45s ease;
+}
+
+/* La ficha propia se distingue del resto: en un bombo de treinta bolas, encontrarse cuesta. */
+.bola.propia {
+  background: linear-gradient(160deg, var(--fo-accent-soft-bg), var(--fo-accent-100));
+  border-color: var(--fo-accent);
+  color: var(--fo-accent-soft-fg);
+}
+
+.bola.extraida {
+  transform: scale(0.2) translateY(-40px);
+  opacity: 0;
+}
+
+.bola-resto {
+  background: var(--fo-surface-2);
+  color: var(--fo-text-muted);
+  font-size: 0.65rem;
+}
+
+.bolas-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Premios                                                           */
+/* ---------------------------------------------------------------- */
+
+.premios {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.premio {
+  flex: 1 1 8rem;
+  max-width: 12rem;
+  min-height: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.75rem 0.5rem;
+  border: 1px dashed var(--fo-border-strong);
+  border-radius: var(--fo-radius, 0.75rem);
+  background: var(--fo-surface);
+  text-align: center;
+}
+
+.premio.cubierto {
+  border-style: solid;
+  border-color: var(--fo-accent);
+  background: var(--fo-accent-soft-bg);
+  animation: premio-aparecer 0.45s ease-out;
+}
+
+.premio-titulo {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fo-text-muted);
+}
+
+.premio-nombre {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.premio-nombre.propio {
+  color: var(--fo-accent-soft-fg);
+}
+
+.premio-vacio {
+  color: var(--fo-text-subtle);
+  letter-spacing: 0.2em;
+}
+
+.premio-detalle {
+  font-size: 0.7rem;
+  color: var(--fo-text-muted);
+}
+
+@keyframes premio-aparecer {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ---------------------------------------------------------------- */
+/* Cuenta atrás y verificación                                       */
+/* ---------------------------------------------------------------- */
+
+.cuenta-atras {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border-radius: var(--fo-radius, 0.75rem);
+  background: var(--fo-surface-2);
+}
+
+.reloj {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.verificacion {
+  border-top: 1px solid var(--fo-border);
+  padding-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.verificacion summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  color: var(--fo-text-muted);
+}
+
+.codigo {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  word-break: break-all;
+  background: var(--fo-surface-2);
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.5rem;
+}
+
+/* Con las animaciones desactivadas el componente enseña el resultado y se está quieto. */
+@media (prefers-reduced-motion: reduce) {
+  .bombo.girando .bombo-cristal,
+  .bombo.girando .bola,
+  .premio.cubierto {
+    animation: none;
+  }
+
+  .bola {
+    transition: none;
+  }
+}

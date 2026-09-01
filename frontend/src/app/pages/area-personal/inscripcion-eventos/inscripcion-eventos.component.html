@@ -42,6 +42,12 @@
                             <fo-icon name="socios" />
                             <span>{{ plazasTexto(evento) }}</span>
                         </div>
+                        @if (evento.costePlaza != null) {
+                            <div class="flex items-center gap-2">
+                                <fo-icon name="euro" />
+                                <span>{{ evento.costePlaza | currency: 'EUR' }} por plaza</span>
+                            </div>
+                        }
                         @if (evento.enListaEspera > 0) {
                             <div class="flex items-center gap-2 text-warning">
                                 <fo-icon name="espera" />
@@ -118,6 +124,49 @@
                             </label>
                         }
                     </div>
+                    <!-- Sorteo de carnets. Va aparte de la plaza de bus a propósito: son dos
+                         cosas distintas y apuntarse a una no condiciona la otra. -->
+                    @if (evento.sorteo; as sorteo) {
+                        <div class="flex flex-col gap-2 border-t border-line pt-3 mt-3">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <div class="flex items-center gap-2">
+                                    <fo-icon name="entrada" />
+                                    <span>{{ sorteo.plazasCarnet }} {{ sorteo.plazasCarnet === 1 ? 'carnet' : 'carnets' }} a sorteo</span>
+                                </div>
+                                @if (sorteo.estado === 'EJECUTADO') {
+                                    <fo-tag tone="success">
+                                        <fo-icon name="check" [size]="14" />
+                                        <span>Sorteo celebrado</span>
+                                    </fo-tag>
+                                } @else {
+                                    <fo-tag tone="info">
+                                        <fo-icon name="hora" [size]="14" />
+                                        <span>{{ sorteo.fechaProgramada | date: 'dd/MM/yyyy HH:mm' }}</span>
+                                    </fo-tag>
+                                }
+                            </div>
+
+                            <div class="flex items-center gap-1 flex-wrap text-xs text-ink-muted">
+                                <span>{{ sorteo.participantes }} en el bombo</span>
+                                @if (evento.costeCarnet != null) {
+                                    <span>· {{ evento.costeCarnet | currency: 'EUR' }} si te toca carnet</span>
+                                }
+                            </div>
+
+                            @for (socio of fichasEnSorteo(sorteo); track socio.socioUid) {
+                                <fo-tag [tone]="tonoSorteo(socio)">
+                                    <fo-icon name="entrada" [size]="14" />
+                                    <span>{{ textoSorteo(socio, sorteo) }}</span>
+                                </fo-tag>
+                            }
+
+                            <button foButton variant="secondary" size="sm"
+                                    (click)="abrirSorteo(evento)">
+                                <fo-icon name="ver" [size]="16" />
+                                <span>{{ puedeEntrarSoloAlSorteo(evento) ? 'Entrar en el sorteo' : 'Ver el bombo' }}</span>
+                            </button>
+                        </div>
+                    }
                     <ng-template pTemplate="footer">
                         @if (evento.misSocios.length === 0) {
                             <fo-tag tone="warn">
@@ -125,16 +174,48 @@
                                 <span>Tu cuenta no tiene ninguna ficha de socio asociada</span>
                             </fo-tag>
                         } @else if (pendientes(evento).length > 0) {
-                            <button
-                                foButton
-                                variant="primary"
-                                [loading]="enCurso(evento)"
-                                [disabled]="!puedeInscribir(evento)"
-                                (click)="inscribir(evento)"
-                            >
-                                <fo-icon name="check" />
-                                <span>{{ textoBotonInscribir(evento) }}</span>
-                            </button>
+                            @if (puedeElegirComoApuntarse(evento)) {
+                                <!-- Dos formas de apuntarse, no dos altas que se sumen: la del
+                                     sorteo ya incluye la plaza del evento. -->
+                                <div class="flex flex-col items-end gap-2">
+                                    <span class="text-xs text-ink-muted text-right">
+                                        Elige una: entrar en el sorteo del carnet ya te apunta al evento.
+                                    </span>
+                                    <div class="flex gap-2 flex-wrap justify-end">
+                                        <button
+                                            foButton
+                                            variant="secondary"
+                                            [loading]="enCurso(evento)"
+                                            [disabled]="!puedeInscribir(evento)"
+                                            (click)="inscribir(evento)"
+                                        >
+                                            <fo-icon name="check" />
+                                            <span>Solo al evento</span>
+                                        </button>
+                                        <button
+                                            foButton
+                                            variant="primary"
+                                            [loading]="enCurso(evento)"
+                                            [disabled]="!puedeInscribir(evento)"
+                                            (click)="apuntarAlSorteo(evento)"
+                                        >
+                                            <fo-icon name="entrada" />
+                                            <span>Al sorteo del carnet</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            } @else {
+                                <button
+                                    foButton
+                                    variant="primary"
+                                    [loading]="enCurso(evento)"
+                                    [disabled]="!puedeInscribir(evento)"
+                                    (click)="inscribir(evento)"
+                                >
+                                    <fo-icon name="check" />
+                                    <span>{{ textoBotonInscribir(evento) }}</span>
+                                </button>
+                            }
                         } @else {
                             <fo-tag tone="neutral">
                                 <fo-icon name="check" [size]="14" />
@@ -147,3 +228,14 @@
         </div>
     }
 </div>
+
+<!-- El bombo se ve en un diálogo: dentro de la tarjeta no cabe y la animación necesita sitio. -->
+<p-dialog [(visible)]="sorteoVisible" [style]="{ width: '560px' }" [modal]="true"
+          [draggable]="false" [header]="'Sorteo de carnets'" (onHide)="cerrarSorteo()">
+    <ng-template #content>
+        @if (eventoDelSorteo; as evento) {
+            <p class="text-ink-muted mb-4">{{ evento.nombreEvento }}</p>
+            <fo-sorteo-bombo [eventoUid]="evento.uid" (cambiado)="sorteoCambiado()" />
+        }
+    </ng-template>
+</p-dialog>

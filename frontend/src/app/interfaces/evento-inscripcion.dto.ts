@@ -1,3 +1,5 @@
+import { SorteoResumen } from '@/interfaces/sorteo-carnet.dto';
+
 export type EstadoInscripcion = 'CONFIRMADA' | 'EN_ESPERA';
 
 /** Resultado de pasar lista a quien tenía plaza. */
@@ -18,6 +20,10 @@ export interface EventoInscripcionDTO {
   fechaEvento: Date;
   fechaLimiteInscripcion?: Date;
   ubicacion?: string;
+  /** Lo que paga cada socio por la plaza. Ausente si no se ha indicado. */
+  costePlaza?: number | null;
+  /** Lo que paga quien va con carnet sorteado. Ausente si no se ha indicado. */
+  costeCarnet?: number | null;
   inscripcionCerrada: boolean;
   plazasOcupadas: number;
   plazasLibres: number; // -1 = ilimitado
@@ -26,6 +32,8 @@ export interface EventoInscripcionDTO {
   isCurrentUserInscrito: boolean;
   /** Una entrada por ficha de socio de la cuenta (multicarnet). */
   misSocios: SocioInscripcion[];
+  /** Resumen del sorteo de carnets. Ausente si el evento no sortea carnets. */
+  sorteo?: SorteoResumen | null;
 }
 
 export type MotivoFalta = 'NO_PRESENTADO' | 'CANCELACION_TARDIA';

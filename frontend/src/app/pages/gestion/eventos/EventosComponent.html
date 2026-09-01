@@ -34,6 +34,12 @@
                     <fo-icon name="anadir" />
                     <span>Nuevo Evento</span>
                 </button>
+                <button foButton variant="secondary" (click)="abrirValoresPorDefecto()"
+                        pTooltip="Con qué valores se propone un evento nuevo"
+                        tooltipPosition="top">
+                    <fo-icon name="ajustes" />
+                    <span>Valores por defecto</span>
+                </button>
             </div>
         </ng-template>
 
@@ -96,6 +102,13 @@
                                 (click)="mostrarInscripciones(evento)" pTooltip="Ver Inscritos"
                                 tooltipPosition="top" aria-label="Ver inscritos"
                         ><fo-icon name="socios" [size]="16" /></button>
+                        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
+                                size="icon-sm" class="rounded-full"
+                                [loading]="celebrandoSorteo === evento.uid"
+                                (click)="celebrarSorteo(evento)"
+                                pTooltip="Celebrar ya el sorteo de carnets"
+                                tooltipPosition="top" aria-label="Celebrar el sorteo de carnets"
+                        ><fo-icon name="entrada" [size]="16" /></button>
                         <button foButton variant="ghost" size="icon-sm" class="rounded-full"
                                 (click)="copiarEnlacePublico(evento)"
                                 pTooltip="Copiar enlace público (no socios)"
@@ -116,77 +129,123 @@
     </p-table>
 </div>
 
-<p-dialog [(visible)]="eventoDialog" [style]="{ width: '650px' }" header="Detalles del Evento"
-          [modal]="true">
+<p-dialog [(visible)]="eventoDialog" [style]="{ width: '760px', maxWidth: '95vw' }"
+          header="Detalles del Evento" [modal]="true">
     <ng-template #content>
+        <!--
+            Rejilla de 12 columnas con items-start a propósito. Con filas de flex y
+            sm:items-center, la columna que no llevaba texto de ayuda quedaba centrada respecto a
+            la que sí, y su etiqueta aparecía descolgada media línea por debajo de la vecina.
+            El ancho de cada campo va por columnas y no por flex-auto, para que un número o un
+            importe no ocupen lo mismo que el nombre del evento.
+        -->
         <div class="flex flex-col gap-6 w-full">
-            <!-- Información Básica -->
-            <div class="flex flex-col gap-6">
-                <span class="font-semibold text-lg">Información Básica</span>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
-                    <div class="flex-auto">
-                        <label for="nombreEvento" class="block font-semibold mb-2">Nombre del
-                            Evento*</label>
-                        <input type="text" pInputText id="nombreEvento"
-                               [(ngModel)]="evento.nombreEvento"
-                               class="w-full" required/>
+            <section class="flex flex-col gap-3">
+                <h3 class="font-semibold">Información básica</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-8 min-w-0 flex flex-col gap-1.5">
+                        <label for="nombreEvento" class="text-sm font-medium">Nombre del evento *</label>
+                        <input type="text" pInputText id="nombreEvento" class="w-full"
+                               [(ngModel)]="evento.nombreEvento" required />
                     </div>
-                    <div class="flex-auto">
-                        <label for="fechaEvento" class="block font-semibold mb-2">Fecha del
-                            Evento*</label>
-                        <p-datepicker id="fechaEvento" [(ngModel)]="evento.fechaEvento"
-                                      class="w-full" [dateFormat]="'dd/mm/yy'"
-                                      [showIcon]="true" required></p-datepicker>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="fechaEvento" class="text-sm font-medium">Fecha del evento *</label>
+                        <p-datepicker appendTo="body" id="fechaEvento" class="w-full"
+                                      styleClass="w-full" inputStyleClass="w-full"
+                                      [ngModel]="evento.fechaEvento"
+                                      (ngModelChange)="evento.fechaEvento = $event; alCambiarFechaEvento()"
+                                      [dateFormat]="'dd/mm/yy'" [showIcon]="true" required></p-datepicker>
                     </div>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
-                    <div class="flex-auto">
-                        <label for="fechaLimiteInscripcion" class="block font-semibold mb-2">Fin de
-                            inscripción (plazo)</label>
-                        <p-datepicker id="fechaLimiteInscripcion" [(ngModel)]="evento.fechaLimiteInscripcion"
-                                      class="w-full" [dateFormat]="'dd/mm/yy'" [showTime]="true"
+                    <div class="sm:col-span-8 min-w-0 flex flex-col gap-1.5">
+                        <label for="ubicacion" class="text-sm font-medium">Ubicación</label>
+                        <input type="text" pInputText id="ubicacion" class="w-full"
+                               [(ngModel)]="evento.ubicacion" placeholder="Estadio, punto de salida…" />
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="fechaLimiteInscripcion" class="text-sm font-medium">Fin de inscripción</label>
+                        <p-datepicker appendTo="body" id="fechaLimiteInscripcion" class="w-full" styleClass="w-full" inputStyleClass="w-full"
+                                      [(ngModel)]="evento.fechaLimiteInscripcion"
+                                      [dateFormat]="'dd/mm/yy'" [showTime]="true"
                                       [showIcon]="true" [hourFormat]="'24'"></p-datepicker>
-                        <span class="text-xs text-muted-color">Déjalo vacío si no hay plazo. Fuera de plazo
-                            no se admiten inscripciones.</span>
-                    </div>
-                    <div class="flex-auto">
-                        <label for="numeroPlazas" class="block font-semibold mb-2">Número de
-                            Plazas</label>
-                        <p-inputNumber id="numeroPlazas" [(ngModel)]="evento.numeroPlazas"
-                                       class="w-full" [showButtons]="true"
-                                       [min]="0"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Vacío: sin plazo.</span>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Costes -->
-            <div class="flex flex-col gap-6">
-                <span class="font-semibold text-lg">Costes</span>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-6">
-                    <div class="flex-auto">
-                        <label for="costeTotalEstimado" class="block font-semibold mb-2">Coste
-                            Estimado</label>
-                        <p-inputNumber id="costeTotalEstimado"
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Plazas del evento</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="numeroPlazas" class="text-sm font-medium">Plazas</label>
+                        <p-inputNumber id="numeroPlazas" class="w-full" styleClass="w-full" inputStyleClass="w-full" [(ngModel)]="evento.numeroPlazas"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Vacío: sin límite.</span>
+                    </div>
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="costePlaza" class="text-sm font-medium">Coste por plaza</label>
+                        <p-inputNumber id="costePlaza" class="w-full" styleClass="w-full" inputStyleClass="w-full" [(ngModel)]="evento.costePlaza"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Lo que paga cada socio.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Sorteo de carnets</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="plazasCarnet" class="text-sm font-medium">Carnets</label>
+                        <p-inputNumber id="plazasCarnet" class="w-full" styleClass="w-full" inputStyleClass="w-full" [(ngModel)]="evento.plazasCarnet"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Vacío o 0: no se sortea.</span>
+                    </div>
+                    <div class="sm:col-span-5 min-w-0 flex flex-col gap-1.5">
+                        <label for="fechaSorteoCarnet" class="text-sm font-medium">Fecha del sorteo</label>
+                        <p-datepicker appendTo="body" id="fechaSorteoCarnet" class="w-full" styleClass="w-full" inputStyleClass="w-full"
+                                      [(ngModel)]="evento.fechaSorteoCarnet"
+                                      [dateFormat]="'dd/mm/yy'" [showTime]="true"
+                                      [showIcon]="true" [hourFormat]="'24'"></p-datepicker>
+                        <span class="text-xs text-ink-muted">Se celebra solo a esa hora.</span>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="costeCarnet" class="text-sm font-medium">Coste con carnet</label>
+                        <p-inputNumber id="costeCarnet" class="w-full" styleClass="w-full" inputStyleClass="w-full" [(ngModel)]="evento.costeCarnet"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Lo que paga a quien le toque.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Cuentas del evento</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="costeTotalEstimado" class="text-sm font-medium">Coste estimado</label>
+                        <p-inputNumber id="costeTotalEstimado" class="w-full" styleClass="w-full" inputStyleClass="w-full"
                                        [(ngModel)]="evento.costeTotalEstimado"
-                                       mode="currency" currency="EUR"
-                                       class="w-full"></p-inputNumber>
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
                     </div>
-                    <div class="flex-auto">
-                        <label for="costeTotalReal" class="block font-semibold mb-2">Coste
-                            Real</label>
-                        <p-inputNumber id="costeTotalReal" [(ngModel)]="evento.costeTotalReal"
-                                       mode="currency" currency="EUR"
-                                       class="w-full"></p-inputNumber>
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="costeTotalReal" class="text-sm font-medium">Coste real</label>
+                        <p-inputNumber id="costeTotalReal" class="w-full" styleClass="w-full" inputStyleClass="w-full"
+                                       [(ngModel)]="evento.costeTotalReal"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-6 min-w-0 flex flex-col gap-1.5">
+                        <span class="text-sm font-medium invisible sm:visible">&nbsp;</span>
+                        <span class="text-xs text-ink-muted">Totales del evento, para la
+                            contabilidad de la peña. Al socio no se le enseñan.</span>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Descripción -->
-            <div class="flex-auto">
-                <label for="descripcion" class="block font-semibold mb-2">Descripción</label>
-                <textarea pTextarea id="descripcion" [(ngModel)]="evento.descripcion" rows="4"
-                          class="w-full" [autoResize]="true"></textarea>
-            </div>
+            <section class="flex flex-col gap-1.5 border-t border-line pt-5">
+                <label for="descripcion" class="text-sm font-medium">Descripción</label>
+                <textarea pTextarea id="descripcion" class="w-full" rows="3"
+                          [(ngModel)]="evento.descripcion" [autoResize]="true"></textarea>
+            </section>
         </div>
     </ng-template>
 
@@ -391,5 +450,129 @@
     </ng-template>
     <ng-template #footer>
         <button foButton variant="secondary" (click)="inscripcionesDialog = false">Cerrar</button>
+    </ng-template>
+</p-dialog>
+
+
+<!-- Valores con los que se propone un evento nuevo. Mismo orden y mismos nombres que el
+     formulario del evento, para que se reconozca qué campo rellena cada uno. -->
+<p-dialog [(visible)]="valoresDialog" [style]="{ width: '620px', maxWidth: '95vw' }"
+          header="Valores por defecto de los eventos" [modal]="true">
+    <ng-template #content>
+        <div class="flex flex-col gap-5 w-full">
+            <p class="text-sm text-ink-muted">
+                Con esto se rellena un evento nuevo. Son sugerencias: al crear el evento puedes
+                cambiarlas, y tocarlas aquí no afecta a los eventos que ya existen. Deja un campo
+                vacío para que no se sugiera nada.
+            </p>
+
+            <section class="flex flex-col gap-3">
+                <h3 class="font-semibold">Plazas del evento</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresPlazas" class="text-sm font-medium">Plazas</label>
+                        <p-inputNumber id="valoresPlazas" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full" [(ngModel)]="valoresEnEdicion.plazas"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresCostePlaza" class="text-sm font-medium">Coste por plaza</label>
+                        <p-inputNumber id="valoresCostePlaza" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.costePlaza"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Las fechas se guardan relativas al evento: lo que se repite de un partido a otro
+                 no es "el 8 de septiembre" sino "dos días antes, a las ocho". -->
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Cierre de la inscripción</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresDiasInscripcion" class="text-sm font-medium">Días antes</label>
+                        <p-inputNumber id="valoresDiasInscripcion" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.diasAntesFinInscripcion"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresHoraInscripcion" class="text-sm font-medium">A las</label>
+                        <p-datepicker appendTo="body" id="valoresHoraInscripcion" class="w-full"
+                                      styleClass="w-full" inputStyleClass="w-full"
+                                      [(ngModel)]="horaFinInscripcionEdicion" [timeOnly]="true"
+                                      [hourFormat]="'24'"></p-datepicker>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex items-start">
+                        <span class="text-xs text-ink-muted sm:pt-7">Contando desde la fecha del
+                            evento.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Sorteo de carnets</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresCarnets" class="text-sm font-medium">Carnets</label>
+                        <p-inputNumber id="valoresCarnets" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full" [(ngModel)]="valoresEnEdicion.carnets"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresCosteCarnet" class="text-sm font-medium">Coste con carnet</label>
+                        <p-inputNumber id="valoresCosteCarnet" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.costeCarnet"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0"></div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresDiasSorteo" class="text-sm font-medium">Días antes</label>
+                        <p-inputNumber id="valoresDiasSorteo" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.diasAntesSorteo"
+                                       [showButtons]="true" [min]="0"
+                                       [useGrouping]="false"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresHoraSorteo" class="text-sm font-medium">A las</label>
+                        <p-datepicker appendTo="body" id="valoresHoraSorteo" class="w-full"
+                                      styleClass="w-full" inputStyleClass="w-full"
+                                      [(ngModel)]="horaSorteoEdicion" [timeOnly]="true"
+                                      [hourFormat]="'24'"></p-datepicker>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex items-start">
+                        <span class="text-xs text-ink-muted sm:pt-7">Cuándo gira el bombo.</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="flex flex-col gap-3 border-t border-line pt-5">
+                <h3 class="font-semibold">Cuentas del evento</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-4 items-start">
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresCosteTotal" class="text-sm font-medium">Coste estimado</label>
+                        <p-inputNumber id="valoresCosteTotal" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.costeTotalEstimado"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </ng-template>
+
+    <ng-template #footer>
+        <button foButton variant="ghost" (click)="valoresDialog = false">Cancelar</button>
+        <button foButton variant="primary" [loading]="guardandoValores"
+                (click)="guardarValoresPorDefecto()">
+            <fo-icon name="check" />
+            <span>Guardar</span>
+        </button>
     </ng-template>
 </p-dialog>

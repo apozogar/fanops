@@ -1,0 +1,253 @@
+@if (cargando() && !sorteo()) {
+    <div class="flex justify-center items-center py-10">
+        <p-progressSpinner></p-progressSpinner>
+    </div>
+} @else if (sorteo(); as s) {
+    @if (!s.habilitado) {
+        <p class="text-ink-muted">Este evento no sortea carnets.</p>
+    } @else {
+        <div class="flex flex-col gap-5">
+            <!-- Cabecera -->
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-2">
+                    <fo-icon name="entrada" />
+                    <span class="font-semibold text-lg">
+                        {{ s.plazasCarnet }} {{ s.plazasCarnet === 1 ? 'carnet' : 'carnets' }} a sorteo
+                    </span>
+                </div>
+                @if (s.abierto) {
+                    <fo-tag tone="info">
+                        <fo-icon name="hora" [size]="14" />
+                        <span>Sorteo el {{ s.fechaProgramada | date: 'dd/MM/yyyy HH:mm' }}</span>
+                    </fo-tag>
+                } @else {
+                    <fo-tag tone="success">
+                        <fo-icon name="check" [size]="14" />
+                        <span>Sorteado el {{ s.fechaEjecucion | date: 'dd/MM/yyyy HH:mm' }}</span>
+                    </fo-tag>
+                }
+            </div>
+
+            @if (s.costeCarnet != null) {
+                <div class="flex items-center gap-2 text-sm text-ink-muted">
+                    <fo-icon name="euro" [size]="16" />
+                    <span>{{ s.costeCarnet | currency: 'EUR' }} por carnet</span>
+                </div>
+            }
+
+            @if (s.abierto) {
+                <!-- ANTES DEL SORTEO -->
+                @if (cuentaAtras()) {
+                    <div class="cuenta-atras">
+                        <span class="text-ink-muted text-sm">El bombo gira en</span>
+                        <span class="reloj">{{ cuentaAtras() }}</span>
+                    </div>
+                }
+
+                <div class="flex flex-col gap-2">
+                    <span class="font-semibold">Tus fichas</span>
+                    <!-- Es una sola acción: no tiene sentido pedir apuntarse al evento y al
+                         bombo por separado, quien quiere el carnet va al partido. -->
+                    <p class="text-xs text-ink-muted">
+                        Entrar en el bombo te apunta también al evento, no hace falta hacer las dos
+                        cosas.
+                    </p>
+                    @for (socio of s.misSocios; track socio.socioUid) {
+                        <div class="flex items-center justify-between gap-2 min-h-9">
+                            <div class="flex flex-col">
+                                <span class="truncate">{{ etiqueta(socio) }}</span>
+                                @if (socio.papeletas > 0) {
+                                    <span class="text-xs text-ink-muted">
+                                        Entra con {{ textoPapeletas(socio.papeletas) }}
+                                    </span>
+                                }
+                            </div>
+                            @if (socio.estado) {
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <fo-tag tone="accent">
+                                        <fo-icon name="check" [size]="14" />
+                                        <span>En el bombo</span>
+                                    </fo-tag>
+                                    <button foButton variant="ghost" size="sm" class="text-danger"
+                                            [loading]="accionEnCurso() === socio.socioUid"
+                                            [disabled]="accionEnCurso() !== null"
+                                            (click)="salir(socio)">Salir</button>
+                                </div>
+                            } @else if (s.admiteSolicitudes) {
+                                <button foButton variant="primary" size="sm"
+                                        [loading]="accionEnCurso() === socio.socioUid"
+                                        [disabled]="accionEnCurso() !== null"
+                                        (click)="apuntar(socio)">
+                                    <fo-icon name="entrada" [size]="16" />
+                                    <span>Entrar en el bombo</span>
+                                </button>
+                            } @else {
+                                <span class="text-ink-muted text-xs shrink-0">Fuera de plazo</span>
+                            }
+                        </div>
+                    }
+                    @if (s.misSocios.length === 0) {
+                        <fo-tag tone="warn">
+                            <fo-icon name="espera" [size]="14" />
+                            <span>Tu cuenta no tiene ninguna ficha de socio asociada</span>
+                        </fo-tag>
+                    }
+                    @if (!s.admiteSolicitudes) {
+                        <fo-tag tone="warn">
+                            <fo-icon name="no-permitido" [size]="14" />
+                            <span>El plazo de inscripción del evento está cerrado, ya no se puede
+                                entrar en el bombo</span>
+                        </fo-tag>
+                    }
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <span class="font-semibold">
+                        {{ s.participantes.length }} en el bombo
+                    </span>
+                    <div class="bolas-lista">
+                        @for (participante of bolas(); track participante.socioUid) {
+                            <span class="bola" [class.propia]="participante.propio"
+                                  [title]="etiqueta(participante)">
+                                {{ iniciales(participante.nombre) }}
+                            </span>
+                        }
+                        @if (bolasOcultas() > 0) {
+                            <span class="bola bola-resto">+{{ bolasOcultas() }}</span>
+                        }
+                    </div>
+                    <p class="text-xs text-ink-muted">
+                        Cuantos más sorteos seguidos te quedas sin carnet, más papeletas llevas al
+                        siguiente. Al que le toca vuelve a empezar con una.
+                    </p>
+                    <p class="text-xs text-ink-muted">
+                        Salir del bombo no te da de baja del evento: si te quedas sin carnet pero
+                        quieres ir, no tienes que hacer nada.
+                    </p>
+                </div>
+            }
+            @else {
+                <!-- DESPUÉS DEL SORTEO -->
+                <div class="escenario">
+                    <div class="bombo" [class.girando]="girando()">
+                        <div class="bombo-cristal">
+                            @for (participante of bolas(); track participante.socioUid) {
+                                <span class="bola"
+                                      [class.propia]="participante.propio"
+                                      [class.extraida]="bolaExtraida(participante)"
+                                      [title]="etiqueta(participante)">
+                                    {{ iniciales(participante.nombre) }}
+                                </span>
+                            }
+                        </div>
+                        @if (bolasOcultas() > 0) {
+                            <span class="bombo-resto">+{{ bolasOcultas() }} bolas más</span>
+                        }
+                    </div>
+
+                    <div class="premios">
+                        @for (hueco of huecos(); track hueco) {
+                            <div class="premio" [class.cubierto]="ganadorDe(hueco) !== null">
+                                <span class="premio-titulo">Carnet {{ hueco + 1 }}</span>
+                                @if (ganadorDe(hueco); as ganador) {
+                                    <span class="premio-nombre"
+                                          [class.propio]="ganador.propio">{{ ganador.nombre }}</span>
+                                    <span class="premio-detalle">
+                                        Bola {{ ganador.posicion }} · {{ textoPapeletas(ganador.papeletas) }}
+                                    </span>
+                                } @else {
+                                    <span class="premio-nombre premio-vacio">···</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button foButton variant="secondary" size="sm"
+                            [disabled]="girando()"
+                            (click)="reproducir()">
+                        <fo-icon name="refrescar" [size]="16" />
+                        <span>Ver la repetición</span>
+                    </button>
+                    <span class="text-xs text-ink-muted">
+                        Sale siempre igual: el orden quedó fijado al celebrarse el sorteo.
+                    </span>
+                </div>
+
+                @if (terminada()) {
+                    <div class="flex flex-col gap-3 border-t border-line pt-4">
+                        <span class="font-semibold">Suplentes</span>
+                        @if (suplentes().length === 0) {
+                            <span class="text-ink-muted text-sm">No hubo más participantes.</span>
+                        } @else {
+                            <ol class="flex flex-col gap-1">
+                                @for (suplente of suplentes(); track suplente.socioUid) {
+                                    <li class="flex items-center justify-between gap-2 text-sm">
+                                        <span class="truncate" [class.font-semibold]="suplente.propio">
+                                            {{ puestoSuplente(suplente) }}. {{ etiqueta(suplente) }}
+                                        </span>
+                                        <span class="text-ink-muted text-xs shrink-0">
+                                            {{ textoPapeletas(suplente.papeletas) }}
+                                        </span>
+                                    </li>
+                                }
+                            </ol>
+                            <p class="text-xs text-ink-muted">
+                                Si un ganador devuelve su carnet, va bajando por este orden.
+                            </p>
+                        }
+
+                        @for (socio of s.misSocios; track socio.socioUid) {
+                            @if (socio.estado === 'GANADORA') {
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="text-sm">
+                                        ¿{{ socio.nombre }} no va a poder ir?
+                                    </span>
+                                    <button foButton variant="ghost" size="sm" class="text-danger"
+                                            [loading]="accionEnCurso() === socio.socioUid"
+                                            [disabled]="accionEnCurso() !== null"
+                                            (click)="renunciar(socio)">
+                                        <fo-icon name="cerrar" [size]="16" />
+                                        <span>Devolver el carnet</span>
+                                    </button>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            }
+
+            <!-- Comprobación: el hash se publica antes y la semilla se revela al celebrarse,
+                 que es lo que demuestra que no se cambió al ver quién se había apuntado. -->
+            <details class="verificacion">
+                <summary>
+                    <fo-icon name="llave" [size]="14" />
+                    <span>Cómo comprobar que el sorteo es limpio</span>
+                </summary>
+                <div class="flex flex-col gap-2 pt-2">
+                    <div>
+                        <span class="text-xs text-ink-muted">Huella de la semilla (publicada al programar el sorteo)</span>
+                        <code class="codigo">{{ s.hashSemilla }}</code>
+                    </div>
+                    @if (s.semilla) {
+                        <div>
+                            <span class="text-xs text-ink-muted">Semilla (revelada al celebrarlo)</span>
+                            <code class="codigo">{{ s.semilla }}</code>
+                        </div>
+                        <p class="text-xs text-ink-muted">
+                            El SHA-256 de la semilla es la huella de arriba, así que la semilla
+                            estaba decidida antes de saber quién participaba. Con ella y la lista
+                            de participantes sale exactamente este mismo orden.
+                        </p>
+                    } @else {
+                        <p class="text-xs text-ink-muted">
+                            La semilla se guarda desde ahora y se publica al celebrarse el sorteo.
+                            Cuando eso pase podrás comprobar que su huella es la de arriba.
+                        </p>
+                    }
+                </div>
+            </details>
+        </div>
+    }
+}

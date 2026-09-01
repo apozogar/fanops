@@ -1,10 +1,12 @@
 package com.softwells.fanops.service;
 
 import com.softwells.fanops.enums.EstadoInscripcion;
+import com.softwells.fanops.enums.EstadoSolicitudCarnet;
 import com.softwells.fanops.enums.MotivoFalta;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.SocioEntity;
+import com.softwells.fanops.model.SolicitudCarnetEntity;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -139,6 +141,54 @@ public class NotificacionService {
     }
     cuerpo.append("\n\nSi crees que se trata de un error, ponte en contacto con nosotros.");
     enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono());
+  }
+
+  /**
+   * Resultado del sorteo de carnets a todos los que se apuntaron. Se avisa también a quien no
+   * ha ganado, y con su número de suplente: si un ganador renuncia el carnet corre esa lista, y
+   * sin saber su puesto nadie entiende por qué le llega el carnet dos días después.
+   */
+  public void enviarResultadoSorteoCarnet(List<SolicitudCarnetEntity> extraidos,
+      EventoEntity evento, int numeroCarnets) {
+    for (SolicitudCarnetEntity solicitud : extraidos) {
+      SocioEntity socio = solicitud.getSocio();
+      boolean premiado = solicitud.getEstado() == EstadoSolicitudCarnet.GANADORA;
+      int puestoSuplente = solicitud.getPosicionSorteo() - numeroCarnets;
+
+      String asunto = (premiado ? "¡Te ha tocado carnet para " : "Sorteo de carnets de ")
+          + evento.getNombreEvento() + (premiado ? "!" : "");
+      StringBuilder cuerpo = new StringBuilder("Hola " + socio.getNombre() + ",\n\n");
+      if (premiado) {
+        cuerpo.append("¡Enhorabuena! En el sorteo de carnets de '")
+            .append(evento.getNombreEvento()).append("' (").append(evento.getFechaEvento())
+            .append(") te ha tocado uno de los ").append(numeroCarnets).append(" carnets.")
+            .append("\n\nSi al final no vas a poder ir, avísanos cuanto antes para que el carnet")
+            .append(" pase al siguiente de la lista.");
+      } else {
+        cuerpo.append("Esta vez no ha habido suerte en el sorteo de carnets de '")
+            .append(evento.getNombreEvento()).append("' (").append(evento.getFechaEvento())
+            .append("). Eres el suplente número ").append(puestoSuplente)
+            .append(": si alguno de los ganadores renuncia, el carnet va bajando por ese orden.")
+            .append("\n\nAdemás, cada sorteo que se te resiste te suma una papeleta para el")
+            .append(" siguiente.");
+      }
+      cuerpo.append("\n\nPuedes ver el sorteo completo aquí: ")
+          .append(publicBaseUrl).append("/inscripcion/").append(evento.getUid());
+
+      enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono());
+    }
+  }
+
+  /** Aviso al suplente que hereda el carnet de un ganador que ha renunciado. */
+  public void enviarCarnetPorRenuncia(SolicitudCarnetEntity solicitud, EventoEntity evento) {
+    SocioEntity socio = solicitud.getSocio();
+    String asunto = "¡Tienes carnet para " + evento.getNombreEvento() + "!";
+    String cuerpo = "Hola " + socio.getNombre() + ",\n\n"
+        + "Uno de los ganadores del sorteo ha devuelto su carnet para '"
+        + evento.getNombreEvento() + "' (" + evento.getFechaEvento() + ") y, como eras el "
+        + "primer suplente, pasa a ser tuyo.\n\n"
+        + "Nos vemos allí. ¡Vamos mi Betis!";
+    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo, socio.getTelefono());
   }
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,

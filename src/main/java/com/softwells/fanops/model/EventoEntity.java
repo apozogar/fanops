@@ -44,6 +44,27 @@ public class EventoEntity {
 
   private Integer numeroPlazas;
 
+  /**
+   * Carnets que se sortean para este evento (null o 0 = el evento no sortea carnets). Es un
+   * recurso aparte de {@code numeroPlazas}: el bus se reparte por orden y el carnet por sorteo.
+   */
+  private Integer plazasCarnet;
+
+  /** Momento en que se celebra el sorteo de carnets. */
+  private LocalDateTime fechaSorteoCarnet;
+
+  /**
+   * Lo que paga cada persona por la plaza del evento (el autobús, normalmente). Null significa
+   * "sin indicar", que no es lo mismo que 0: un evento gratis se marca con 0 y se dice.
+   */
+  private BigDecimal costePlaza;
+
+  /**
+   * Lo que paga quien va con uno de los carnets sorteados. Es aparte del anterior porque suele
+   * ser otra cifra: el carnet no lleva autobús, o la entrada cuesta distinto.
+   */
+  private BigDecimal costeCarnet;
+
   private BigDecimal costeTotalEstimado;
 
   private BigDecimal costeTotalReal;
@@ -69,5 +90,22 @@ public class EventoEntity {
   /** Número de plazas libres (-1 significa ilimitado). */
   @Transient
   private int plazasLibres;
+
+  /** true si el sorteo de carnets ya se ha celebrado. Solo se rellena en la vista de gestión. */
+  @Transient
+  private boolean sorteoCelebrado;
+
+  /**
+   * true si ya no se admiten inscripciones: se pasó el plazo o el evento fue antes de hoy. Vive
+   * en la entidad porque lo consultan tanto las inscripciones como el sorteo de carnets, que
+   * apunta al evento y necesita saber si eso todavía es posible.
+   */
+  public boolean plazoInscripcionCerrado() {
+    if (fechaEvento != null && fechaEvento.isBefore(LocalDate.now())) {
+      return true;
+    }
+    return fechaLimiteInscripcion != null
+        && LocalDateTime.now().isAfter(fechaLimiteInscripcion);
+  }
 
 }

@@ -1,2 +1,25 @@
 /* Estilos específicos para el componente de Eventos */
-/* Puedes añadir aquí cualquier estilo personalizado para este componente */
+
+/*
+ * PrimeNG dibuja inputNumber y datepicker como inline-flex y sin ancho propio, así que el campo
+ * acaba midiendo lo que mida su <input>, que por defecto son unas 20 columnas (~200px). En el
+ * formulario del evento hay campos de tres columnas (un número, un importe) más estrechos que
+ * eso, y el control desbordaba su celda y se pintaba encima del vecino.
+ *
+ * Hace falta ::ng-deep porque estos elementos los renderiza PrimeNG dentro de sus propios
+ * componentes y no llevan el atributo de encapsulación de este.
+ */
+:host ::ng-deep {
+  .p-inputnumber,
+  .p-datepicker {
+    width: 100%;
+  }
+
+  /* El input es un hijo flex: sin min-width 0 se niega a bajar de su ancho intrínseco y el
+     desbordamiento reaparece por dentro. */
+  .p-inputnumber .p-inputnumber-input,
+  .p-datepicker .p-datepicker-input {
+    width: 100%;
+    min-width: 0;
+  }
+}

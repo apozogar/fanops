@@ -20,6 +20,10 @@ import {TagModule} from 'primeng/tag';
 import {AccordionModule} from 'primeng/accordion';
 import {TooltipModule} from 'primeng/tooltip';
 import {EventoService} from '@/services/evento.service';
+import {SorteoCarnetService} from '@/services/sorteo-carnet.service';
+import {ValoresEventoService} from '@/services/valores-evento.service';
+import {ValoresEvento} from '@/interfaces/valores-evento.dto';
+import {fechaRelativaAlEvento} from '@/core/eventos/fechas-por-defecto';
 
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
@@ -54,17 +58,29 @@ export class EventosComponent implements OnInit {
     eventos: Evento[] = [];
     evento: Partial<Evento> = {};
     eventoDialog: boolean = false;
+    /** Valores con los que se propone un evento nuevo, configurables por la peña. */
+    valoresPorDefecto: ValoresEvento = {};
+    valoresDialog: boolean = false;
+    valoresEnEdicion: ValoresEvento = {};
+    /** Las horas se editan con el selector de PrimeNG, que trabaja con Date, no con 'HH:mm'. */
+    horaFinInscripcionEdicion: Date | null = null;
+    horaSorteoEdicion: Date | null = null;
+    guardandoValores: boolean = false;
     inscripcionesDialog: boolean = false;
     inscripciones: InscripcionAdmin[] = [];
     faltas: FaltaEvento[] = [];
     eventoSeleccionado: Evento | null = null;
     loading: boolean = false;
     asignandoPlazas: boolean = false;
+    /** Evento cuyo sorteo de carnets se está adelantando. */
+    celebrandoSorteo: string | null = null;
     eliminandoInscripcion: string | null = null;
     /** Inscripción con un cambio de asistencia o de falta en vuelo. */
     marcandoAsistencia: string | null = null;
 
     private readonly eventoService = inject(EventoService);
+    private readonly sorteoCarnetService = inject(SorteoCarnetService);
+    private readonly valoresEventoService = inject(ValoresEventoService);
     private readonly messageService = inject(MessageService);
     private readonly confirmationService = inject(ConfirmationService);
 
@@ -75,6 +91,78 @@ export class EventosComponent implements OnInit {
 
     ngOnInit() {
         this.cargarEventos();
+        this.cargarValoresPorDefecto();
+    }
+
+    // ----------------------------------------------------------------
+    // Valores por defecto de la peña
+    // ----------------------------------------------------------------
+
+    /**
+     * Se cargan al entrar y no al abrir el formulario: así el evento nuevo aparece ya relleno,
+     * sin el parpadeo de unos campos que se completan solos medio segundo después.
+     */
+    private cargarValoresPorDefecto() {
+        this.valoresEventoService.obtener().subscribe({
+            next: (resp) => this.valoresPorDefecto = resp.data ?? {},
+            // Un fallo aquí no rompe nada: el formulario simplemente sale vacío.
+            error: () => this.valoresPorDefecto = {}
+        });
+    }
+
+    abrirValoresPorDefecto() {
+        this.valoresEnEdicion = {...this.valoresPorDefecto};
+        this.horaFinInscripcionEdicion = this.aHora(this.valoresPorDefecto.horaFinInscripcion);
+        this.horaSorteoEdicion = this.aHora(this.valoresPorDefecto.horaSorteo);
+        this.valoresDialog = true;
+    }
+
+    /** 'HH:mm' a Date, que es con lo que trabaja el selector de hora. */
+    private aHora(texto?: string | null): Date | null {
+        if (!texto) return null;
+
+        const [horas, minutos] = texto.split(':');
+        const fecha = new Date();
+
+        fecha.setHours(Number(horas), Number(minutos), 0, 0);
+
+        return fecha;
+    }
+
+    private deHora(fecha?: Date | null): string | null {
+        if (!fecha) return null;
+
+        return this.dosDigitos(fecha.getHours()) + ':' + this.dosDigitos(fecha.getMinutes());
+    }
+
+    private dosDigitos(valor: number): string {
+        return valor.toString().padStart(2, '0');
+    }
+
+    guardarValoresPorDefecto() {
+        this.valoresEnEdicion.horaFinInscripcion = this.deHora(this.horaFinInscripcionEdicion);
+        this.valoresEnEdicion.horaSorteo = this.deHora(this.horaSorteoEdicion);
+        this.guardandoValores = true;
+        this.valoresEventoService.guardar(this.valoresEnEdicion).subscribe({
+            next: (resp) => {
+                this.guardandoValores = false;
+                this.valoresPorDefecto = resp.data ?? {};
+                this.valoresDialog = false;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Guardado',
+                    detail: resp.message || 'Valores por defecto guardados'
+                });
+            },
+            error: (err) => {
+                this.guardandoValores = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudieron guardar los valores'
+                });
+            }
+        });
     }
 
     cargarEventos() {
@@ -90,6 +178,9 @@ export class EventosComponent implements OnInit {
                         if (p.fechaLimiteInscripcion) {
                             p.fechaLimiteInscripcion = new Date(p.fechaLimiteInscripcion);
                         }
+                        if (p.fechaSorteoCarnet) {
+                            p.fechaSorteoCarnet = new Date(p.fechaSorteoCarnet);
+                        }
                         // Pendientes = próximos, con inscripción pendiente de cerrarse/asignarse
                         if (p.fechaEvento >= new Date() && !p.inscripcionCerrada) {
                             this.numEventosPendientes += 1;
@@ -104,9 +195,91 @@ export class EventosComponent implements OnInit {
         });
     }
 
+    /** Solo tiene sentido adelantar un sorteo que existe y todavía no se ha celebrado. */
+    puedeSortear(evento: Evento): boolean {
+        return !!evento.plazasCarnet && !!evento.fechaSorteoCarnet && !evento.sorteoCelebrado;
+    }
+
+    /**
+     * Adelanta el sorteo de carnets. No cambia el resultado (la semilla estaba comprometida desde
+     * que se programó), solo el momento en que se sabe, pero sí es irreversible: por eso se
+     * pregunta.
+     */
+    celebrarSorteo(evento: Evento) {
+        if (!evento.uid) return;
+        this.confirmationService.confirm({
+            header: 'Celebrar el sorteo ahora',
+            message: `El sorteo de carnets de '${evento.nombreEvento}' estaba previsto para el `
+                + `${evento.fechaSorteoCarnet?.toLocaleString('es-ES') ?? 'futuro'}. Si lo celebras `
+                + 'ahora, quien no se haya apuntado se queda fuera y no se puede deshacer. '
+                + '¿Continuar?',
+            accept: () => this.ejecutarSorteo(evento)
+        });
+    }
+
+    private ejecutarSorteo(evento: Evento) {
+        this.celebrandoSorteo = evento.uid!;
+        this.sorteoCarnetService.celebrar(evento.uid!).subscribe({
+            next: (resp) => {
+                this.celebrandoSorteo = null;
+                const ganadores = (resp.data?.participantes ?? [])
+                    .filter(p => (p.posicion ?? 0) <= (resp.data?.plazasCarnet ?? 0))
+                    .map(p => p.nombre)
+                    .join(', ');
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Sorteo celebrado',
+                    detail: ganadores ? 'Carnets para: ' + ganadores : 'No había nadie en el bombo.'
+                });
+                this.cargarEventos();
+            },
+            error: (err) => {
+                this.celebrandoSorteo = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudo celebrar el sorteo'
+                });
+            }
+        });
+    }
+
+    /**
+     * Un evento nuevo nace con los valores por defecto de la peña. Casi todos los eventos se
+     * parecen (mismo autobús, mismo precio, mismos carnets), así que se proponen ya rellenos;
+     * son sugerencias y se pueden cambiar antes de guardar.
+     */
     abrirNuevo() {
-        this.evento = {nombreEvento: '', numeroPlazas: 0};
+        const porDefecto = this.valoresPorDefecto;
+        this.evento = {
+            nombreEvento: '',
+            numeroPlazas: porDefecto.plazas ?? undefined,
+            costePlaza: porDefecto.costePlaza ?? undefined,
+            plazasCarnet: porDefecto.carnets ?? undefined,
+            costeCarnet: porDefecto.costeCarnet ?? undefined,
+            costeTotalEstimado: porDefecto.costeTotalEstimado ?? undefined
+        };
         this.eventoDialog = true;
+    }
+
+    /**
+     * Al elegir la fecha del evento se proponen las que dependen de ella. Solo en un evento nuevo
+     * y solo si el campo sigue vacío: si no, corregir la fecha del partido movería un plazo que
+     * quien lo está creando ya había puesto a mano.
+     */
+    alCambiarFechaEvento() {
+        if (this.evento.uid || !this.evento.fechaEvento) return;
+
+        const porDefecto = this.valoresPorDefecto;
+
+        if (!this.evento.fechaLimiteInscripcion && porDefecto.diasAntesFinInscripcion != null) {
+            this.evento.fechaLimiteInscripcion = fechaRelativaAlEvento(this.evento.fechaEvento,
+                porDefecto.diasAntesFinInscripcion, porDefecto.horaFinInscripcion);
+        }
+        if (!this.evento.fechaSorteoCarnet && porDefecto.diasAntesSorteo != null) {
+            this.evento.fechaSorteoCarnet = fechaRelativaAlEvento(this.evento.fechaEvento,
+                porDefecto.diasAntesSorteo, porDefecto.horaSorteo);
+        }
     }
 
     editarEvento(evento: Evento) {

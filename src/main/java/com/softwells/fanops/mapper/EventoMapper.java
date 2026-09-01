@@ -3,6 +3,7 @@ package com.softwells.fanops.mapper;
 import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionAdminDTO;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
+import com.softwells.fanops.controller.dto.SorteoResumenDTO;
 import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
@@ -12,7 +13,12 @@ import java.util.List;
 public class EventoMapper {
 
   public static EventoInscripcionDTO toInscripcionDTO(EventoEntity evento) {
-    return toInscripcionDTO(evento, List.of());
+    return toInscripcionDTO(evento, List.of(), null);
+  }
+
+  public static EventoInscripcionDTO toInscripcionDTO(EventoEntity evento,
+      List<SocioInscripcionDTO> misSocios) {
+    return toInscripcionDTO(evento, misSocios, null);
   }
 
   /**
@@ -20,19 +26,22 @@ public class EventoMapper {
    *                  lista vacía en consultas anónimas o de administración
    */
   public static EventoInscripcionDTO toInscripcionDTO(EventoEntity evento,
-      List<SocioInscripcionDTO> misSocios) {
+      List<SocioInscripcionDTO> misSocios, SorteoResumenDTO sorteo) {
     return EventoInscripcionDTO.builder()
         .uid(evento.getUid())
         .nombreEvento(evento.getNombreEvento())
         .fechaEvento(evento.getFechaEvento())
         .fechaLimiteInscripcion(evento.getFechaLimiteInscripcion())
         .ubicacion(evento.getUbicacion())
+        .costePlaza(evento.getCostePlaza())
+        .costeCarnet(evento.getCosteCarnet())
         .inscripcionCerrada(evento.isInscripcionCerrada())
         .plazasOcupadas(evento.getNumInscritos())
         .plazasLibres(evento.getPlazasLibres())
         .enListaEspera(evento.getNumEnEspera())
         .isCurrentUserInscrito(evento.isCurrentUserInscrito())
         .misSocios(misSocios)
+        .sorteo(sorteo)
         .build();
   }
 
