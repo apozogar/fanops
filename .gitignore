@@ -46,3 +46,6 @@ target/
 otros/node_modules/
 
 src/main/resources/static/
+
+# Credenciales del despliegue en el VPS
+deploy/.env

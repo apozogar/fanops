@@ -1,0 +1,21 @@
+# Caddy pide y renueva el certificado de Let's Encrypt solo. Requisitos: que el dominio
+# de DOMINIO apunte por DNS a la IP del servidor y que los puertos 80 y 443 estén
+# abiertos en el cortafuegos.
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	reverse_proxy app:8080 {
+		# La aplicación las necesita para saber que la petición original venía por HTTPS
+		# (server.forward-headers-strategy=framework en application.yml).
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+	}
+}

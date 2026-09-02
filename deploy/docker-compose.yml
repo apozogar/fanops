@@ -1,0 +1,69 @@
+# Despliegue de FanOps en un VPS.
+#
+# Dos contenedores: la aplicación (Spring Boot con el frontend dentro del jar) y Caddy
+# como proxy inverso, que resuelve HTTPS solo con Let's Encrypt.
+#
+# La base de datos NO está aquí a propósito: ya existe en el servidor. La conexión se
+# configura en .env (ver .env.example).
+#
+# Uso:
+#   cp .env.example .env && nano .env      # rellenar credenciales
+#   docker compose up -d --build
+#   docker compose logs -f app
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: fanops:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 8080
+    # Sin límite, la JVM ve toda la RAM del servidor y reserva un heap enorme
+    # (MaxRAMPercentage=70 del Dockerfile), dejando sin memoria a Postgres, que vive en
+    # esta misma máquina. Con el límite, ese 70% se calcula sobre 1,5 GB.
+    mem_limit: 1500m
+    # Para que el contenedor pueda llegar a un Postgres que corre en el host: en .env se
+    # usa host.docker.internal como servidor de la base de datos.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    expose:
+      - "8080"
+    healthcheck:
+      # 'liveness' y no '/management/health' a propósito: este comprueba solo que el
+      # proceso responde. Con el de salud completo, un corte temporal de la base de datos
+      # haría que Docker reiniciara la aplicación en bucle sin motivo.
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/management/health/liveness"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+    networks:
+      - interna
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Aquí viven los certificados: sin este volumen, cada reinicio pediría uno nuevo a
+      # Let's Encrypt y se agotaría el límite de emisión del dominio.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - interna
+
+networks:
+  interna:
+
+volumes:
+  caddy_data:
+  caddy_config:
