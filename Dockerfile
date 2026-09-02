@@ -1,65 +1,76 @@
+# syntax=docker/dockerfile:1
+
 # ------------------------------------
 # FASE 1: BUILD DEL FRONTEND (Angular)
 # ------------------------------------
-# Usa una imagen Node para construir el frontend
-FROM node:20-alpine AS frontend-builder
-
-# El directorio de trabajo es la subcarpeta del frontend
+FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
-# Copiamos solo los archivos de configuración y dependencias del frontend
-COPY frontend/package*.json ./
-COPY frontend/angular.json ./
+# Solo el manifiesto primero: mientras no cambien las dependencias, esta capa se reutiliza.
+COPY frontend/package.json frontend/package-lock.json ./
+# 'npm ci' respeta el lockfile y es reproducible, a diferencia de 'npm install'.
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-# Instalar dependencias
-RUN npm install
-
-# Copiar el código fuente de Angular
 COPY frontend/ ./
-
-# Compilar la aplicación Angular en modo producción
 RUN npm run build -- --configuration=production
 
 # ------------------------------------
 # FASE 2: BUILD DEL BACKEND (Spring Boot con Maven)
 # ------------------------------------
-# Usamos la imagen de Maven con Java 21 para construir el proyecto.
 FROM maven:3.9-eclipse-temurin-21 AS build
-
-# Establecemos el directorio de trabajo.
 WORKDIR /app
 
-# 1. COPIAR EL FRONTEND AL STATIC FOLDER DEL BACKEND
-# Reemplaza 'fanops' con el nombre de la carpeta de salida real (p. ej. 'frontend' o el nombre del proyecto)
-# Spring Boot busca archivos estáticos en src/main/resources/static/
-# ¡IMPORTANTE!: Esta es la línea clave.
-COPY --from=frontend-builder /app/frontend/dist/browser/ src/main/resources/static/
-
-# Copiamos solo el pom.xml para cachear las dependencias de Maven.
+# Las dependencias primero, para que un cambio en el código fuente no vuelva a bajarlas.
 COPY pom.xml .
-RUN mvn dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:go-offline
 
-# Copiamos el resto del código fuente del backend.
+# El frontend compilado se sirve desde dentro del jar (ver SpaWebConfig).
+COPY --from=frontend-builder /app/frontend/dist/browser/ src/main/resources/static/
 COPY src ./src
-
-# Construimos el proyecto y generamos el archivo .jar.
-RUN mvn package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests
 
 # ------------------------------------
 # FASE 3: IMAGEN FINAL DE PRODUCCIÓN
 # ------------------------------------
-# Usamos una imagen ligera de Java para ejecutar la aplicación.
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# NOTA: Asegúrate de que el puerto 8080 se configure en 'server.port=${PORT:8080}' en Spring Boot.
-ENV PORT 8080
+ENV PORT=8080
+# MaxRAMPercentage: el contenedor tiene 1 GB y la JVM necesita dejar sitio para metaspace,
+# hilos y buffers fuera del heap. TieredStopAtLevel=1 recorta el arranque a costa de algo
+# de rendimiento pico, un intercambio que compensa en una app con esta carga.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Duser.timezone=Europe/Madrid -Dfile.encoding=UTF-8"
 
-# Copiamos el artefacto construido (.jar) desde la etapa anterior.
 COPY --from=build /app/target/*.jar app.jar
 
-# Exponemos el puerto (esto no es estrictamente necesario, pero es informativo)
+# Se desempaqueta el jar (Spring Boot 3.3+, jarmode 'tools'): con las clases y las
+# librerías sueltas en el sistema de ficheros, la JVM puede usar un archivo CDS, que es
+# lo que recorta el arranque.
+RUN java -Djarmode=tools -jar app.jar extract --destination /app/extracted \
+    && rm app.jar
+
+# Entrenamiento de CDS: se arranca la aplicación hasta el refresco del contexto y se sale,
+# guardando las clases cargadas en app.jsa. Se desactiva todo lo que necesitaría una base
+# de datos (Liquibase, DDL de Hibernate y la lectura de metadatos JDBC), porque durante el
+# build no hay ninguna a la que conectarse. El seeder del superadmin es un
+# CommandLineRunner, así que con 'spring.context.exit=onRefresh' ni se ejecuta.
+#
+# Si el entrenamiento falla, el build continúa: en tiempo de ejecución un archivo CDS que
+# no exista o no valga solo produce un aviso de la JVM (-Xshare:auto), no un error.
+# El 'timeout' es un cinturón de seguridad: si el entrenamiento se quedara esperando algo
+# (una conexión, un recurso), el build no se puede quedar colgado por ello.
+RUN timeout 420 java $JAVA_OPTS -XX:ArchiveClassesAtExit=/app/app.jsa \
+      -Dspring.context.exit=onRefresh \
+      -Dspring.liquibase.enabled=false \
+      -Dspring.jpa.hibernate.ddl-auto=none \
+      -Dspring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false \
+      -jar /app/extracted/app.jar > /tmp/cds.log 2>&1 \
+    || { echo "AVISO: el entrenamiento de CDS falló, se continúa sin archivo CDS"; tail -30 /tmp/cds.log; }
+
+# Sin privilegios: si alguna vez se cuela una ejecución de código, que no sea como root.
+RUN addgroup -S fanops && adduser -S fanops -G fanops && chown -R fanops:fanops /app
+USER fanops
+
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -XX:SharedArchiveFile=/app/app.jsa -jar /app/extracted/app.jar"]

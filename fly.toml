@@ -1,59 +1,85 @@
-# fly.toml app configuration file generated for pblb on 2025-10-22T15:13:12Z
+# fly.toml — FanOps
 #
-# Despliegue (una sola vez, con flyctl instalado):
-#   1. Crear la base de datos PostgreSQL gestionada:
-#        fly postgres create
-#      (anota el nombre de la app de la BD, p. ej. "pblb-db")
-#   2. Conectarla a esta app (inyecta la variable DATABASE_URL):
-#        fly postgres attach pblb-db --app pblb
-#   3. Configurar los secretos:
-#        fly secrets set \
-#          APP_JWT_SECRET="<base64 de al menos 32 bytes, generarlo con: openssl rand -base64 48>" \
-#          SMTP_HOST="..." SMTP_PORT=587 SMTP_USERNAME="..." SMTP_PASSWORD="..." \
-#          MAIL_FROM_ADDRESS="noreply@tudominio.com" \
-#          WHATSAPP_ENABLED="false" WHATSAPP_PHONE_NUMBER_ID="" WHATSAPP_ACCESS_TOKEN="" \
-#          SPRING_JPA_DDL_AUTO="update"
-#   4. Desplegar:
-#        fly deploy
+# Región: 'mad' (Madrid). La app y la base de datos deben estar en la misma región o
+# cerca; con los socios en España, Madrid deja el servidor a ~10 ms en vez de los ~40 ms
+# de Frankfurt.
 #
-# Nota: los secretos seteados con `fly secrets set` están disponibles como variables
-# de entorno en el contenedor y pueden referenciarse en [env] con {{ secrets.NOMBRE }}.
+# IMPORTANTE: en fly.toml NO existe interpolación de secretos ({{ secrets.X }} no se
+# sustituye por nada). Los secretos creados con `fly secrets set` se inyectan en el
+# contenedor como variables de entorno con su mismo nombre, así que basta con nombrarlos
+# igual que las variables que lee application.yml. En [env] van solo valores no sensibles.
+#
+# Despliegue completo paso a paso: ver DESPLIEGUE.md
 
-app = 'pblb'
-primary_region = 'iad'
+app = 'fanops'
+primary_region = 'mad'
+
+# La JVM en 1 GB va justa en los picos (build de Hibernate, exportación de Excel con POI).
+# El swap evita que el kernel mate el proceso en lugar de tragarse un GC más lento.
+swap_size_mb = 512
 
 [build]
 
 [env]
-  # Base de datos (la URL la inyecta `fly postgres attach`)
-  SPRING_DATASOURCE_URL = "{{ secrets.DATABASE_URL }}"
-  # JPA: usa 'update' para la primera subida; después pasa a 'validate'
-  SPRING_JPA_DDL_AUTO = "{{ secrets.SPRING_JPA_DDL_AUTO }}"
-  # JWT: secreto para firmar tokens (obligatorio cambiarlo en producción)
-  APP_JWT_SECRET = "{{ secrets.APP_JWT_SECRET }}"
-  # Correo SMTP
-  SMTP_HOST = "{{ secrets.SMTP_HOST }}"
-  SMTP_PORT = "{{ secrets.SMTP_PORT }}"
-  SMTP_USERNAME = "{{ secrets.SMTP_USERNAME }}"
-  SMTP_PASSWORD = "{{ secrets.SMTP_PASSWORD }}"
-  MAIL_FROM_ADDRESS = "{{ secrets.MAIL_FROM_ADDRESS }}"
-  # WhatsApp (dejar desactivado hasta tener credenciales de Meta)
-  WHATSAPP_ENABLED = "{{ secrets.WHATSAPP_ENABLED }}"
-  WHATSAPP_PHONE_NUMBER_ID = "{{ secrets.WHATSAPP_PHONE_NUMBER_ID }}"
-  WHATSAPP_ACCESS_TOKEN = "{{ secrets.WHATSAPP_ACCESS_TOKEN }}"
-  # URL pública para enlaces en emails/WhatsApp (p. ej. https://pblb.fly.dev)
-  PUBLIC_BASE_URL = "{{ secrets.PUBLIC_BASE_URL }}"
+  # --- Esquema ---
+  # 'update' para el primer arranque contra una base de datos recién restaurada; una vez
+  # el esquema está estable, pasar a 'validate': 'update' compara todo el metamodelo
+  # contra la base de datos en cada arranque y eso son decenas de idas y vueltas.
+  SPRING_JPA_DDL_AUTO = 'update'
+
+  # --- URL pública (enlaces de emails y WhatsApp) ---
+  # Cambiar al dominio propio en cuanto esté configurado con `fly certs add`.
+  PUBLIC_BASE_URL = 'https://fanops.fly.dev'
+
+  # --- Correo ---
+  # En Fly no hay bloqueo de puertos SMTP (eso era una limitación del plan gratuito de
+  # Render), así que se puede usar 'smtp' con SMTP_*; se deja 'resend' por continuidad.
+  APP_EMAIL_PROVEEDOR = 'resend'
+  MAIL_FROM_NAME = 'FanOps'
+  MAIL_ACTIVE = 'true'
+
+  # --- WhatsApp (desactivado hasta tener credenciales de Meta) ---
+  WHATSAPP_ENABLED = 'false'
+
+  # --- Logs ---
+  # En desarrollo el paquete de la aplicación va a DEBUG; en el despliegue sobra.
+  LOG_LEVEL_APP = 'INFO'
+
+  # --- Pool de conexiones ---
+  # Una sola máquina con poca concurrencia: un pool pequeño va mejor que el default de 10
+  # y no agota el límite de conexiones del plan de Neon.
+  DB_POOL_MAX = '5'
+  DB_POOL_MIN = '1'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+
+  # Esto es lo que elimina el tiempo de caída: la máquina no se para nunca.
+  # Con auto_stop_machines = 'off' y min_machines_running = 1 no hay arranque en frío
+  # y el SorteoCarnetScheduler (@Scheduled cada minuto) se ejecuta de verdad siempre.
+  auto_stop_machines = 'off'
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ['app']
 
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 150
+    hard_limit = 250
+
+  # El health check de Spring incluye el indicador de base de datos, así que este ping
+  # cada 30 s también mantiene despierto el compute de Neon (que si no se suspende a los
+  # ~5 min de inactividad y añade ~1 s a la primera consulta).
+  # Si en algún momento interesa NO tocar la base de datos en cada check, cambiar la ruta
+  # a '/management/health/liveness', que está configurada en application.yml.
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '90s'
+    method = 'GET'
+    path = '/management/health'
+
 [[vm]]
+  size = 'shared-cpu-1x'
   memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 1
-  memory_mb = 1024

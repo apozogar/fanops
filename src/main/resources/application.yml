@@ -7,9 +7,27 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:toor}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Una sola instancia con poca concurrencia: un pool pequeño rinde mejor que el
+      # default de 10 y no agota el límite de conexiones del plan de Neon.
+      maximum-pool-size: ${DB_POOL_MAX:5}
+      minimum-idle: ${DB_POOL_MIN:1}
+      connection-timeout: 10000
+      idle-timeout: 300000
+      # Por debajo del corte de conexiones ociosas del pooler de Neon, para que sea Hikari
+      # quien recicle la conexión y no el servidor quien la cierre en mitad de una consulta.
+      max-lifetime: 900000
+      keepalive-time: 120000
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    # OJO: se deja en 'true' (el default de Spring Boot) a propósito. Ponerlo a false
+    # libera la conexión antes y es lo recomendado, pero aquí los controllers serializan
+    # entidades JPA directamente, así que las colecciones perezosas se cargan durante la
+    # serialización, ya fuera de la transacción: apagarlo sin repasar endpoint por endpoint
+    # provocaría LazyInitializationException en producción. Se expone como variable para
+    # poder probarlo en un entorno de pruebas antes de cambiar el default.
+    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW:true}
     hibernate:
       ddl-auto: ${SPRING_JPA_DDL_AUTO:update}  # 'update' para dev; en producción usa 'validate' o migraciones
     properties:
@@ -38,11 +56,22 @@ spring:
 
 server:
   port: ${PORT:8090}
+  # Los bundles de Angular y las respuestas JSON viajan sin comprimir si no se activa.
+  compression:
+    enabled: true
+    mime-types: text/html,text/css,text/plain,text/javascript,application/javascript,application/json,application/xml,image/svg+xml
+    min-response-size: 1024
+  # Detrás del proxy de Fly (o de Cloudflare) la petición llega por HTTP con las cabeceras
+  # X-Forwarded-*; sin esto Spring cree que el esquema es http y genera enlaces incorrectos.
+  forward-headers-strategy: framework
 
 logging:
   level:
     root: INFO
-    com.softwells.fanops: DEBUG
+    # DEBUG en desarrollo; en el despliegue se baja a INFO con LOG_LEVEL_APP, porque cada
+    # línea de log cuesta tiempo de CPU y llena el almacenamiento de logs sin aportar nada
+    # cuando todo va bien.
+    com.softwells.fanops: ${LOG_LEVEL_APP:DEBUG}
 
 # Configuraciones de Actuator
 management:
@@ -51,6 +80,17 @@ management:
       base-path: /management # Mueve todos los endpoints a /management (ej: /management/health)
       exposure:
         include: health, info # Exponemos explícitamente los endpoints que queremos
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        # /management/health sigue comprobando la base de datos, que es lo que queremos
+        # para el health check del despliegue (de paso mantiene despierto el compute de
+        # Neon). /management/health/liveness solo mira que el proceso esté vivo: es la
+        # alternativa si en algún momento interesa no tocar la base de datos en cada ping.
+        liveness:
+          include: livenessState
   health:
     # El indicador del correo abre una conexión al host SMTP y lo cuenta como salud de la
     # aplicación. En Render eso es contraproducente: con los puertos SMTP bloqueados daría DOWN
@@ -96,7 +136,10 @@ app:
       api-key: ${BREVO_API_KEY:}
     resend:
       url: ${RESEND_API_URL:https://api.resend.com/emails}
-      api-key: ${RESEND_API_KEY:re_BZEWwqM8_CC2tFM9LyaKYsjEiA7bDZ8Hn}
+      # Sin valor por defecto a propósito: la clave se inyecta por entorno
+      # (`fly secrets set RESEND_API_KEY=...`) y nunca se commitea. Si falta, el envío
+      # simplemente no sale y queda registrado (ver ResendEmailSender).
+      api-key: ${RESEND_API_KEY:}
 
 # Dirección de correo para el remitente (email real del dominio en producción)
 mail:

@@ -81,9 +81,26 @@ Frontend (desde `frontend/`):
 - La peña es **singleton** (ID 1), usado en cuotas, remesas SEPA y carnet.
 - El flujo SEPA genera cuotas y remesas `pain.008`; los retornos se procesan desde `/api/cobros`.
 
-## Despliegue (Fly.io)
+## Despliegue (Fly.io Madrid + Neon Frankfurt)
 
-- Configuración en `fly.toml` (con instrucciones comentadas).
-- Postgres gestionado: `fly postgres create` + `fly postgres attach`.
-- Secretos: `fly secrets set APP_JWT_SECRET=... SPRING_DATASOURCE_URL=... SMTP_* WHATSAPP_* ...`.
-- En `Fly.io` los secretos se referencian en `fly.toml` con `{{ secrets.NOMBRE }}`.
+Guía completa en **`DESPLIEGUE.md`**. Lo esencial:
+
+- Configuración en `fly.toml`: región `mad`, `min_machines_running = 1` y
+  `auto_stop_machines = 'off'`. La máquina **no se duerme**: es lo que quita el arranque en frío y
+  lo que hace que `SorteoCarnetScheduler` se ejecute de verdad cada minuto.
+- Base de datos en Neon, región `eu-central-1`, **endpoint directo** (el que no lleva `-pooler`):
+  con una sola instancia y su pool de HikariCP, el pooler solo añade un salto.
+- App y base de datos tienen que estar en la misma zona del mundo. Tenerlas separadas era lo que
+  hacía lento el despliegue anterior: ~150 ms por consulta, y una petición con diez consultas se
+  iba a segundo y medio de puro cable.
+- Secretos: `fly secrets set NOMBRE=valor`. **No existe interpolación de secretos en `fly.toml`**;
+  `{{ secrets.X }}` no se sustituye por nada. Los secretos se inyectan como variables de entorno
+  con su propio nombre, así que hay que nombrarlos igual que las variables que lee
+  `application.yml` (`SPRING_DATASOURCE_URL`, `APP_JWT_SECRET`, `RESEND_API_KEY`...). En `[env]`
+  van solo los valores no sensibles.
+- `SPRING_DATASOURCE_URL` es una URL **JDBC** (`jdbc:postgresql://host/fanops?sslmode=require`),
+  no la cadena de `psql`: sin credenciales embebidas y sin `channel_binding`, que es un parámetro
+  de `libpq` que el driver JDBC no entiende.
+- El `Dockerfile` desempaqueta el jar y entrena un archivo CDS durante el build para recortar el
+  arranque. Si ese paso falla, el build continúa y la JVM arranca sin él.
+- `render.yaml` se conserva solo como referencia del despliegue anterior.
