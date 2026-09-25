@@ -80,6 +80,13 @@ management:
       base-path: /management # Mueve todos los endpoints a /management (ej: /management/health)
       exposure:
         include: health, info # Exponemos explícitamente los endpoints que queremos
+  info:
+    # git.properties y build-info.properties los genera el build de Maven (ver pom.xml): sin
+    # esto /management/info no tendría de dónde sacar el commit ni la fecha del build.
+    git:
+      mode: full
+    build:
+      enabled: true
   endpoint:
     health:
       probes:

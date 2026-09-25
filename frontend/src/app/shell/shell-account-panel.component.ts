@@ -1,4 +1,5 @@
 import { Component, inject, input, output } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@/pages/auth/auth.service';
 import { ActivePenaService } from '@/core/pena/active-pena.service';
@@ -7,6 +8,7 @@ import { PenaPublicaService } from '@/core/pena/pena-publica.service';
 import { IconComponent } from '@/ui/icon/icon.component';
 import { NavItem } from './navigation';
 import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
+import { VersionService } from '@/core/platform/version.service';
 
 /**
  * Panel de cuenta: datos del usuario, cambio de tema, selector de peña y cierre de sesión.
@@ -17,7 +19,7 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
 @Component({
     selector: 'fo-shell-account-panel',
     standalone: true,
-    imports: [RouterLink, PenaSwitcherComponent, IconComponent],
+    imports: [RouterLink, PenaSwitcherComponent, IconComponent, DatePipe],
     host: {
         '(document:keydown.escape)': 'onEscape()'
     },
@@ -75,6 +77,15 @@ import { ROLE_ADMIN, ROLE_SUPERADMIN } from '@/core/auth/roles';
                         <span>Cerrar sesión</span>
                     </button>
                 </div>
+
+                @if (version(); as v) {
+                    <p class="truncate px-4 pb-3 text-xs text-ink-subtle">
+                        Versión {{ v.commit }}
+                        @if (v.fecha) {
+                            · {{ v.fecha | date: 'dd/MM/yy HH:mm' }}
+                        }
+                    </p>
+                }
             </div>
         }
     `
@@ -83,6 +94,7 @@ export class ShellAccountPanelComponent {
     private readonly auth = inject(AuthService);
     protected readonly penaPublica = inject(PenaPublicaService);
     protected readonly activePena = inject(ActivePenaService);
+    protected readonly version = inject(VersionService).version;
 
     readonly open = input<boolean>(false);
     /** Destinos que no caben en la barra de pestañas y se listan aquí. */

@@ -141,6 +141,41 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+        Genera git.properties con el commit del build. Solo así /management/info puede
+        identificar qué despliegue está corriendo; sin esto, dos versiones desplegadas serían
+        indistinguibles desde fuera. El Dockerfile copia el .git al build stage para que el
+        plugin tenga de dónde leerlo (failOnNoGitDirectory=false por si algún build lo hiciera
+        sin repo, para no romper el empaquetado por esto).
+      -->
+      <plugin>
+        <groupId>io.github.git-commit-id</groupId>
+        <artifactId>git-commit-id-maven-plugin</artifactId>
+        <version>9.0.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>revision</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <generateGitPropertiesFile>true</generateGitPropertiesFile>
+          <failOnNoGitDirectory>false</failOnNoGitDirectory>
+          <includeOnlyProperties>
+            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+            <includeOnlyProperty>^git.commit.time$</includeOnlyProperty>
+            <includeOnlyProperty>^git.branch$</includeOnlyProperty>
+          </includeOnlyProperties>
+        </configuration>
       </plugin>
     </plugins>
   </build>

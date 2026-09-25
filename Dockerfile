@@ -27,6 +27,10 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:go-offline
 # El frontend compilado se sirve desde dentro del jar (ver SpaWebConfig).
 COPY --from=frontend-builder /app/frontend/dist/browser/ src/main/resources/static/
 COPY src ./src
+# El .git hace falta para que git-commit-id-maven-plugin escriba el commit del build en
+# git.properties (lo expone /management/info): sin él no habría forma de saber, mirando un
+# despliegue ya corriendo, de qué commit salió.
+COPY .git ./.git
 RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests
 
 # ------------------------------------
