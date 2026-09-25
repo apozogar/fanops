@@ -1,5 +1,6 @@
 package com.softwells.fanops.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -70,7 +71,16 @@ public class SecurityConfig {
             .anyRequest().permitAll()
         )
         // Configurar la gestión de sesiones como STATELESS (una sola vez)
-        .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        /*
+         * Sin esto, Spring Security responde 403 (Http403ForbiddenEntryPoint) tanto si falta el
+         * token como si no tienes permiso, y el interceptor del frontend solo cierra sesión ante
+         * un 401 (ver AuthInterceptor). El resultado era que un token caducado o ausente dejaba
+         * al usuario atascado en vez de mandarlo al login.
+         */
+        .exceptionHandling(ex -> ex.authenticationEntryPoint(
+            (request, response, authException) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+        ));
 
     return http.build();
   }
