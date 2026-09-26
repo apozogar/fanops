@@ -16,6 +16,7 @@ import com.softwells.fanops.repository.UsuarioRepository;
 import com.softwells.fanops.security.JwtService;
 import com.softwells.fanops.service.EmailSender;
 import com.softwells.fanops.service.EmailTemplateService;
+import com.softwells.fanops.service.HistorialAccesoService;
 import com.softwells.fanops.service.SocioService;
 import com.softwells.fanops.service.UsuarioService;
 import com.softwells.fanops.service.VinculacionSocioService;
@@ -47,6 +48,7 @@ public class AuthController {
 
   private final SocioService socioService;
   private final UsuarioService usuarioService;
+  private final HistorialAccesoService historialAccesoService;
   private final VinculacionSocioService vinculacionSocioService;
   private final AuthenticationManager authenticationManager;
   private final UserDetailsService userDetailsService;
@@ -69,16 +71,33 @@ public class AuthController {
     return (origin != null && !origin.isBlank()) ? origin : publicBaseUrl;
   }
 
+  /**
+   * IP real del cliente. En despliegue hay un proxy delante (Fly.io), así que la IP de socket
+   * ({@code getRemoteAddr}) sería la del proxy: se prioriza el primer salto de
+   * {@code X-Forwarded-For}, que es el cliente original.
+   */
+  private String clientIp(HttpServletRequest servletRequest) {
+    String forwardedFor = servletRequest.getHeader("X-Forwarded-For");
+    if (forwardedFor != null && !forwardedFor.isBlank()) {
+      return forwardedFor.split(",")[0].trim();
+    }
+    return servletRequest.getRemoteAddr();
+  }
+
   @PostMapping("/login")
-  public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+  public ResponseEntity<?> login(@RequestBody AuthRequest request, HttpServletRequest servletRequest) {
     try {
       authenticationManager.authenticate(
           new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
       final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
       final String jwt = jwtService.generateToken(userDetails);
       usuarioService.registrarAcceso(request.getEmail());
+      historialAccesoService.registrar(request.getEmail(), true, clientIp(servletRequest),
+          servletRequest.getHeader("User-Agent"));
       return ResponseEntity.ok(new AuthResponse(jwt));
     } catch (AuthenticationException e) {
+      historialAccesoService.registrar(request.getEmail(), false, clientIp(servletRequest),
+          servletRequest.getHeader("User-Agent"));
       // Si las credenciales son incorrectas, devolvemos un 401 Unauthorized
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse<>(false, "Email o contraseña incorrectos", null));
     }
@@ -132,11 +151,13 @@ public class AuthController {
    */
   @PostMapping("/vinculacion/confirmar")
   public ResponseEntity<AuthResponse> confirmarVinculacion(
-      @RequestBody ConfirmarVinculacionRequest request) {
+      @RequestBody ConfirmarVinculacionRequest request, HttpServletRequest servletRequest) {
     UsuarioEntity usuario =
         vinculacionSocioService.confirmar(request.getToken(), request.getPassword());
     // La confirmación deja la sesión iniciada, así que cuenta como acceso igual que un login.
     usuarioService.registrarAcceso(usuario.getEmail());
+    historialAccesoService.registrar(usuario.getEmail(), true, clientIp(servletRequest),
+        servletRequest.getHeader("User-Agent"));
     return ResponseEntity.ok(new AuthResponse(jwtService.generateToken(usuario)));
   }
 

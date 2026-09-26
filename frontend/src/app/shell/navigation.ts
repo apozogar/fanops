@@ -88,6 +88,13 @@ const SUPERADMIN: NavSection = {
             shortLabel: 'Peñas',
             icon: 'super-admin',
             route: 'penas'
+        },
+        {
+            id: 'historial-accesos',
+            label: 'Historial de accesos',
+            shortLabel: 'Accesos',
+            icon: 'historial',
+            route: 'historial-accesos'
         }
     ]
 };

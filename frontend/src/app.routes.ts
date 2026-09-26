@@ -101,6 +101,11 @@ export const appRoutes: Routes = [
                 canActivate: [superAdminGuard]
             },
             {
+                path: 'historial-accesos',
+                loadComponent: () => import('@/pages/gestion/historial-accesos/HistorialAccesosComponent').then((m) => m.HistorialAccesosComponent),
+                canActivate: [superAdminGuard]
+            },
+            {
                 path: 'carnet-socio',
                 component: CarnetSocioComponent
             },
