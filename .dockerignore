@@ -1,6 +1,5 @@
-# .git SÍ hace falta en el contexto de build: git-commit-id-maven-plugin lo lee para escribir
-# el commit del build en git.properties (lo expone /management/info). Sin él, el propio COPY
-# .git ./.git del Dockerfile falla porque Docker nunca recibe la carpeta.
+# Ignorar archivos y carpetas de Git
+.git
 .gitignore
 
 # Ignorar la carpeta de compilación de Maven

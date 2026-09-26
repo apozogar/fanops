@@ -34,6 +34,7 @@
     <node.version>v22.20.0</node.version>
     <npm.version>10.9.0</npm.version>
     <poi.version>5.4.0</poi.version>
+    <commit.id>local</commit.id>
   </properties>
   <dependencies>
     <dependency>
@@ -138,6 +139,16 @@
 
   <build>
     <plugins>
+      <!--
+        Escribe el commit del build en build-info.properties (lo expone /management/info),
+        para identificar qué despliegue está corriendo. El commit llega por la propiedad
+        commit.id: el checkout que hace Coolify no trae el directorio .git (el tamaño del
+        contexto de build no cambia lo copiemos o no), así que leerlo de un repo Git in situ
+        no es una opción; el Dockerfile lo recibe como build arg (SOURCE_COMMIT, que Coolify
+        solo pasa con "Include Source Commit in Build" activado) y se lo pasa a Maven con
+        -Dcommit.id=... En un build local sin ese flag, commit.id conserva su valor por
+        defecto ("local").
+      -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
@@ -146,36 +157,13 @@
             <goals>
               <goal>build-info</goal>
             </goals>
+            <configuration>
+              <additionalProperties>
+                <commit>${commit.id}</commit>
+              </additionalProperties>
+            </configuration>
           </execution>
         </executions>
-      </plugin>
-      <!--
-        Genera git.properties con el commit del build. Solo así /management/info puede
-        identificar qué despliegue está corriendo; sin esto, dos versiones desplegadas serían
-        indistinguibles desde fuera. El Dockerfile copia el .git al build stage para que el
-        plugin tenga de dónde leerlo (failOnNoGitDirectory=false por si algún build lo hiciera
-        sin repo, para no romper el empaquetado por esto).
-      -->
-      <plugin>
-        <groupId>io.github.git-commit-id</groupId>
-        <artifactId>git-commit-id-maven-plugin</artifactId>
-        <version>9.0.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>revision</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <failOnNoGitDirectory>false</failOnNoGitDirectory>
-          <includeOnlyProperties>
-            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
-            <includeOnlyProperty>^git.commit.time$</includeOnlyProperty>
-            <includeOnlyProperty>^git.branch$</includeOnlyProperty>
-          </includeOnlyProperties>
-        </configuration>
       </plugin>
     </plugins>
   </build>

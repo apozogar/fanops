@@ -20,6 +20,11 @@ RUN npm run build -- --configuration=production
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
+# Commit del build, para identificar el despliegue desde /management/info (ver pom.xml).
+# Coolify solo rellena este build arg con "Include Source Commit in Build" activado en
+# Configuration > Advanced; sin eso queda "unknown" y el jar se sigue empaquetando igual.
+ARG SOURCE_COMMIT=unknown
+
 # Las dependencias primero, para que un cambio en el código fuente no vuelva a bajarlas.
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:go-offline
@@ -27,11 +32,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B dependency:go-offline
 # El frontend compilado se sirve desde dentro del jar (ver SpaWebConfig).
 COPY --from=frontend-builder /app/frontend/dist/browser/ src/main/resources/static/
 COPY src ./src
-# El .git hace falta para que git-commit-id-maven-plugin escriba el commit del build en
-# git.properties (lo expone /management/info): sin él no habría forma de saber, mirando un
-# despliegue ya corriendo, de qué commit salió.
-COPY .git ./.git
-RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests -Dcommit.id=${SOURCE_COMMIT}
 
 # ------------------------------------
 # FASE 3: IMAGEN FINAL DE PRODUCCIÓN

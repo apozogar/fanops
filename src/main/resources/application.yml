@@ -81,10 +81,9 @@ management:
       exposure:
         include: health, info # Exponemos explícitamente los endpoints que queremos
   info:
-    # git.properties y build-info.properties los genera el build de Maven (ver pom.xml): sin
-    # esto /management/info no tendría de dónde sacar el commit ni la fecha del build.
-    git:
-      mode: full
+    # build-info.properties lo genera el build de Maven (ver pom.xml, incluye el commit como
+    # propiedad adicional): sin esto /management/info no tendría de dónde sacar la versión
+    # desplegada.
     build:
       enabled: true
   endpoint:
