@@ -80,7 +80,12 @@ import { VersionService } from '@/core/platform/version.service';
 
                 @if (version(); as v) {
                     <p class="truncate px-4 pb-3 text-xs text-ink-subtle">
-                        Versión {{ v.commit }}
+                        @if (v.version) {
+                            v{{ v.version }}
+                        }
+                        @if (v.commit) {
+                            ({{ v.commit }})
+                        }
                         @if (v.fecha) {
                             · {{ v.fecha | date: 'dd/MM/yy HH:mm' }}
                         }
