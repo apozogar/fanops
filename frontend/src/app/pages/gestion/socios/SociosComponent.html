@@ -397,101 +397,159 @@
     </ng-template>
 </p-dialog>
 
-<!-- Modal de historial de eventos y faltas del socio -->
+<!-- Modal de eventos del socio: su historial con las faltas y, arriba, a qué se le puede apuntar.
+     Mismo formato que el listado de inscripciones de un evento: pantalla completa en móvil y una
+     tarjeta por fila, porque desde aquí se atiende al socio que llama o lo pide en persona. -->
 <p-dialog
     [(visible)]="historialDialog"
-    [style]="{ width: '900px' }"
-    [breakpoints]="{ '960px': '95vw' }"
+    [style]="{ width: '960px' }"
+    styleClass="fo-dlg-completo"
     [modal]="true"
-    [header]="historial ? 'Eventos de ' + historial.nombre : 'Eventos del socio'"
+    [draggable]="false"
+    [dismissableMask]="true"
 >
-    <ng-template pTemplate="content">
+    <ng-template #header>
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="fo-avatar fo-avatar-socio" aria-hidden="true">{{ iniciales(historial?.nombre) }}</div>
+            <div class="flex flex-col min-w-0">
+                <span class="text-xs uppercase tracking-wide text-ink-muted">Eventos del socio</span>
+                <span class="text-xl font-semibold text-ink break-words">{{ historial?.nombre ?? 'Cargando…' }}</span>
+                @if (historial?.numeroSocio != null) {
+                <span class="text-sm text-ink-muted">Nº {{ historial?.numeroSocio }}</span>
+                }
+            </div>
+        </div>
+    </ng-template>
+
+    <ng-template #content>
         @if (historialCargando) {
         <div class="text-muted-color py-6 text-center">Cargando historial…</div>
         } @else if (historial) {
-        <!-- Resumen arriba: lo primero que se quiere saber es cuántas faltas acumula y si
-             todavía le penalizan. Las cuatro tarjetas tienen la misma estructura (rótulo y
-             número, sin pies de texto) para que midan igual también con dos por fila en móvil. -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-            <div class="card mb-0 h-full !p-3 md:!p-4">
-                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Faltas acumuladas</span>
-                <div class="font-medium text-xl md:text-2xl" [class.text-red-500]="historial.faltasAcumuladas > 0">{{ historial.faltasAcumuladas }}</div>
+        <div class="flex flex-col gap-6">
+            <!-- Resumen: lo primero que se quiere saber es cuántas faltas acumula y si todavía le
+                 penalizan antes de apuntarle a nada. -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                <div class="fo-tab !cursor-default">
+                    <span class="text-2xl font-bold leading-none" [class.text-danger]="historial.faltasAcumuladas > 0">{{ historial.faltasAcumuladas }}</span>
+                    <span class="text-sm">Faltas acumuladas</span>
+                </div>
+                <div class="fo-tab !cursor-default" pTooltip="Cada una manda una inscripción a lista de espera" tooltipPosition="top">
+                    <span class="text-2xl font-bold leading-none" [class.text-warn]="historial.faltasPendientes > 0">{{ historial.faltasPendientes }}</span>
+                    <span class="text-sm">Faltas activas</span>
+                </div>
+                <div class="fo-tab !cursor-default">
+                    <span class="text-2xl font-bold leading-none">{{ historial.eventosConPlaza }}</span>
+                    <span class="text-sm">Eventos con plaza</span>
+                </div>
+                <div class="fo-tab !cursor-default">
+                    <span class="text-2xl font-bold leading-none text-accent">{{ historial.eventosAsistidos }}</span>
+                    <span class="text-sm">Asistencias</span>
+                </div>
             </div>
-            <div class="card mb-0 h-full !p-3 md:!p-4" pTooltip="Cada una manda una inscripción a lista de espera" tooltipPosition="top">
-                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Faltas activas</span>
-                <div class="font-medium text-xl md:text-2xl" [class.text-orange-500]="historial.faltasPendientes > 0">{{ historial.faltasPendientes }}</div>
-            </div>
-            <div class="card mb-0 h-full !p-3 md:!p-4">
-                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Eventos con plaza</span>
-                <div class="font-medium text-xl md:text-2xl">{{ historial.eventosConPlaza }}</div>
-            </div>
-            <div class="card mb-0 h-full !p-3 md:!p-4">
-                <span class="block text-muted-color font-medium mb-1 text-xs md:text-sm">Asistencias</span>
-                <div class="font-medium text-xl md:text-2xl text-primary">{{ historial.eventosAsistidos }}</div>
-            </div>
-        </div>
 
-        <p-table [value]="historial.eventos" [rows]="8" [paginator]="historial.eventos.length > 8" dataKey="eventoUid" [rowHover]="true">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th scope="col">Evento</th>
-                    <th scope="col" class="hidden md:table-cell" style="width: 120px">Fecha</th>
-                    <th scope="col" class="hidden md:table-cell" style="width: 190px">Resultado</th>
-                    <th scope="col" class="hidden md:table-cell" style="width: 150px">Falta</th>
-                    <th scope="col" style="width: 70px">Perdonar</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-fila>
-                <tr>
-                    <td>
-                        <div class="font-medium">{{ fila.nombreEvento }}</div>
-                        <!-- En móvil no caben cinco columnas: fecha, resultado y falta se apilan
-                             bajo el nombre del evento en vez de perderse. -->
-                        <div class="md:hidden mt-1.5 flex flex-wrap items-center gap-2">
-                            <span class="text-xs text-muted-color">{{ fila.fechaEvento | date: 'dd/MM/yyyy' }}</span>
-                            <p-tag [severity]="resultadoEventoSeverity(fila)" [value]="resultadoEventoTexto(fila)" />
-                            @if (fila.faltaUid) {
-                            <span class="text-xs text-red-500 font-medium">{{ faltaTexto(fila) }}</span>
+            <!-- Apuntar a un evento. Mismas reglas que si se apuntara él: plazo, hueco,
+                 penalizaciones y prioridad; el backend lo vuelve a comprobar todo. -->
+            <section class="flex flex-col gap-2">
+                <h3 class="text-base font-semibold text-ink flex items-center gap-2">
+                    <fo-icon name="inscribirse" [size]="18" /> Apuntar a un evento
+                </h3>
+                <ul class="fo-lista">
+                    @for (evento of eventosDisponibles; track evento.uid) {
+                    <li class="fo-fila">
+                        <div class="fo-fila-cabecera">
+                            <div class="fo-avatar" aria-hidden="true"><fo-icon name="calendario" [size]="20" /></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-base text-ink break-words">{{ evento.nombreEvento }}</div>
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-ink-muted">
+                                    <span class="inline-flex items-center gap-1">
+                                        <fo-icon name="calendario" [size]="14" />{{ evento.fechaEvento | date: 'dd/MM/yyyy' }}
+                                    </span>
+                                    @if (evento.fechaLimiteInscripcion) {
+                                    <span class="inline-flex items-center gap-1">
+                                        <fo-icon name="hora" [size]="14" />Hasta {{ evento.fechaLimiteInscripcion | date: 'dd/MM HH:mm' }}
+                                    </span>
+                                    }
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                    <fo-tag [tone]="evento.plazasLibres === 0 ? 'warn' : 'success'">{{ plazasTexto(evento) }}</fo-tag>
+                                    @if (sorteoAbierto(evento)) {
+                                    <fo-tag tone="info">Sortea {{ evento.plazasCarnet }} carnet{{ evento.plazasCarnet === 1 ? '' : 's' }}</fo-tag>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="fo-acciones">
+                            <button foButton variant="primary" class="flex-1 sm:flex-none"
+                                    [loading]="apuntando === evento.uid + ':evento'"
+                                    [disabled]="apuntando !== null"
+                                    (click)="apuntarAEvento(evento, false)">
+                                <fo-icon name="inscribirse" [size]="16" /><span>{{ sorteoAbierto(evento) ? 'Solo al evento' : 'Apuntar' }}</span>
+                            </button>
+                            @if (sorteoAbierto(evento)) {
+                            <button foButton variant="info" class="flex-1 sm:flex-none"
+                                    [loading]="apuntando === evento.uid + ':sorteo'"
+                                    [disabled]="apuntando !== null"
+                                    (click)="apuntarAEvento(evento, true)">
+                                <fo-icon name="entrada" [size]="16" /><span>Al sorteo del carnet</span>
+                            </button>
                             }
                         </div>
-                    </td>
-                    <td class="hidden md:table-cell">{{ fila.fechaEvento | date: 'dd/MM/yyyy' }}</td>
-                    <td class="hidden md:table-cell"><p-tag [severity]="resultadoEventoSeverity(fila)" [value]="resultadoEventoTexto(fila)" /></td>
-                    <td class="hidden md:table-cell">
-                        @if (fila.faltaUid) {
-                        <div class="flex flex-col">
-                            <span class="text-red-500 font-medium text-sm">{{ faltaTexto(fila) }}</span>
-                            <span class="text-xs text-muted-color">{{ fila.fechaFalta | date: 'dd/MM/yyyy' }}</span>
+                    </li>
+                    } @empty {
+                    <li class="fo-vacio">No hay eventos con la inscripción abierta a los que no esté ya apuntado.</li>
+                    }
+                </ul>
+            </section>
+
+            <section class="flex flex-col gap-2">
+                <h3 class="text-base font-semibold text-ink flex items-center gap-2">
+                    <fo-icon name="historial" [size]="18" /> Sus eventos
+                </h3>
+                <ul class="fo-lista">
+                    @for (fila of historial.eventos; track fila.eventoUid) {
+                    <li class="fo-fila">
+                        <div class="fo-fila-cabecera">
+                            <div class="fo-avatar" [class.fo-avatar-falta]="fila.faltaUid" [class.fo-avatar-socio]="!fila.faltaUid && fila.asistencia === 'ASISTIO'"
+                                 aria-hidden="true"><fo-icon [name]="fila.faltaUid ? 'aviso' : fila.asistencia === 'ASISTIO' ? 'check' : 'calendario'" [size]="20" /></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-base text-ink break-words">{{ fila.nombreEvento }}</div>
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-ink-muted">
+                                    <span class="inline-flex items-center gap-1">
+                                        <fo-icon name="calendario" [size]="14" />{{ fila.fechaEvento | date: 'dd/MM/yyyy' }}
+                                    </span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                    <p-tag [severity]="resultadoEventoSeverity(fila)" [value]="resultadoEventoTexto(fila)" />
+                                    @if (fila.faltaUid) {
+                                    <fo-tag [tone]="fila.penalizacionesRestantes > 0 ? 'danger' : 'neutral'">
+                                        {{ faltaTexto(fila) }} · {{ fila.fechaFalta | date: 'dd/MM/yyyy' }}
+                                    </fo-tag>
+                                    }
+                                </div>
+                            </div>
                         </div>
-                        } @else {
-                        <span class="text-muted-color">—</span>
-                        }
-                    </td>
-                    <td style="width: 70px">
                         @if (fila.faltaUid) {
-                        <button
-                            foButton
-                            variant="ghost"
-                            size="icon-sm"
-                            class="rounded-full"
-                            [loading]="perdonando === fila.faltaUid"
-                            [disabled]="perdonando !== null"
-                            (click)="perdonarFalta(fila)"
-                            pTooltip="Perdonar la falta"
-                            tooltipPosition="top"
-                            aria-label="Perdonar la falta"
-                        ><fo-icon name="confirmar" [size]="16" /></button>
+                        <div class="fo-acciones">
+                            <button foButton variant="warning" class="flex-1 sm:flex-none"
+                                    [loading]="perdonando === fila.faltaUid"
+                                    [disabled]="perdonando !== null"
+                                    (click)="perdonarFalta(fila)"
+                                    [attr.aria-label]="'Perdonar la falta de ' + fila.nombreEvento">
+                                <fo-icon name="confirmar" [size]="16" /><span>Perdonar falta</span>
+                            </button>
+                        </div>
                         }
-                    </td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="5" class="text-center text-muted-color py-6">Este socio no se ha inscrito todavía a ningún evento.</td>
-                </tr>
-            </ng-template>
-        </p-table>
+                    </li>
+                    } @empty {
+                    <li class="fo-vacio">Este socio no se ha inscrito todavía a ningún evento.</li>
+                    }
+                </ul>
+            </section>
+        </div>
         }
+    </ng-template>
+    <ng-template #footer>
+        <button foButton variant="secondary" class="w-full sm:w-auto" (click)="historialDialog = false">Cerrar</button>
     </ng-template>
 </p-dialog>
 

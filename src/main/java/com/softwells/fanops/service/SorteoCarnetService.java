@@ -7,6 +7,7 @@ import com.softwells.fanops.controller.dto.SorteoResumenDTO;
 import com.softwells.fanops.enums.EstadoSolicitudCarnet;
 import com.softwells.fanops.enums.EstadoSorteo;
 import com.softwells.fanops.model.EventoEntity;
+import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.SolicitudCarnetEntity;
 import com.softwells.fanops.model.SorteoCarnetEntity;
@@ -47,11 +48,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class SorteoCarnetService {
 
+  /** Tope de papeletas extra por participante, para que un error al teclear no decida el sorteo. */
+  static final int MAX_PAPELETAS_EXTRA = 100;
+
   private final EventoRepository eventoRepository;
   private final SorteoCarnetRepository sorteoRepository;
   private final SolicitudCarnetRepository solicitudRepository;
   private final FichasUsuarioService fichasUsuarioService;
   private final NotificacionService notificacionService;
+  private final UsuarioService usuarioService;
 
   // ----------------------------------------------------------------
   // Programación del sorteo
@@ -202,6 +207,51 @@ public class SorteoCarnetService {
     return construirDto(evento);
   }
 
+  /**
+   * Fija las papeletas extra de un participante (acción de gestión). Se suman a las del historial
+   * y se publican junto al total, así que el sorteo sigue siendo comprobable desde fuera.
+   *
+   * <p>Solo mientras el sorteo no se ha celebrado, y solo si la peña del socio tiene la opción
+   * activada y es la misma que la de quien gestiona: un admin no puede tocar el bombo de otra.
+   *
+   * @param papeletasExtra papeletas a sumar, entre 0 y {@value #MAX_PAPELETAS_EXTRA}; 0 las quita
+   */
+  public SorteoCarnetDTO ajustarPapeletasExtra(UUID eventoId, UUID socioUid, int papeletasExtra) {
+    if (papeletasExtra < 0 || papeletasExtra > MAX_PAPELETAS_EXTRA) {
+      throw new IllegalArgumentException(
+          "Las papeletas extra tienen que estar entre 0 y " + MAX_PAPELETAS_EXTRA + ".");
+    }
+    EventoEntity evento = findEvento(eventoId);
+    // Si ya le tocaba celebrarse, se celebra antes: ajustar un bombo que debería estar vacío
+    // cambiaría un resultado que en rigor ya existe.
+    celebrarSiVencido(eventoId);
+    SorteoCarnetEntity sorteo = sorteoRepository.findByEventoUid(eventoId)
+        .orElseThrow(() -> new EntityNotFoundException("Este evento no sortea carnets."));
+    if (sorteo.estaEjecutado()) {
+      throw new IllegalStateException(
+          "El sorteo ya se ha celebrado: sus papeletas no se pueden cambiar.");
+    }
+
+    SolicitudCarnetEntity solicitud = solicitudRepository.findByEventoUidAndSocioUid(eventoId,
+            socioUid)
+        .orElseThrow(() -> new EntityNotFoundException("Ese socio no está en el bombo."));
+    PenaEntity penaSocio = solicitud.getSocio().getPena();
+    PenaEntity miPena = usuarioService.obtenerPenaDelUsuarioAutenticado();
+    if (penaSocio == null || !penaSocio.getId().equals(miPena.getId())) {
+      throw new IllegalStateException("Ese socio no pertenece a tu peña.");
+    }
+    if (!penaSocio.permitePapeletasExtraSorteo()) {
+      throw new IllegalStateException(
+          "Las papeletas extra no están activadas para esta peña.");
+    }
+
+    solicitud.setPapeletasExtra(papeletasExtra == 0 ? null : papeletasExtra);
+    solicitudRepository.save(solicitud);
+    log.info("Papeletas extra de {} en el sorteo del evento {}: {}",
+        solicitud.getSocio().getNombre(), eventoId, papeletasExtra);
+    return construirDto(evento);
+  }
+
   // ----------------------------------------------------------------
   // Celebración
   // ----------------------------------------------------------------
@@ -245,8 +295,7 @@ public class SorteoCarnetService {
     }
 
     List<SolicitudCarnetEntity> participantes = participantesEnOrdenEstable(eventoId);
-    participantes.forEach(
-        solicitud -> solicitud.setPesoSorteo(papeletasDe(solicitud.getSocio().getUid())));
+    participantes.forEach(solicitud -> solicitud.setPesoSorteo(papeletasTotales(solicitud)));
 
     List<SolicitudCarnetEntity> extraidos = SorteoAleatorio.extraer(participantes,
         SolicitudCarnetEntity::getPesoSorteo, sorteo.getSemilla());
@@ -296,6 +345,34 @@ public class SorteoCarnetService {
     return 1 + sinPremio;
   }
 
+  /** Papeletas con las que entra una solicitud: las del historial más las extra que cuenten. */
+  private int papeletasTotales(SolicitudCarnetEntity solicitud) {
+    return papeletasDe(solicitud.getSocio().getUid()) + papeletasExtraEfectivas(solicitud);
+  }
+
+  /**
+   * Papeletas extra que de verdad cuentan: si la peña desactiva la opción, las que se hubieran
+   * puesto dejan de sumar sin necesidad de ir borrándolas una a una.
+   */
+  private int papeletasExtraEfectivas(SolicitudCarnetEntity solicitud) {
+    PenaEntity pena = solicitud.getSocio().getPena();
+    Integer extra = solicitud.getPapeletasExtra();
+    return pena != null && pena.permitePapeletasExtraSorteo() && extra != null ? extra : 0;
+  }
+
+  /** true si quien consulta puede ajustar papeletas extra en un sorteo sin celebrar. */
+  private boolean ajustePapeletasPermitido(SorteoCarnetEntity sorteo) {
+    if (sorteo.estaEjecutado()) {
+      return false;
+    }
+    try {
+      return usuarioService.obtenerPenaDelUsuarioAutenticado().permitePapeletasExtraSorteo();
+    } catch (RuntimeException sinPena) {
+      // Un superadmin sin peña seleccionada o un usuario sin peña: no hay nada que ajustar.
+      return false;
+    }
+  }
+
   // ----------------------------------------------------------------
   // Construcción de la vista
   // ----------------------------------------------------------------
@@ -332,7 +409,8 @@ public class SorteoCarnetService {
             .nombre(solicitud.getSocio().getNombre())
             .papeletas(solicitud.getPesoSorteo() != null
                 ? solicitud.getPesoSorteo()
-                : papeletasDe(solicitud.getSocio().getUid()))
+                : papeletasTotales(solicitud))
+            .papeletasExtra(papeletasExtraEfectivas(solicitud))
             .posicion(solicitud.getPosicionSorteo())
             .estado(solicitud.getEstado())
             .propio(uidsPropios.contains(solicitud.getSocio().getUid()))
@@ -348,9 +426,9 @@ public class SorteoCarnetService {
               .nombre(socio.getNombre())
               .estado(solicitud != null ? solicitud.getEstado() : null)
               .posicion(solicitud != null ? solicitud.getPosicionSorteo() : null)
-              .papeletas(solicitud != null && solicitud.getPesoSorteo() != null
-                  ? solicitud.getPesoSorteo()
-                  : papeletasDe(socio.getUid()))
+              .papeletas(solicitud == null ? papeletasDe(socio.getUid())
+                  : solicitud.getPesoSorteo() != null ? solicitud.getPesoSorteo()
+                  : papeletasTotales(solicitud))
               .build();
         })
         .collect(Collectors.toList());
@@ -363,6 +441,7 @@ public class SorteoCarnetService {
         .estado(sorteo.getEstado())
         .abierto(!sorteo.estaEjecutado())
         .admiteSolicitudes(admiteSolicitudes(evento, sorteo))
+        .ajustePapeletasPermitido(ajustePapeletasPermitido(sorteo))
         .hashSemilla(sorteo.getHashSemilla())
         // La semilla solo se revela con el sorteo ya celebrado: antes permitiría calcular el
         // resultado por adelantado y elegir cuándo apuntarse en consecuencia.

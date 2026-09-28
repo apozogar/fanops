@@ -41,6 +41,11 @@ Frontend (desde `frontend/`):
     inscribe a esa ficha exactamente como desde la app: el correo es lo que valida al socio. En un
     multicarnet, con varias fichas en el mismo correo, se elige por el nombre escrito; si no
     coincide con ninguna, entra como no socio (`EventoService.socioPorCorreo`).
+  - Desde el **listado de socios** (modal de eventos del socio) la gestión puede apuntar a un
+    socio que no usa la app, al evento o al sorteo del carnet
+    (`POST /api/eventos/{id}/socios/{socioUid}/inscribir?sorteoCarnet=`). Sigue exactamente las
+    mismas reglas que si se apuntara él (plazo, hueco, penalizaciones) y solo alcanza a socios de
+    la peña de quien gestiona (`EventoService.inscribirSocioDesdeGestion`).
   - Cuando se anula una inscripción confirmada o el admin ejecuta `asignar-plazas`, se promocionan los de espera (prioridad: socios al día, luego por fecha de inscripción).
   - El plazo de inscripción por evento se guarda en `EventoEntity.fechaLimiteInscripcion`; fuera de plazo no se admiten inscripciones.
 - **Cuenta de acceso de un socio**: el camino normal es que la persona se registre y confirme el enlace de vinculación enviado a su correo (`VinculacionSocioService`). Desde el listado de socios, un admin puede además crearla a mano con una contraseña (`POST /api/socios/{id}/cuenta`), para socios que no van a registrarse; ahí los roles solo se fijan al crear la cuenta, nunca al cambiar una contraseña.
@@ -73,6 +78,12 @@ Frontend (desde `frontend/`):
   - El reparto es **ponderado**: cada socio entra con 1 papeleta más otra por cada sorteo en el
     que participó y se quedó sin carnet desde la última vez que le tocó. Ganar (o ganar y
     renunciar) devuelve el contador a 1.
+  - **Papeletas extra**: si la peña tiene activado `papeletasExtraSorteo` (lo activa el
+    superadmin en la ficha de la peña), la gestión puede sumar papeletas a mano a un participante
+    (`PUT /api/eventos/{id}/sorteo-carnet/papeletas-extra/{socioUid}`, entre 0 y 100) mientras el
+    sorteo no se ha celebrado. Se suman a las del historial al fijar el peso, y se publican
+    aparte (`papeletasExtra`) para que el reparto siga siendo comprobable. Si la peña desactiva
+    la opción, las que hubiera dejan de contar.
   - La semilla se genera al **programar** el evento y no se regenera nunca; hasta que el sorteo se
     celebra solo se publica su SHA-256. Eso es lo que permite adelantarlo sin que cambie el
     resultado y lo que hace el sorteo comprobable desde fuera (`SorteoAleatorio`).

@@ -1,6 +1,7 @@
 package com.softwells.fanops.controller;
 
 import com.softwells.fanops.controller.dto.ApiResponse;
+import com.softwells.fanops.controller.dto.PapeletasExtraRequest;
 import com.softwells.fanops.controller.dto.SolicitudCarnetRequest;
 import com.softwells.fanops.controller.dto.ApuntarSorteoResultado;
 import com.softwells.fanops.controller.dto.SocioInscripcionDTO;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -109,5 +111,18 @@ public class SorteoCarnetController {
   public ResponseEntity<ApiResponse<SorteoCarnetDTO>> celebrar(@PathVariable UUID id) {
     SorteoCarnetDTO sorteo = sorteoCarnetService.celebrarAhora(id);
     return ResponseEntity.ok(new ApiResponse<>(true, "Sorteo celebrado.", sorteo));
+  }
+
+  /**
+   * Fija las papeletas extra de un participante. Solo la gestión, solo con la opción activada
+   * para la peña y solo antes de celebrarse el sorteo.
+   */
+  @PutMapping("/papeletas-extra/{socioUid}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<ApiResponse<SorteoCarnetDTO>> ajustarPapeletasExtra(@PathVariable UUID id,
+      @PathVariable UUID socioUid, @RequestBody PapeletasExtraRequest request) {
+    SorteoCarnetDTO sorteo = sorteoCarnetService.ajustarPapeletasExtra(id, socioUid,
+        request.getPapeletasExtra());
+    return ResponseEntity.ok(new ApiResponse<>(true, "Papeletas guardadas.", sorteo));
   }
 }

@@ -74,7 +74,7 @@
 
 <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-<p-dialog [(visible)]="penaDialog" [style]="{ width: '650px' }" header="Datos de la Peña" [modal]="true">
+<p-dialog [(visible)]="penaDialog" [style]="{ width: '80%' }" header="Datos de la Peña" [modal]="true">
     <ng-template #content>
         <div class="flex flex-col gap-6 w-full">
             <div class="flex flex-col gap-6">
@@ -196,6 +196,13 @@
                         <p-inputNumber id="eventosPenalizacionPorFalta" [(ngModel)]="pena.eventosPenalizacionPorFalta"
                                        [min]="0" [max]="20" class="w-full" styleClass="w-full" />
                         <small class="text-ink-muted">Inscripciones que irán a lista de espera por cada falta. 0 registra las faltas sin penalizar.</small>
+                    </div>
+                </div>
+                <div class="flex items-start gap-2">
+                    <p-checkbox [(ngModel)]="pena.papeletasExtraSorteo" [binary]="true" inputId="papeletasExtraSorteo"></p-checkbox>
+                    <div>
+                        <label for="papeletasExtraSorteo" class="font-semibold">Papeletas extra en el sorteo de carnets</label>
+                        <small class="block text-ink-muted">Permite a la gestión de la peña sumar papeletas a mano a participantes concretos. Se publican junto al total, así que el sorteo sigue siendo comprobable.</small>
                     </div>
                 </div>
             </div>

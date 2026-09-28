@@ -48,4 +48,10 @@ export class SorteoCarnetService {
   celebrar(eventoUid: string): Observable<ApiResponse<SorteoCarnet>> {
     return this.http.post<ApiResponse<SorteoCarnet>>(`${this.base(eventoUid)}/celebrar`, {});
   }
+
+  /** Fija las papeletas extra de un participante (administración). 0 las quita. */
+  ajustarPapeletasExtra(eventoUid: string, socioUid: string, papeletasExtra: number): Observable<ApiResponse<SorteoCarnet>> {
+    return this.http.put<ApiResponse<SorteoCarnet>>(`${this.base(eventoUid)}/papeletas-extra/${socioUid}`,
+      { papeletasExtra });
+  }
 }

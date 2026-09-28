@@ -99,7 +99,7 @@
                 <td>
                     <div class="flex items-center gap-1.5">
                         <button foButton variant="ghost" size="icon-sm" class="rounded-full"
-                                (click)="mostrarInscripciones(evento)" pTooltip="Ver Inscritos"
+                                (click)="abrirInscripciones(evento)" pTooltip="Ver Inscritos"
                                 tooltipPosition="top" aria-label="Ver inscritos"
                         ><fo-icon name="socios" [size]="16" /></button>
                         <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
@@ -109,6 +109,12 @@
                                 pTooltip="Celebrar ya el sorteo de carnets"
                                 tooltipPosition="top" aria-label="Celebrar el sorteo de carnets"
                         ><fo-icon name="entrada" [size]="16" /></button>
+                        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
+                                size="icon-sm" class="rounded-full"
+                                (click)="abrirBombo(evento)"
+                                pTooltip="Ver el bombo del sorteo"
+                                tooltipPosition="top" aria-label="Ver el bombo del sorteo"
+                        ><fo-icon name="ajustes" [size]="16" /></button>
                         <button foButton variant="ghost" size="icon-sm" class="rounded-full"
                                 (click)="copiarEnlacePublico(evento)"
                                 pTooltip="Copiar enlace público (no socios)"
@@ -260,196 +266,258 @@
 
 <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-<!-- Diálogo con el listado de inscripciones (confirmados + lista de espera) -->
-<p-dialog [(visible)]="inscripcionesDialog" [style]="{ width: '850px' }"
-          header="Inscripciones"
-          [modal]="true" (onHide)="inscripciones = []">
+<!-- Bombo del sorteo de carnets, con las papeletas extra si la peña las tiene activadas -->
+<p-dialog [(visible)]="bomboDialog" [style]="{ width: '720px', maxWidth: '95vw' }"
+          header="Bombo del sorteo de carnets" [modal]="true" (onHide)="bombo = null">
     <ng-template #content>
-        <div *ngIf="eventoSeleccionado" class="mb-4">
-            <span class="font-semibold">{{ eventoSeleccionado.nombreEvento }}</span>
-            <button foButton variant="primary" class="ml-4"
-                    [loading]="asignandoPlazas"
-                    [disabled]="enEspera.length === 0 || asignandoPlazas"
-                    (click)="asignarPlazas()">
-                <fo-icon name="usuario-nuevo" />
-                <span>Asignar plazas de espera</span>
-            </button>
-        </div>
+        <div *ngIf="!bombo" class="py-6 text-center text-muted-color">Cargando…</div>
+        <div *ngIf="bombo" class="flex flex-col gap-3">
+            <div>
+                <span class="font-semibold">{{ bombo.nombreEvento }}</span>
+                <span class="text-muted-color text-sm ml-2">
+                    {{ bombo.plazasCarnet }} carnets · {{ bombo.participantes.length }} en el bombo
+                </span>
+            </div>
+            <small *ngIf="!bombo.ajustePapeletasPermitido" class="text-ink-muted">
+                Las papeletas extra no están activadas para esta peña. Se activan desde la ficha de la
+                peña en el panel de superadmin.
+            </small>
+            <small *ngIf="bombo.ajustePapeletasPermitido" class="text-ink-muted">
+                Las papeletas extra se suman a las del historial. El total de cada participante es
+                público y es con el que se celebra el sorteo.
+            </small>
 
-        <p-accordion value="0">
-            <p-accordion-panel value="0">
-                <p-accordion-header>
-                    Confirmados ({{ inscritos.length }})
-                    <span *ngIf="pendientesDeLista > 0" class="text-ink-muted text-sm ml-2">
-                        · {{ pendientesDeLista }} sin pasar lista
-                    </span>
-                </p-accordion-header>
-                <p-accordion-content>
-                    <p-table [value]="inscritos" [rows]="10" [paginator]="true" [rowHover]="true"
-                             dataKey="uid">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th>Nº Socio</th>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>Teléfono</th>
-                                <th>Inscripción</th>
-                                <th class="text-center">Asistencia</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-inscripcion>
-                            <tr>
-                                <td>{{ inscripcion.numeroSocio ?? '—' }}</td>
-                                <td>
-                                    {{ inscripcion.nombre }}
-                                    <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
-                                           value="Socio" class="ml-1"></p-tag>
-                                    <p-tag *ngIf="inscripcion.faltasAcumuladas > 0" severity="warn"
-                                           [value]="inscripcion.faltasAcumuladas + ' falta(s)'"
-                                           class="ml-1"></p-tag>
-                                    <p-tag *ngIf="inscripcion.penalizacionesPendientes > 0" severity="danger"
-                                           [value]="'a espera x' + inscripcion.penalizacionesPendientes"
-                                           class="ml-1"></p-tag>
-                                </td>
-                                <td>{{ inscripcion.email }}</td>
-                                <td>{{ inscripcion.telefono }}</td>
-                                <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <!-- Pasar lista: se marca a cada uno como presente o ausente.
-                                     Volver a pulsar el botón ya activo retira la marca. -->
-                                <td class="text-center whitespace-nowrap">
-                                    <button foButton size="icon-sm" class="rounded-full"
-                                            [variant]="inscripcion.asistencia === 'ASISTIO' ? 'primary' : 'ghost'"
-                                            [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="marcarAsistencia(inscripcion, 'ASISTIO')"
-                                            pTooltip="Vino" tooltipPosition="top"
-                                            [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' vino'"
-                                    ><fo-icon name="check" [size]="16" /></button>
-                                    <button foButton size="icon-sm" class="rounded-full ml-1"
-                                            [variant]="inscripcion.asistencia === 'NO_ASISTIO' ? 'danger' : 'ghost'"
-                                            [disabled]="marcandoAsistencia === inscripcion.uid"
-                                            (click)="marcarAsistencia(inscripcion, 'NO_ASISTIO')"
-                                            pTooltip="No vino (genera falta)" tooltipPosition="top"
-                                            [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' no vino'"
-                                    ><fo-icon name="cerrar" [size]="16" /></button>
-                                </td>
-                                <td class="text-center whitespace-nowrap">
-                                    <button foButton variant="ghost" size="icon-sm"
-                                            class="rounded-full text-danger"
-                                            [disabled]="eliminandoInscripcion === inscripcion.uid"
-                                            (click)="eliminarInscripcion(inscripcion)"
-                                            pTooltip="Dar de baja" tooltipPosition="top"
-                                            aria-label="Dar de baja"
-                                    ><fo-icon name="eliminar" [size]="16" /></button>
-                                </td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="empty">
-                            <tr><td colspan="7">No hay inscritos confirmados.</td></tr>
-                        </ng-template>
-                    </p-table>
-                </p-accordion-content>
-            </p-accordion-panel>
-            <p-accordion-panel value="1">
-                <p-accordion-header>Lista de espera ({{ enEspera.length }})</p-accordion-header>
-                <p-accordion-content>
-                    <p-table [value]="enEspera" [rows]="10" [paginator]="true" [rowHover]="true"
-                             dataKey="uid">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th>Nº Socio</th>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>Teléfono</th>
-                                <th>Alta en espera</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-inscripcion>
-                            <tr>
-                                <td>{{ inscripcion.numeroSocio ?? '—' }}</td>
-                                <td>
-                                    {{ inscripcion.nombre }}
-                                    <p-tag *ngIf="inscripcion.socioPrioritario" severity="success"
-                                           value="Socio" class="ml-1"></p-tag>
-                                    <p-tag *ngIf="inscripcion.faltasAcumuladas > 0" severity="warn"
-                                           [value]="inscripcion.faltasAcumuladas + ' falta(s)'"
-                                           class="ml-1"></p-tag>
-                                    <p-tag *ngIf="inscripcion.penalizacionesPendientes > 0" severity="danger"
-                                           [value]="'a espera x' + inscripcion.penalizacionesPendientes"
-                                           class="ml-1"></p-tag>
-                                </td>
-                                <td>{{ inscripcion.email }}</td>
-                                <td>{{ inscripcion.telefono }}</td>
-                                <td>{{ inscripcion.fechaInscripcion | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <td class="text-center">
-                                    <button foButton variant="ghost" size="icon-sm"
-                                            class="rounded-full text-danger"
-                                            [disabled]="eliminandoInscripcion === inscripcion.uid"
-                                            (click)="eliminarInscripcion(inscripcion)"
-                                            pTooltip="Quitar de la lista de espera" tooltipPosition="top"
-                                            aria-label="Quitar de la lista de espera"
-                                    ><fo-icon name="eliminar" [size]="16" /></button>
-                                </td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="empty">
-                            <tr><td colspan="6">No hay nadie en lista de espera.</td></tr>
-                        </ng-template>
-                    </p-table>
-                </p-accordion-content>
-            </p-accordion-panel>
-            <p-accordion-panel value="2">
-                <p-accordion-header>Han fallado ({{ faltas.length }})</p-accordion-header>
-                <p-accordion-content>
-                    <p-table [value]="faltas" [rows]="10" [paginator]="true" [rowHover]="true"
-                             dataKey="uid">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th>Nº Socio</th>
-                                <th>Nombre</th>
-                                <th>Motivo</th>
-                                <th>Registrada</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-falta>
-                            <tr>
-                                <td>{{ falta.numeroSocio ?? '—' }}</td>
-                                <td>
-                                    {{ falta.nombre }}
-                                    <p-tag *ngIf="falta.faltasAcumuladas > 1" severity="warn"
-                                           [value]="falta.faltasAcumuladas + ' falta(s) en total'"
-                                           class="ml-1"></p-tag>
-                                </td>
-                                <td>
-                                    {{ motivoFaltaTexto(falta) }}
-                                    <p-tag *ngIf="falta.penalizacionesRestantes > 0" severity="danger"
-                                           [value]="'a espera x' + falta.penalizacionesRestantes"
-                                           class="ml-1"></p-tag>
-                                </td>
-                                <td>{{ falta.fechaRegistro | date:'dd/MM/yyyy HH:mm' }}</td>
-                                <td class="text-center">
-                                    <button foButton variant="ghost" size="icon-sm"
-                                            class="rounded-full text-warn"
-                                            [disabled]="marcandoAsistencia === falta.uid"
-                                            (click)="quitarFalta(falta)"
-                                            pTooltip="Retirar la falta" tooltipPosition="top"
-                                            aria-label="Retirar la falta"
-                                    ><fo-icon name="check" [size]="16" /></button>
-                                </td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="empty">
-                            <tr><td colspan="5">Nadie ha fallado en este evento.</td></tr>
-                        </ng-template>
-                    </p-table>
-                </p-accordion-content>
-            </p-accordion-panel>
-        </p-accordion>
+            <p-table [value]="bombo.participantes" dataKey="socioUid" [rowHover]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Nº Socio</th>
+                        <th>Nombre</th>
+                        <th class="text-center">Historial</th>
+                        <th *ngIf="bombo.ajustePapeletasPermitido" class="text-center">Extra</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center">% papeletas</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-p>
+                    <tr>
+                        <td>{{ p.numeroSocio ?? '—' }}</td>
+                        <td>{{ p.nombre }}</td>
+                        <td class="text-center">{{ p.papeletas - (p.papeletasExtra ?? 0) }}</td>
+                        <td *ngIf="bombo.ajustePapeletasPermitido">
+                            <div class="flex items-center justify-center gap-1">
+                                <p-inputNumber [(ngModel)]="papeletasEnEdicion[p.socioUid]" [min]="0" [max]="100"
+                                               [disabled]="ajustandoPapeletas === p.socioUid"
+                                               inputStyleClass="w-14 text-center" />
+                                <button foButton variant="ghost" size="icon-sm" class="rounded-full"
+                                        [loading]="ajustandoPapeletas === p.socioUid"
+                                        [disabled]="(papeletasEnEdicion[p.socioUid] ?? 0) === (p.papeletasExtra ?? 0)"
+                                        (click)="ajustarPapeletas(p)"
+                                        pTooltip="Guardar papeletas extra" tooltipPosition="top"
+                                        aria-label="Guardar papeletas extra"
+                                ><fo-icon name="check" [size]="16" /></button>
+                            </div>
+                        </td>
+                        <td class="text-center font-semibold">{{ p.papeletas }}</td>
+                        <td class="text-center">{{ porcentajePapeletas(p.papeletas) | number:'1.0-1' }} %</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="6" class="text-center text-muted-color">Todavía no hay nadie en el bombo.</td></tr>
+                </ng-template>
+            </p-table>
+        </div>
     </ng-template>
     <ng-template #footer>
-        <button foButton variant="secondary" (click)="inscripcionesDialog = false">Cerrar</button>
+        <button foButton variant="secondary" (click)="bomboDialog = false">Cerrar</button>
+    </ng-template>
+</p-dialog>
+
+<!-- Diálogo con el listado de inscripciones (confirmados, lista de espera y faltas).
+     Se pinta como lista de tarjetas y no como tabla: la gestión se hace sobre todo desde el
+     móvil, y una tabla de siete columnas obliga a desplazarse en horizontal para pasar lista. -->
+<p-dialog [(visible)]="inscripcionesDialog" [style]="{ width: '960px' }"
+          styleClass="fo-dlg-completo" [modal]="true" [draggable]="false"
+          [dismissableMask]="true" (onHide)="inscripciones = []">
+    <ng-template #header>
+        <div *ngIf="eventoSeleccionado" class="flex flex-col min-w-0">
+            <span class="text-xs uppercase tracking-wide text-ink-muted">Inscripciones</span>
+            <span class="text-xl font-semibold text-ink break-words">{{ eventoSeleccionado.nombreEvento }}</span>
+            <span class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted mt-1">
+                <span class="inline-flex items-center gap-1">
+                    <fo-icon name="calendario" [size]="14" />
+                    {{ eventoSeleccionado.fechaEvento | date:'dd/MM/yyyy' }}
+                </span>
+                <span *ngIf="eventoSeleccionado.ubicacion" class="inline-flex items-center gap-1">
+                    <fo-icon name="ubicacion" [size]="14" />
+                    {{ eventoSeleccionado.ubicacion }}
+                </span>
+            </span>
+        </div>
+    </ng-template>
+
+    <ng-template #content>
+        <div class="flex flex-col gap-4">
+            <!-- Pestañas con contador. Son botones grandes para que se puedan pulsar con el dedo. -->
+            <div class="grid grid-cols-3 gap-2" role="tablist">
+                <button type="button" role="tab" class="fo-tab"
+                        [class.fo-tab-activa]="pestanaInscripciones === 'confirmados'"
+                        [attr.aria-selected]="pestanaInscripciones === 'confirmados'"
+                        (click)="pestanaInscripciones = 'confirmados'">
+                    <span class="text-2xl font-bold leading-none">{{ inscritos.length }}<span
+                            *ngIf="eventoSeleccionado?.numeroPlazas != null"
+                            class="text-base font-medium opacity-70">/{{ eventoSeleccionado?.numeroPlazas }}</span></span>
+                    <span class="text-sm">Confirmados</span>
+                </button>
+                <button type="button" role="tab" class="fo-tab"
+                        [class.fo-tab-activa]="pestanaInscripciones === 'espera'"
+                        [attr.aria-selected]="pestanaInscripciones === 'espera'"
+                        (click)="pestanaInscripciones = 'espera'">
+                    <span class="text-2xl font-bold leading-none">{{ enEspera.length }}</span>
+                    <span class="text-sm">En espera</span>
+                </button>
+                <button type="button" role="tab" class="fo-tab"
+                        [class.fo-tab-activa]="pestanaInscripciones === 'faltas'"
+                        [attr.aria-selected]="pestanaInscripciones === 'faltas'"
+                        (click)="pestanaInscripciones = 'faltas'">
+                    <span class="text-2xl font-bold leading-none">{{ faltas.length }}</span>
+                    <span class="text-sm">Han fallado</span>
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <p-iconfield class="flex-1">
+                    <p-inputicon><fo-icon name="buscar" [size]="16" /></p-inputicon>
+                    <input pInputText type="search" class="w-full" [(ngModel)]="filtroInscripciones"
+                           placeholder="Buscar por nombre, nº socio, email o teléfono"
+                           aria-label="Buscar inscripciones" />
+                </p-iconfield>
+                <button *ngIf="pestanaInscripciones === 'espera'" foButton variant="primary"
+                        class="w-full sm:w-auto"
+                        [loading]="asignandoPlazas"
+                        [disabled]="enEspera.length === 0 || asignandoPlazas"
+                        (click)="asignarPlazas()">
+                    <fo-icon name="usuario-nuevo" />
+                    <span>Asignar plazas de espera</span>
+                </button>
+            </div>
+
+            <p *ngIf="pestanaInscripciones === 'confirmados' && inscritos.length > 0"
+               class="text-sm text-ink-muted -mt-1">
+                <ng-container *ngIf="pendientesDeLista > 0; else listaPasada">
+                    Pasa lista: {{ pendientesDeLista }} sin marcar.
+                </ng-container>
+                <ng-template #listaPasada>Lista pasada a todos.</ng-template>
+            </p>
+
+            <!-- Confirmados y lista de espera comparten tarjeta; solo cambian las acciones. -->
+            <ul *ngIf="pestanaInscripciones !== 'faltas'" class="fo-lista">
+                <li *ngFor="let inscripcion of inscripcionesVisibles; trackBy: trackPorUid" class="fo-fila">
+                    <div class="fo-fila-cabecera">
+                        <div class="fo-avatar" [class.fo-avatar-socio]="inscripcion.numeroSocio != null"
+                             aria-hidden="true">{{ iniciales(inscripcion.nombre) }}</div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-base text-ink break-words">{{ inscripcion.nombre }}</div>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                <fo-tag *ngIf="inscripcion.numeroSocio != null" tone="neutral">Nº {{ inscripcion.numeroSocio }}</fo-tag>
+                                <fo-tag *ngIf="inscripcion.numeroSocio == null" tone="info">No socio</fo-tag>
+                                <fo-tag *ngIf="inscripcion.socioPrioritario" tone="success">Al día</fo-tag>
+                                <fo-tag *ngIf="inscripcion.faltasAcumuladas > 0" tone="warn">
+                                    {{ inscripcion.faltasAcumuladas }} falta{{ inscripcion.faltasAcumuladas === 1 ? '' : 's' }}
+                                </fo-tag>
+                                <fo-tag *ngIf="inscripcion.penalizacionesPendientes > 0" tone="danger">
+                                    A espera ×{{ inscripcion.penalizacionesPendientes }}
+                                </fo-tag>
+                            </div>
+                            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+                                <a *ngIf="inscripcion.email" [href]="'mailto:' + inscripcion.email"
+                                   class="fo-contacto"><fo-icon name="correo" [size]="14" />
+                                    <span class="truncate">{{ inscripcion.email | lowercase }}</span></a>
+                                <a *ngIf="inscripcion.telefono" [href]="'tel:' + inscripcion.telefono"
+                                   class="fo-contacto"><fo-icon name="telefono" [size]="14" />
+                                    <span>{{ inscripcion.telefono }}</span></a>
+                                <span class="inline-flex items-center gap-1 text-ink-muted">
+                                    <fo-icon name="hora" [size]="14" />
+                                    {{ inscripcion.fechaInscripcion | date:'dd/MM HH:mm' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pasar lista: volver a pulsar el botón ya activo retira la marca. -->
+                    <div class="fo-acciones">
+                        <ng-container *ngIf="pestanaInscripciones === 'confirmados'">
+                            <button foButton size="md" class="flex-1 sm:flex-none"
+                                    [variant]="inscripcion.asistencia === 'ASISTIO' ? 'success' : 'secondary'"
+                                    [disabled]="marcandoAsistencia === inscripcion.uid"
+                                    (click)="marcarAsistencia(inscripcion, 'ASISTIO')"
+                                    [attr.aria-pressed]="inscripcion.asistencia === 'ASISTIO'"
+                                    [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' vino'">
+                                <fo-icon name="check" [size]="16" /><span>Vino</span>
+                            </button>
+                            <button foButton size="md" class="flex-1 sm:flex-none"
+                                    [variant]="inscripcion.asistencia === 'NO_ASISTIO' ? 'danger' : 'secondary'"
+                                    [disabled]="marcandoAsistencia === inscripcion.uid"
+                                    (click)="marcarAsistencia(inscripcion, 'NO_ASISTIO')"
+                                    [attr.aria-pressed]="inscripcion.asistencia === 'NO_ASISTIO'"
+                                    pTooltip="Genera una falta" tooltipPosition="top"
+                                    [attr.aria-label]="'Marcar que ' + inscripcion.nombre + ' no vino'">
+                                <fo-icon name="cerrar" [size]="16" /><span>No vino</span>
+                            </button>
+                        </ng-container>
+                        <button foButton variant="ghost" size="icon" class="rounded-full text-danger ml-auto"
+                                [disabled]="eliminandoInscripcion === inscripcion.uid"
+                                (click)="eliminarInscripcion(inscripcion)"
+                                [pTooltip]="pestanaInscripciones === 'confirmados' ? 'Dar de baja' : 'Quitar de la lista de espera'"
+                                tooltipPosition="top"
+                                [attr.aria-label]="(pestanaInscripciones === 'confirmados' ? 'Dar de baja a ' : 'Quitar de la lista de espera a ') + inscripcion.nombre"
+                        ><fo-icon name="eliminar" [size]="18" /></button>
+                    </div>
+                </li>
+                <li *ngIf="inscripcionesVisibles.length === 0" class="fo-vacio">
+                    {{ filtroInscripciones.trim() ? 'Nadie coincide con la búsqueda.'
+                        : pestanaInscripciones === 'confirmados' ? 'No hay inscritos confirmados.'
+                        : 'No hay nadie en lista de espera.' }}
+                </li>
+            </ul>
+
+            <ul *ngIf="pestanaInscripciones === 'faltas'" class="fo-lista">
+                <li *ngFor="let falta of faltasVisibles; trackBy: trackPorUid" class="fo-fila">
+                    <div class="fo-fila-cabecera">
+                        <div class="fo-avatar fo-avatar-falta" aria-hidden="true">{{ iniciales(falta.nombre) }}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-base text-ink break-words">{{ falta.nombre }}</div>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                <fo-tag *ngIf="falta.numeroSocio != null" tone="neutral">Nº {{ falta.numeroSocio }}</fo-tag>
+                                <fo-tag tone="warn">{{ motivoFaltaTexto(falta) }}</fo-tag>
+                                <fo-tag *ngIf="falta.faltasAcumuladas > 1" tone="warn">{{ falta.faltasAcumuladas }} en total</fo-tag>
+                                <fo-tag *ngIf="falta.penalizacionesRestantes > 0" tone="danger">
+                                    A espera ×{{ falta.penalizacionesRestantes }}
+                                </fo-tag>
+                            </div>
+                            <div class="inline-flex items-center gap-1 mt-2 text-sm text-ink-muted">
+                                <fo-icon name="hora" [size]="14" />
+                                {{ falta.fechaRegistro | date:'dd/MM HH:mm' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fo-acciones">
+                        <button foButton variant="warning" size="md" class="flex-1 sm:flex-none"
+                                [disabled]="marcandoAsistencia === falta.uid"
+                                (click)="quitarFalta(falta)"
+                                [attr.aria-label]="'Retirar la falta de ' + falta.nombre">
+                            <fo-icon name="check" [size]="16" /><span>Retirar falta</span>
+                        </button>
+                    </div>
+                </li>
+                <li *ngIf="faltasVisibles.length === 0" class="fo-vacio">
+                    {{ filtroInscripciones.trim() ? 'Nadie coincide con la búsqueda.' : 'Nadie ha fallado en este evento.' }}
+                </li>
+            </ul>
+        </div>
+    </ng-template>
+    <ng-template #footer>
+        <button foButton variant="secondary" class="w-full sm:w-auto" (click)="inscripcionesDialog = false">Cerrar</button>
     </ng-template>
 </p-dialog>
 

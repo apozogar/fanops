@@ -4,8 +4,26 @@
         {
             "name": "frontend",
             "runtimeExecutable": "npm",
-            "runtimeArgs": ["start", "--prefix", "frontend"],
+            "runtimeArgs": [
+                "start",
+                "--prefix",
+                "frontend"
+            ],
             "port": 5300
+        },
+        {
+            "name": "backend",
+            "runtimeExecutable": "cmd",
+            "runtimeArgs": [
+                "/c",
+                "C:/dev/git/personal/fanops/mvnw.cmd",
+                "-f",
+                "C:/dev/git/personal/fanops/pom.xml",
+                "spring-boot:run",
+                "-Dspring-boot.run.arguments=--server.port=8095",
+                "-Dspring-boot.run.jvmArguments=-Djdk.net.unixdomain.tmpdir=C:/dev/tmp-jvm"
+            ],
+            "port": 8095
         }
     ]
 }

@@ -12,6 +12,7 @@ import {DialogModule} from 'primeng/dialog';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {FileUploadModule} from 'primeng/fileupload';
 import {Tooltip} from 'primeng/tooltip';
+import {CheckboxModule} from 'primeng/checkbox';
 import {PenaService} from '@/services/pena.service';
 import {ActivePenaService} from '@/core/pena/active-pena.service';
 import {Pena, PenaRequest} from '@/interfaces/socio.interface';
@@ -24,6 +25,7 @@ import { IconComponent } from '@/ui/icon/icon.component';
     imports: [UiButtonDirective, IconComponent, 
         CommonModule,
         FormsModule,
+        CheckboxModule,
         TableModule,
         InputTextModule,
         InputNumberModule,

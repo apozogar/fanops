@@ -19,6 +19,7 @@ import com.softwells.fanops.mapper.EventoMapper;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.FaltaEventoEntity;
+import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
@@ -59,6 +60,7 @@ public class EventoService {
   private final NotificacionService notificacionService;
   private final FichasUsuarioService fichasUsuarioService;
   private final SorteoCarnetService sorteoCarnetService;
+  private final UsuarioService usuarioService;
 
   /** Penalización por falta si la peña no la tiene configurada. */
   private static final int PENALIZACION_POR_FALTA_DEFECTO = 1;
@@ -321,8 +323,14 @@ public class EventoService {
       SolicitudCarnetRequest request) {
     List<SocioEntity> fichas = fichasUsuarioService.resolver(
         request != null ? request.getSocioUids() : null, "apuntar al sorteo");
+    return apuntarAlSorteo(findEvento(eventoId), fichas,
+        request != null && request.isSoloSiEntranTodos());
+  }
 
-    EventoEntity evento = findEvento(eventoId);
+  /** Mete en el bombo y apunta al evento a fichas ya validadas. */
+  private ApuntarSorteoResultado apuntarAlSorteo(EventoEntity evento, List<SocioEntity> fichas,
+      boolean soloSiEntranTodos) {
+    UUID eventoId = evento.getUid();
     validarInscripcionAbierta(evento);
 
     SorteoCarnetDTO sorteo = sorteoCarnetService.solicitar(eventoId, fichas);
@@ -336,9 +344,40 @@ public class EventoService {
         .collect(Collectors.toList());
     List<SocioInscripcionDTO> inscripciones = sinInscribir.isEmpty()
         ? List.of()
-        : inscribir(evento, sinInscribir, request != null && request.isSoloSiEntranTodos());
+        : inscribir(evento, sinInscribir, soloSiEntranTodos);
 
     return new ApuntarSorteoResultado(sorteo, inscripciones);
+  }
+
+  /**
+   * Apunta a un socio desde la gestión, para quien no maneja la aplicación y lo pide en persona
+   * o por teléfono. Sigue exactamente las mismas reglas que si se apuntara él (plazo, hueco,
+   * penalizaciones y prioridad), así que pasar por la gestión no da ventaja a nadie.
+   *
+   * @param alSorteoCarnet true para meterle en el bombo del carnet, que ya le apunta al evento
+   * @return la plaza que ha sacado; null si ya estaba inscrito y solo ha entrado en el bombo
+   */
+  public EstadoInscripcion inscribirSocioDesdeGestion(UUID eventoId, UUID socioUid,
+      boolean alSorteoCarnet) {
+    SocioEntity socio = socioRepository.findById(socioUid)
+        .orElseThrow(() -> new EntityNotFoundException("Socio no encontrado con ID: " + socioUid));
+    PenaEntity miPena = usuarioService.obtenerPenaDelUsuarioAutenticado();
+    if (socio.getPena() == null || !socio.getPena().getId().equals(miPena.getId())) {
+      throw new IllegalStateException("Ese socio no pertenece a tu peña.");
+    }
+    EventoEntity evento = findEvento(eventoId);
+
+    if (alSorteoCarnet) {
+      List<SocioInscripcionDTO> plazas = apuntarAlSorteo(evento, List.of(socio), false)
+          .inscripciones();
+      return plazas.isEmpty() ? null : plazas.get(0).getEstado();
+    }
+
+    validarInscripcionAbierta(evento);
+    if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+      throw new IllegalStateException(socio.getNombre() + " ya está inscrito en este evento.");
+    }
+    return inscribir(evento, List.of(socio), false).get(0).getEstado();
   }
 
   /**
@@ -406,19 +445,32 @@ public class EventoService {
    * Ficha de socio a la que corresponde una inscripción pública, o null si es un no socio.
    *
    * <p>En un multicarnet varias fichas comparten el correo del titular, así que con más de una
-   * candidata se elige por el nombre escrito. Si no coincide con ninguna no se adivina: apuntar a
-   * otra ficha de la familia sería peor que tratarle como no socio.
+   * candidata se elige por el nombre escrito: primero el nombre exacto y, si no, la única ficha
+   * cuyo nombre contiene todas las palabras escritas (o al revés), porque en el formulario es
+   * habitual poner solo nombre y primer apellido. Si sigue sin quedar una sola no se adivina:
+   * apuntar a otra ficha de la familia sería peor que tratarle como no socio.
    */
   private SocioEntity socioPorCorreo(String email, String nombre) {
-    List<SocioEntity> candidatas = socioRepository.findByEmailDeFichaOCuenta(email);
-    if (candidatas.size() == 1) {
-      return candidatas.get(0);
+    List<SocioEntity> candidatas = socioRepository.findByEmailDeFichaOCuenta(email.toLowerCase(
+        Locale.ROOT));
+    if (candidatas.size() <= 1) {
+      return candidatas.isEmpty() ? null : candidatas.get(0);
     }
     String buscado = normalizarNombre(nombre);
-    List<SocioEntity> porNombre = candidatas.stream()
+    List<SocioEntity> exactas = candidatas.stream()
         .filter(socio -> normalizarNombre(socio.getNombre()).equals(buscado))
         .collect(Collectors.toList());
-    return porNombre.size() == 1 ? porNombre.get(0) : null;
+    if (exactas.size() == 1) {
+      return exactas.get(0);
+    }
+    List<String> palabras = List.of(buscado.split(" "));
+    List<SocioEntity> parciales = candidatas.stream()
+        .filter(socio -> {
+          List<String> deLaFicha = List.of(normalizarNombre(socio.getNombre()).split(" "));
+          return deLaFicha.containsAll(palabras) || palabras.containsAll(deLaFicha);
+        })
+        .collect(Collectors.toList());
+    return parciales.size() == 1 ? parciales.get(0) : null;
   }
 
   /** Nombre comparable: sin tildes, sin mayúsculas y con los espacios colapsados. */

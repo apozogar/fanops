@@ -54,6 +54,13 @@ public class PenaEntity {
    * las penalizaciones sin dejar de registrar las faltas.
    */
   private Integer eventosPenalizacionPorFalta;
+
+  /**
+   * Permite a la gestión dar papeletas extra a participantes concretos del sorteo de carnets.
+   * Desactivado salvo que se pida expresamente para la peña; null cuenta como desactivado (así
+   * las peñas anteriores a la columna no necesitan migración).
+   */
+  private Boolean papeletasExtraSorteo;
   @Column(columnDefinition = "TEXT")
   private String logo;
   private String lema;
@@ -61,4 +68,9 @@ public class PenaEntity {
 
   @OneToMany(mappedBy = "pena", cascade = CascadeType.ALL)
   private Set<SocioEntity> socios = new HashSet<>();
+
+  /** true si la peña tiene activadas las papeletas extra en el sorteo de carnets. */
+  public boolean permitePapeletasExtraSorteo() {
+    return Boolean.TRUE.equals(papeletasExtraSorteo);
+  }
 }

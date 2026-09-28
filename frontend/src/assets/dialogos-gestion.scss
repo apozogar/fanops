@@ -1,0 +1,194 @@
+/*
+ * Diálogos de gestión a pantalla completa en móvil y sus listas de tarjetas.
+ *
+ * Los usan el listado de inscripciones de un evento y los eventos de un socio. La gestión se
+ * hace sobre todo desde el móvil (pasar lista en el autobús, apuntar a alguien que llama), así
+ * que en vez de tablas anchas cada fila es una tarjeta y el diálogo ocupa toda la pantalla.
+ *
+ * Uso: styleClass="fo-dlg-completo" en el p-dialog; dentro, .fo-tab para las pestañas con
+ * contador y .fo-lista > .fo-fila (con .fo-fila-cabecera y .fo-acciones) para cada persona.
+ */
+
+.p-dialog.fo-dlg-completo {
+  max-width: 100vw;
+  max-height: 100dvh;
+
+  .p-dialog-content {
+    padding-top: 0.25rem;
+  }
+
+  /*
+   * En un monitor de 1920 los 960px de base se quedan en media pantalla con letra de 14px, que
+   * se lee pequeña a distancia de escritorio. A partir de 1280 el diálogo crece con la ventana y
+   * la letra sube un punto; la maqueta es la misma, solo cambia la escala.
+   */
+  @media (min-width: 1280px) {
+    width: min(1180px, 72vw) !important;
+    font-size: 1.0625rem;
+
+    .text-sm {
+      font-size: 0.9375rem;
+    }
+
+    .text-base {
+      font-size: 1.125rem;
+    }
+
+    .text-xl {
+      font-size: 1.5rem;
+    }
+
+    .text-2xl {
+      font-size: 1.875rem;
+    }
+
+    .fo-avatar {
+      width: 3.25rem;
+      height: 3.25rem;
+      font-size: 1.05rem;
+    }
+
+    .fo-fila {
+      padding: 1.125rem 1.25rem;
+    }
+
+    .fo-tab {
+      min-height: 5.25rem;
+    }
+  }
+
+  @media (max-width: 639px) {
+    width: 100vw !important;
+    height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+
+    .p-dialog-header,
+    .p-dialog-content,
+    .p-dialog-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+}
+
+.fo-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 4.5rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-token, 0.75rem);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-ink);
+  }
+}
+
+.fo-tab-activa {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent-soft-fg);
+
+  &:hover {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-fg);
+  }
+}
+
+.fo-lista {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-token, 0.75rem);
+  overflow: hidden;
+}
+
+.fo-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+
+  & + & {
+    border-top: 1px solid var(--color-line);
+  }
+
+  /* A partir de tablet las acciones pasan a la derecha de la tarjeta. */
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.fo-fila-cabecera {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.fo-avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--color-surface-2);
+  color: var(--color-ink-muted);
+}
+
+.fo-avatar-socio {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-fg);
+}
+
+.fo-avatar-falta {
+  background: var(--color-warn-soft);
+  color: var(--color-warn-soft-fg);
+}
+
+.fo-contacto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  color: var(--color-ink-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}
+
+.fo-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* En móvil se alinean con el texto, no con el avatar. */
+  padding-left: 3.5rem;
+
+  @media (min-width: 640px) {
+    padding-left: 0;
+    flex-shrink: 0;
+  }
+}
+
+.fo-vacio {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-ink-muted);
+}

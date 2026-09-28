@@ -16,8 +16,14 @@ public class ParticipanteSorteoDTO {
   private Integer numeroSocio;
   private String nombre;
 
-  /** Papeletas con las que entra o entró al bombo. */
+  /** Papeletas con las que entra o entró al bombo, extra incluidas. */
   private int papeletas;
+
+  /**
+   * Parte de {@link #papeletas} que ha añadido la gestión a mano. Se publica para que el reparto
+   * siga siendo comprobable: cualquiera ve de dónde sale el total de cada participante.
+   */
+  private int papeletasExtra;
 
   /** Orden de salida, 1..N. Null si el sorteo todavía no se ha celebrado. */
   private Integer posicion;

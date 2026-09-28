@@ -61,6 +61,12 @@ public class SolicitudCarnetEntity {
    */
   private Integer pesoSorteo;
 
+  /**
+   * Papeletas que la gestión ha añadido a mano, además de las que da el historial. Solo cuentan
+   * si la peña del socio tiene activada la opción; null equivale a ninguna.
+   */
+  private Integer papeletasExtra;
+
   /** true si llegó a tener el carnet, aunque después renunciara. */
   public boolean fuePremiada() {
     return estado == EstadoSolicitudCarnet.GANADORA || estado == EstadoSolicitudCarnet.RENUNCIADA;

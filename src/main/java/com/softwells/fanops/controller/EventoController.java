@@ -200,6 +200,29 @@ public class EventoController {
         eventoService.getHistorialSocio(socioUid)));
   }
 
+  /**
+   * Apunta a un socio desde el listado de socios, para quien no usa la aplicación. Con
+   * {@code sorteoCarnet=true} entra en el bombo del carnet, que ya le apunta al evento.
+   */
+  @PostMapping("/{id}/socios/{socioUid}/inscribir")
+  public ResponseEntity<ApiResponse<EstadoInscripcion>> inscribirSocioDesdeGestion(
+      @PathVariable UUID id, @PathVariable UUID socioUid,
+      @RequestParam(defaultValue = "false") boolean sorteoCarnet) {
+    EstadoInscripcion estado = eventoService.inscribirSocioDesdeGestion(id, socioUid,
+        sorteoCarnet);
+    String mensaje;
+    if (estado == null) {
+      mensaje = "Ya estaba inscrito: ahora también entra en el sorteo del carnet.";
+    } else if (estado == EstadoInscripcion.CONFIRMADA) {
+      mensaje = sorteoCarnet ? "Apuntado con plaza y metido en el sorteo del carnet."
+          : "Apuntado con plaza confirmada.";
+    } else {
+      mensaje = sorteoCarnet ? "Metido en el sorteo del carnet; la plaza queda en lista de espera."
+          : "Apuntado en lista de espera.";
+    }
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, estado));
+  }
+
   /** Retira una falta, ya sea por estar justificada o por un error al pasar lista. */
   @DeleteMapping("/faltas/{faltaId}")
   public ResponseEntity<ApiResponse<Void>> quitarFalta(@PathVariable UUID faltaId) {

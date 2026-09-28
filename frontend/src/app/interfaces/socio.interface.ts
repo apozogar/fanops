@@ -22,6 +22,8 @@ export interface Pena {
     edadJubilacion?: number;
     /** Inscripciones que van forzadas a lista de espera por cada falta. 0 desactiva el castigo. */
     eventosPenalizacionPorFalta?: number;
+    /** Permite a la gestión dar papeletas extra en el sorteo de carnets. Desactivado por defecto. */
+    papeletasExtraSorteo?: boolean;
 }
 
 /** Datos editables al crear/actualizar una peña (sin id, lo pone el backend). */

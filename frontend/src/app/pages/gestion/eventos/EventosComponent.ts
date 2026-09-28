@@ -17,20 +17,21 @@ import {DatePickerModule} from 'primeng/datepicker';
 import {IconFieldModule} from 'primeng/iconfield';
 import {InputIconModule} from 'primeng/inputicon';
 import {TagModule} from 'primeng/tag';
-import {AccordionModule} from 'primeng/accordion';
 import {TooltipModule} from 'primeng/tooltip';
 import {EventoService} from '@/services/evento.service';
 import {SorteoCarnetService} from '@/services/sorteo-carnet.service';
+import {ParticipanteSorteo, SorteoCarnet} from '@/interfaces/sorteo-carnet.dto';
 import {ValoresEventoService} from '@/services/valores-evento.service';
 import {ValoresEvento} from '@/interfaces/valores-evento.dto';
 import {fechaRelativaAlEvento} from '@/core/eventos/fechas-por-defecto';
 
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
+import { UiTagComponent } from '@/ui/ui-tag.component';
 @Component({
     selector: 'app-eventos',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, 
+    imports: [UiButtonDirective, UiTagComponent, IconComponent, 
         CommonModule,
         FormsModule,
         TableModule,
@@ -46,7 +47,6 @@ import { UiButtonDirective } from '@/ui/ui-button.directive';
         IconFieldModule,
         InputIconModule,
         TagModule,
-        AccordionModule,
         TooltipModule,
     ],
     templateUrl: './EventosComponent.html',
@@ -70,10 +70,18 @@ export class EventosComponent implements OnInit {
     inscripciones: InscripcionAdmin[] = [];
     faltas: FaltaEvento[] = [];
     eventoSeleccionado: Evento | null = null;
+    pestanaInscripciones: 'confirmados' | 'espera' | 'faltas' = 'confirmados';
+    filtroInscripciones = '';
     loading: boolean = false;
     asignandoPlazas: boolean = false;
     /** Evento cuyo sorteo de carnets se está adelantando. */
     celebrandoSorteo: string | null = null;
+    /** Bombo abierto en el diálogo de papeletas; null mientras carga. */
+    bomboDialog: boolean = false;
+    bombo: SorteoCarnet | null = null;
+    /** Papeletas extra tecleadas por participante, pendientes de guardar. */
+    papeletasEnEdicion: Record<string, number | null> = {};
+    ajustandoPapeletas: string | null = null;
     eliminandoInscripcion: string | null = null;
     /** Inscripción con un cambio de asistencia o de falta en vuelo. */
     marcandoAsistencia: string | null = null;
@@ -217,6 +225,59 @@ export class EventosComponent implements OnInit {
         });
     }
 
+    /** Abre el bombo del evento: quién está dentro y con cuántas papeletas. */
+    abrirBombo(evento: Evento) {
+        if (!evento.uid) return;
+        this.bombo = null;
+        this.bomboDialog = true;
+        this.sorteoCarnetService.consultar(evento.uid).subscribe({
+            next: (resp) => this.mostrarBombo(resp.data),
+            error: (err) => {
+                this.bomboDialog = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudo cargar el sorteo'
+                });
+            }
+        });
+    }
+
+    private mostrarBombo(sorteo: SorteoCarnet) {
+        this.bombo = sorteo;
+        this.papeletasEnEdicion = {};
+        for (const p of sorteo.participantes) {
+            this.papeletasEnEdicion[p.socioUid] = p.papeletasExtra ?? 0;
+        }
+    }
+
+    /** Parte del total de papeletas del bombo. Con un carnet es la probabilidad de llevárselo. */
+    porcentajePapeletas(papeletas: number): number {
+        const total = (this.bombo?.participantes ?? []).reduce((suma, p) => suma + p.papeletas, 0);
+        return total > 0 ? (papeletas * 100) / total : 0;
+    }
+
+    ajustarPapeletas(participante: ParticipanteSorteo) {
+        if (!this.bombo) return;
+        const extra = this.papeletasEnEdicion[participante.socioUid] ?? 0;
+        this.ajustandoPapeletas = participante.socioUid;
+        this.sorteoCarnetService.ajustarPapeletasExtra(this.bombo.eventoUid, participante.socioUid, extra)
+            .subscribe({
+                next: (resp) => {
+                    this.ajustandoPapeletas = null;
+                    this.mostrarBombo(resp.data);
+                },
+                error: (err) => {
+                    this.ajustandoPapeletas = null;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err.error?.message || 'No se pudieron guardar las papeletas'
+                    });
+                }
+            });
+    }
+
     private ejecutarSorteo(evento: Evento) {
         this.celebrandoSorteo = evento.uid!;
         this.sorteoCarnetService.celebrar(evento.uid!).subscribe({
@@ -287,6 +348,17 @@ export class EventosComponent implements OnInit {
         this.eventoDialog = true;
     }
 
+    /**
+     * Abre el listado desde la tabla. La pestaña y la búsqueda solo se reinician aquí, no en
+     * mostrarInscripciones, que también se llama para refrescar tras pasar lista o dar de baja y
+     * no debe sacar al usuario de donde estaba.
+     */
+    abrirInscripciones(evento: Evento) {
+        this.pestanaInscripciones = 'confirmados';
+        this.filtroInscripciones = '';
+        this.mostrarInscripciones(evento);
+    }
+
     mostrarInscripciones(evento: Evento) {
         if (!evento.uid) return;
         this.eventoSeleccionado = evento;
@@ -327,6 +399,31 @@ export class EventosComponent implements OnInit {
 
     get enEspera(): InscripcionAdmin[] {
         return this.inscripciones.filter(i => i.estado === 'EN_ESPERA');
+    }
+
+    /** Inscripciones de la pestaña activa que casan con la búsqueda. */
+    get inscripcionesVisibles(): InscripcionAdmin[] {
+        const lista = this.pestanaInscripciones === 'espera' ? this.enEspera : this.inscritos;
+        return lista.filter(i => this.coincideBusqueda(i.nombre, i.numeroSocio, i.email, i.telefono));
+    }
+
+    get faltasVisibles(): FaltaEvento[] {
+        return this.faltas.filter(f => this.coincideBusqueda(f.nombre, f.numeroSocio));
+    }
+
+    private coincideBusqueda(...campos: (string | number | null | undefined)[]): boolean {
+        const buscado = normalizarTexto(this.filtroInscripciones);
+        return !buscado || campos.some(c => c != null && normalizarTexto(String(c)).includes(buscado));
+    }
+
+    /** Dos iniciales para el avatar: nombre y primer apellido. */
+    iniciales(nombre: string): string {
+        return (nombre ?? '').trim().split(/\s+/).slice(0, 2)
+            .map(p => p.charAt(0)).join('').toUpperCase() || '?';
+    }
+
+    trackPorUid(_: number, item: { uid: string }): string {
+        return item.uid;
     }
 
     plazasDisponibles(evento: Evento): boolean {
@@ -545,4 +642,9 @@ export class EventosComponent implements OnInit {
             }
         });
     }
+}
+
+/** Texto comparable en la búsqueda: sin tildes ni mayúsculas. */
+function normalizarTexto(texto: string): string {
+    return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 }

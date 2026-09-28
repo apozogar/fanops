@@ -24,6 +24,8 @@ import {
 import {Role} from "@/interfaces/role.interface";
 import {EventoService} from "@/services/evento.service";
 import {HistorialEventoSocio, HistorialSocio} from "@/interfaces/evento-inscripcion.dto";
+import {Evento} from "@/interfaces/evento.interface";
+import {UiTagComponent} from "@/ui/ui-tag.component";
 import {GestionCobrosComponent} from "@/components/gestion-cobros/gestion-cobros.component";
 import {UiButtonDirective} from "@/ui/ui-button.directive";
 import {IconComponent} from "@/ui/icon/icon.component";
@@ -46,7 +48,7 @@ import {coincideBusqueda} from "@/core/busqueda/busqueda-flexible";
         CheckboxModule,
         DatePickerModule,
         Textarea, IconField, InputIcon, Tooltip, CuotasSocioTableComponent, GestionCobrosComponent,
-        UiButtonDirective, IconComponent, UiPasswordComponent
+        UiButtonDirective, IconComponent, UiPasswordComponent, UiTagComponent
 
     ],
     templateUrl: './SociosComponent.html'
@@ -82,6 +84,10 @@ export class SociosComponent implements OnInit {
     historialCargando: boolean = false;
     /** Falta con el perdón en vuelo: alimenta el indicador del botón y evita el doble envío. */
     perdonando: string | null = null;
+    /** Eventos de gestión, para ofrecer a qué se le puede apuntar desde el propio modal. */
+    eventosGestion: Evento[] = [];
+    /** Inscripción en vuelo ("<eventoUid>:evento" o "<eventoUid>:sorteo"). */
+    apuntando: string | null = null;
 
     /** Modal para crear la cuenta de acceso del socio o cambiarle la contraseña. */
     cuentaDialog: boolean = false;
@@ -399,7 +405,13 @@ export class SociosComponent implements OnInit {
         this.historial = undefined;
         this.historialCargando = true;
         this.historialDialog = true;
-        this.eventoService.getHistorialSocio(socio.uid).subscribe({
+        this.cargarEventosGestion();
+        this.recargarHistorial(socio.uid);
+    }
+
+    /** Vuelve a pedir el historial sin vaciar el modal, para refrescarlo tras un cambio. */
+    private recargarHistorial(socioUid: string): void {
+        this.eventoService.getHistorialSocio(socioUid).subscribe({
             next: (response) => {
                 this.historial = response.data;
                 this.historialCargando = false;
@@ -440,7 +452,7 @@ export class SociosComponent implements OnInit {
                         // El listado muestra el contador de faltas, así que hay que refrescarlo
                         // junto con el propio historial.
                         if (this.historial) {
-                            this.abrirHistorial({uid: this.historial.socioUid});
+                            this.recargarHistorial(this.historial.socioUid);
                         }
                         this.cargarSocios(this.filtroActivo ?? undefined);
                     },
@@ -454,6 +466,84 @@ export class SociosComponent implements OnInit {
                 });
             }
         });
+    }
+
+    private cargarEventosGestion(): void {
+        this.eventoService.getEventosParaGestion().subscribe({
+            next: (response) => (this.eventosGestion = response.data ?? []),
+            error: () => (this.eventosGestion = [])
+        });
+    }
+
+    /**
+     * Eventos a los que todavía se le puede apuntar: futuros, con el plazo abierto y en los que
+     * no está ya inscrito. El backend vuelve a comprobarlo todo; esto solo evita ofrecer botones
+     * que van a fallar.
+     */
+    get eventosDisponibles(): Evento[] {
+        if (!this.historial) return [];
+        const inscritoEn = new Set(this.historial.eventos.filter(e => e.estado).map(e => e.eventoUid));
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        return this.eventosGestion
+            .filter(e => e.uid && !inscritoEn.has(e.uid) && !e.inscripcionCerrada && new Date(e.fechaEvento) >= hoy)
+            .sort((a, b) => new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime());
+    }
+
+    /** true si el evento tiene un sorteo de carnets en el que todavía se puede entrar. */
+    sorteoAbierto(evento: Evento): boolean {
+        return (evento.plazasCarnet ?? 0) > 0 && !evento.sorteoCelebrado
+            && !!evento.fechaSorteoCarnet && new Date(evento.fechaSorteoCarnet) > new Date();
+    }
+
+    plazasTexto(evento: Evento): string {
+        if (evento.plazasLibres == null || evento.plazasLibres < 0) return 'Plazas ilimitadas';
+        if (evento.plazasLibres === 0) return 'Completo: irá a lista de espera';
+        return `${evento.plazasLibres} plaza${evento.plazasLibres === 1 ? '' : 's'} libre${evento.plazasLibres === 1 ? '' : 's'}`;
+    }
+
+    /**
+     * Apunta al socio a un evento (o a su sorteo de carnet, que ya le apunta al evento). Se pide
+     * confirmación porque al socio le llega el aviso por correo.
+     */
+    apuntarAEvento(evento: Evento, alSorteo: boolean): void {
+        if (!this.historial || !evento.uid || this.apuntando) return;
+        const socioUid = this.historial.socioUid;
+        const nombre = this.historial.nombre;
+        const eventoUid = evento.uid;
+        this.confirmationService.confirm({
+            header: alSorteo ? 'Apuntar al sorteo del carnet' : 'Apuntar al evento',
+            message: alSorteo
+                ? `¿Meter a ${nombre} en el sorteo del carnet de "${evento.nombreEvento}"? También queda apuntado al evento.`
+                : `¿Apuntar a ${nombre} a "${evento.nombreEvento}"? Se le avisará por correo.`,
+            acceptLabel: 'Apuntar',
+            rejectLabel: 'Cancelar',
+            accept: () => {
+                this.apuntando = `${eventoUid}:${alSorteo ? 'sorteo' : 'evento'}`;
+                this.eventoService.inscribirSocioDesdeGestion(eventoUid, socioUid, alSorteo)
+                    .pipe(finalize(() => (this.apuntando = null)))
+                    .subscribe({
+                        next: (resp) => {
+                            this.messageService.add({
+                                severity: resp.data === 'EN_ESPERA' ? 'warn' : 'success',
+                                summary: evento.nombreEvento,
+                                detail: resp.message
+                            });
+                            this.recargarHistorial(socioUid);
+                            this.cargarEventosGestion();
+                        },
+                        error: (err) => this.messageService.add({
+                            severity: 'error',
+                            summary: 'No se pudo apuntar',
+                            detail: err.error?.message || 'No se pudo completar la inscripción.'
+                        })
+                    });
+            }
+        });
+    }
+
+    iniciales(nombre: string | undefined): string {
+        return (nombre ?? '').trim().split(/\s+/).slice(0, 2).map(p => p.charAt(0)).join('').toUpperCase() || '?';
     }
 
     /** Estado de la falta de un evento: si todavía castiga y con cuántas inscripciones. */

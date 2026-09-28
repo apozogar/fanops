@@ -32,7 +32,7 @@ public interface SocioRepository extends JpaRepository<SocioEntity, UUID> {
    * gestiona. Es lo que usa el enlace público de inscripción para reconocer a un socio.
    */
   @Query("SELECT DISTINCT s FROM SocioEntity s LEFT JOIN s.usuario u "
-      + "WHERE LOWER(s.email) = LOWER(:email) OR LOWER(u.email) = LOWER(:email) "
+      + "WHERE LOWER(TRIM(s.email)) = LOWER(:email) OR LOWER(TRIM(u.email)) = LOWER(:email) "
       + "ORDER BY s.numeroSocio")
   List<SocioEntity> findByEmailDeFichaOCuenta(@Param("email") String email);
 

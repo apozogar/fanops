@@ -90,6 +90,16 @@ export class EventoService {
   }
 
   /** Historial de eventos de un socio con sus faltas, para el modal del listado de socios. */
+  /**
+   * Apunta a un socio desde la gestión, con las mismas reglas que si se apuntara él. Con
+   * `sorteoCarnet` entra en el bombo del carnet, que ya le apunta al evento. `data` es null si ya
+   * estaba inscrito y solo ha entrado en el bombo.
+   */
+  inscribirSocioDesdeGestion(eventoId: string, socioUid: string, sorteoCarnet: boolean): Observable<ApiResponse<'CONFIRMADA' | 'EN_ESPERA' | null>> {
+    return this.http.post<ApiResponse<'CONFIRMADA' | 'EN_ESPERA' | null>>(
+      `${this.apiUrl}/${eventoId}/socios/${socioUid}/inscribir`, null, {params: {sorteoCarnet}});
+  }
+
   getHistorialSocio(socioUid: string): Observable<ApiResponse<HistorialSocio>> {
     return this.http.get<ApiResponse<HistorialSocio>>(`${this.apiUrl}/socios/${socioUid}/historial`);
   }

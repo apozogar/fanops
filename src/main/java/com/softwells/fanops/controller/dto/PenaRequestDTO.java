@@ -34,6 +34,9 @@ public class PenaRequestDTO {
 
   /** Inscripciones que van forzadas a lista de espera por cada falta. 0 desactiva el castigo. */
   private Integer eventosPenalizacionPorFalta;
+
+  /** Permite dar papeletas extra en el sorteo de carnets. Null o false lo deja desactivado. */
+  private Boolean papeletasExtraSorteo;
   private String logo;
   private String lema;
   private String color;

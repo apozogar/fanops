@@ -21,7 +21,10 @@ export interface ParticipanteSorteo {
   socioUid: string;
   numeroSocio?: number | null;
   nombre: string;
+  /** Papeletas totales, extra incluidas. */
   papeletas: number;
+  /** Parte de `papeletas` añadida a mano por la gestión. Se publica para que el reparto se pueda comprobar. */
+  papeletasExtra: number;
   /** Orden de salida, 1..N. null si el sorteo aún no se ha celebrado. */
   posicion?: number | null;
   estado: EstadoSolicitudCarnet;
@@ -58,6 +61,8 @@ export interface SorteoCarnet {
    * apunta también al evento, así que el plazo de inscripción tiene que estar abierto.
    */
   admiteSolicitudes: boolean;
+  /** true si la peña de quien consulta permite papeletas extra y el sorteo no se ha celebrado. */
+  ajustePapeletasPermitido: boolean;
   /** SHA-256 de la semilla, publicado desde que se programa el sorteo. */
   hashSemilla?: string;
   /** Semilla del sorteo. null hasta que se celebra. */

@@ -247,6 +247,7 @@ public class PenaService {
     pena.setEdadMayoria(dto.getEdadMayoria());
     pena.setEdadJubilacion(dto.getEdadJubilacion());
     pena.setEventosPenalizacionPorFalta(dto.getEventosPenalizacionPorFalta());
+    pena.setPapeletasExtraSorteo(Boolean.TRUE.equals(dto.getPapeletasExtraSorteo()));
     pena.setLogo(validarLogo(dto.getLogo()));
     pena.setLema(dto.getLema());
     pena.setColor(dto.getColor());

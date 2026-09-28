@@ -37,6 +37,12 @@ public class SorteoCarnetDTO {
    */
   private boolean admiteSolicitudes;
 
+  /**
+   * true si la gestión puede ajustar papeletas extra: la peña de quien consulta tiene la opción
+   * activada y el sorteo no se ha celebrado. Con el sorteo celebrado ya no se toca nada.
+   */
+  private boolean ajustePapeletasPermitido;
+
   /** SHA-256 de la semilla. Se publica desde el principio. */
   private String hashSemilla;
 

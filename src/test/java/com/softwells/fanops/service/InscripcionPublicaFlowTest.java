@@ -93,6 +93,36 @@ class InscripcionPublicaFlowTest {
   }
 
   @Test
+  @DisplayName("Un correo guardado con espacios en la ficha también reconoce al socio")
+  void correoDeFichaConEspacios() {
+    SocioEntity socio = ficha("Juan Pérez", "  " + EMAIL_FICHA + " ", null);
+    EventoEntity evento = evento();
+
+    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(),
+        peticion("Juan Pérez", EMAIL_FICHA));
+
+    assertThat(estado).isEqualTo(EstadoInscripcion.CONFIRMADA);
+    assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
+        socio.getUid())).isTrue();
+  }
+
+  @Test
+  @DisplayName("En un multicarnet basta con nombre y primer apellido si solo encaja una ficha")
+  void multicarnetConNombreIncompleto() {
+    UsuarioEntity usuario = cuenta(EMAIL_CUENTA);
+    ficha("Pedro Gómez Ruiz", EMAIL_CUENTA, usuario);
+    SocioEntity hija = ficha("Lucía Gómez Ruiz", EMAIL_CUENTA, usuario);
+    EventoEntity evento = evento();
+
+    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(),
+        peticion("lucia gomez", EMAIL_CUENTA));
+
+    assertThat(estado).isEqualTo(EstadoInscripcion.CONFIRMADA);
+    assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
+        hija.getUid())).isTrue();
+  }
+
+  @Test
   @DisplayName("Un socio no puede apuntarse dos veces aunque use el enlace público")
   void socioYaInscritoNoRepite() {
     ficha("Juan Pérez", EMAIL_FICHA, null);
