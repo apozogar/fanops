@@ -317,6 +317,6 @@ export class SorteoBomboComponent implements OnInit, OnDestroy {
     }
 
     protected textoPapeletas(papeletas: number): string {
-        return papeletas === 1 ? '1 papeleta' : `${papeletas} papeletas`;
+        return '';
     }
 }

@@ -56,11 +56,11 @@
                         <div class="flex items-center justify-between gap-2 min-h-9">
                             <div class="flex flex-col">
                                 <span class="truncate">{{ etiqueta(socio) }}</span>
-                                @if (socio.papeletas > 0) {
-                                    <span class="text-xs text-ink-muted">
-                                        Entra con {{ textoPapeletas(socio.papeletas) }}
-                                    </span>
-                                }
+<!--                                @if (socio.papeletas > 0) {-->
+<!--                                    <span class="text-xs text-ink-muted">-->
+<!--                                        Entra con {{ textoPapeletas(socio.papeletas) }}-->
+<!--                                    </span>-->
+<!--                                }-->
                             </div>
                             @if (socio.estado) {
                                 <div class="flex items-center gap-2 shrink-0">
@@ -153,7 +153,7 @@
                                     <span class="premio-nombre"
                                           [class.propio]="ganador.propio">{{ ganador.nombre }}</span>
                                     <span class="premio-detalle">
-                                        Bola {{ ganador.posicion }} · {{ textoPapeletas(ganador.papeletas) }}
+                                        Bola {{ ganador.posicion }}
                                     </span>
                                 } @else {
                                     <span class="premio-nombre premio-vacio">···</span>
