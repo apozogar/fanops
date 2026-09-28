@@ -27,6 +27,15 @@ public interface SocioRepository extends JpaRepository<SocioEntity, UUID> {
    */
   List<SocioEntity> findByEmailIgnoreCaseAndUsuarioIsNull(String email);
 
+  /**
+   * Fichas identificadas por un correo, ya sea el de la propia ficha o el de la cuenta que la
+   * gestiona. Es lo que usa el enlace público de inscripción para reconocer a un socio.
+   */
+  @Query("SELECT DISTINCT s FROM SocioEntity s LEFT JOIN s.usuario u "
+      + "WHERE LOWER(s.email) = LOWER(:email) OR LOWER(u.email) = LOWER(:email) "
+      + "ORDER BY s.numeroSocio")
+  List<SocioEntity> findByEmailDeFichaOCuenta(@Param("email") String email);
+
   // numeroSocio es único a nivel global (columna con constraint unique), así que la numeración
   // sigue siendo por toda la aplicación y no por peña.
   @Query("SELECT MAX(CAST(s.numeroSocio as INTEGER)) FROM SocioEntity s")

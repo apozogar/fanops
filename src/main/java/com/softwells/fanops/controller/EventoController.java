@@ -116,15 +116,18 @@ public class EventoController {
   }
 
   /**
-   * Inscripción pública de un no socio. Accesible sin autenticación desde el enlace compartido.
+   * Inscripción desde el enlace compartido, accesible sin autenticación. Si el correo es de un
+   * socio se le inscribe como tal y puede salir ya con plaza.
    */
   @PostMapping("/{id}/inscripcion-publica")
   @PreAuthorize("permitAll()")
   public ResponseEntity<ApiResponse<EstadoInscripcion>> inscribirPublico(@PathVariable UUID id,
       @Valid @RequestBody InscripcionPublicaRequest request) {
     EstadoInscripcion estado = eventoService.inscribirPublico(id, request);
-    return ResponseEntity.ok(new ApiResponse<>(true,
-        "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.", estado));
+    String mensaje = estado == EstadoInscripcion.CONFIRMADA
+        ? "Te has apuntado y tienes plaza confirmada. ¡Nos vemos allí!"
+        : "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.";
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, estado));
   }
 
   /**

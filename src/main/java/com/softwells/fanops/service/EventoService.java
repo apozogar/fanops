@@ -28,12 +28,14 @@ import com.softwells.fanops.repository.FaltaEventoRepository;
 import com.softwells.fanops.repository.SocioRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -358,9 +360,12 @@ public class EventoService {
   }
 
   /**
-   * Inscripción pública para no socios (sustituye al Google Form). Siempre entran en lista de
-   * espera; se confirmarán cuando queden plazas libres (asignación del administrador o baja de
-   * un confirmado).
+   * Inscripción desde el enlace público (sustituye al Google Form).
+   *
+   * <p>Si el correo es el de una ficha de socio (o el de la cuenta que la gestiona), se trata
+   * igual que si se hubiera apuntado desde la aplicación: el correo es lo que identifica al socio.
+   * El resto de personas son no socios y siempre entran en lista de espera; se confirmarán cuando
+   * queden plazas libres (asignación del administrador o baja de un confirmado).
    */
   public EstadoInscripcion inscribirPublico(UUID eventoId, InscripcionPublicaRequest request) {
     EventoEntity evento = findEvento(eventoId);
@@ -370,6 +375,15 @@ public class EventoService {
     if (email.isBlank() || request.getNombre() == null || request.getNombre().isBlank()) {
       throw new IllegalArgumentException("Nombre y email son obligatorios.");
     }
+
+    SocioEntity socio = socioPorCorreo(email, request.getNombre());
+    if (socio != null) {
+      if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+        throw new IllegalStateException(socio.getNombre() + " ya está inscrito en este evento.");
+      }
+      return inscribir(evento, List.of(socio), false).get(0).getEstado();
+    }
+
     if (inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(eventoId, email)) {
       throw new IllegalStateException("Ya existe una inscripción para ese email.");
     }
@@ -386,6 +400,35 @@ public class EventoService {
 
     notificacionService.enviarConfirmacionInscripcionPublica(inscripcion, evento);
     return EstadoInscripcion.EN_ESPERA;
+  }
+
+  /**
+   * Ficha de socio a la que corresponde una inscripción pública, o null si es un no socio.
+   *
+   * <p>En un multicarnet varias fichas comparten el correo del titular, así que con más de una
+   * candidata se elige por el nombre escrito. Si no coincide con ninguna no se adivina: apuntar a
+   * otra ficha de la familia sería peor que tratarle como no socio.
+   */
+  private SocioEntity socioPorCorreo(String email, String nombre) {
+    List<SocioEntity> candidatas = socioRepository.findByEmailDeFichaOCuenta(email);
+    if (candidatas.size() == 1) {
+      return candidatas.get(0);
+    }
+    String buscado = normalizarNombre(nombre);
+    List<SocioEntity> porNombre = candidatas.stream()
+        .filter(socio -> normalizarNombre(socio.getNombre()).equals(buscado))
+        .collect(Collectors.toList());
+    return porNombre.size() == 1 ? porNombre.get(0) : null;
+  }
+
+  /** Nombre comparable: sin tildes, sin mayúsculas y con los espacios colapsados. */
+  private static String normalizarNombre(String nombre) {
+    if (nombre == null) {
+      return "";
+    }
+    String sinTildes = Normalizer.normalize(nombre, Normalizer.Form.NFD)
+        .replaceAll("\\p{M}", "");
+    return sinTildes.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
   }
 
   /**

@@ -23,10 +23,17 @@
             <div class="text-center py-4">
                 <fo-icon name="check-circulo" class="text-4xl text-success mb-3" />
                 <h3 class="text-xl font-semibold mb-2">¡Te has apuntado!</h3>
-                <p>Tu solicitud para <strong>{{ evento.nombreEvento }}</strong> ha quedado en
-                    <strong>lista de espera</strong>.</p>
-                <p class="text-muted-color text-sm mt-2">Te avisaremos por email o WhatsApp cuando haya
-                    hueco.</p>
+                <ng-container *ngIf="confirmada; else enEspera">
+                    <p>Tienes <strong>plaza confirmada</strong> para
+                        <strong>{{ evento.nombreEvento }}</strong>.</p>
+                    <p class="text-muted-color text-sm mt-2">Te hemos enviado el detalle por email.</p>
+                </ng-container>
+                <ng-template #enEspera>
+                    <p>Tu solicitud para <strong>{{ evento.nombreEvento }}</strong> ha quedado en
+                        <strong>lista de espera</strong>.</p>
+                    <p class="text-muted-color text-sm mt-2">Te avisaremos por email o WhatsApp cuando haya
+                        hueco.</p>
+                </ng-template>
             </div>
         </p-card>
 
@@ -75,10 +82,10 @@
                             [disabled]="!formularioValido || enviando"
                             (click)="inscribirse()">
                         <fo-icon name="check" />
-                        <span>Apuntarme en lista de espera</span>
+                        <span>Apuntarme</span>
                     </button>
-                    <span class="text-xs text-muted-color">Al apuntarte aceptas que te avisemos por email o
-                        WhatsApp cuando haya hueco disponible.</span>
+                    <span class="text-xs text-muted-color">Si eres socio, usa el email de tu ficha y te
+                        apuntaremos como socio. Al apuntarte aceptas que te avisemos por email o WhatsApp.</span>
                 </div>
             </div>
         </p-card>

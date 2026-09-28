@@ -37,6 +37,10 @@ Frontend (desde `frontend/`):
 
 - **Socio prioritario** para eventos = ficha `activo` + cuota al día (`EstadoCuota.PAGADA` en los últimos 2 meses) o `exentoPago`. Ver `EventoService.esSocioAlDia`.
 - **Inscripción a eventos**: el socio prioritario con hueco → `CONFIRMADA`; el resto (socios sin cuota al día y no socios del enlace público) → `EN_ESPERA`.
+  - En el **enlace público**, si el correo es el de una ficha de socio (o el de su cuenta) se
+    inscribe a esa ficha exactamente como desde la app: el correo es lo que valida al socio. En un
+    multicarnet, con varias fichas en el mismo correo, se elige por el nombre escrito; si no
+    coincide con ninguna, entra como no socio (`EventoService.socioPorCorreo`).
   - Cuando se anula una inscripción confirmada o el admin ejecuta `asignar-plazas`, se promocionan los de espera (prioridad: socios al día, luego por fecha de inscripción).
   - El plazo de inscripción por evento se guarda en `EventoEntity.fechaLimiteInscripcion`; fuera de plazo no se admiten inscripciones.
 - **Cuenta de acceso de un socio**: el camino normal es que la persona se registre y confirme el enlace de vinculación enviado a su correo (`VinculacionSocioService`). Desde el listado de socios, un admin puede además crearla a mano con una contraseña (`POST /api/socios/{id}/cuenta`), para socios que no van a registrarse; ahí los roles solo se fijan al crear la cuenta, nunca al cambiar una contraseña.

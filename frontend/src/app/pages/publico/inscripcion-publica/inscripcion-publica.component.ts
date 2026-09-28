@@ -28,6 +28,8 @@ export class InscripcionPublicaComponent implements OnInit {
     loading = true;
     enviando = false;
     enviado = false;
+    /** Un socio reconocido por su correo puede salir ya con plaza; el resto queda en espera. */
+    confirmada = false;
     errorCarga = false;
 
     nombre = '';
@@ -86,11 +88,12 @@ export class InscripcionPublicaComponent implements OnInit {
         }).subscribe({
             next: (resp) => {
                 this.enviado = true;
+                this.confirmada = resp.data === 'CONFIRMADA';
                 this.enviando = false;
                 this.messageService.add({
                     severity: 'success',
                     summary: '¡Apuntado!',
-                    detail: resp.message || 'Te hemos apuntado a la lista de espera.'
+                    detail: resp.message || 'Te hemos apuntado.'
                 });
             },
             error: (err) => {
