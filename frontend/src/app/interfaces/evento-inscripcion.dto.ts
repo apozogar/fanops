@@ -16,6 +16,8 @@ export interface SocioInscripcion {
 
 export interface EventoInscripcionDTO {
   uid: string;
+  /** Dominio de la peña que organiza el evento (solo en la información pública). */
+  slugPena?: string | null;
   nombreEvento: string;
   fechaEvento: Date;
   fechaLimiteInscripcion?: Date;

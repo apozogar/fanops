@@ -61,6 +61,7 @@ public class EventoService {
   private final FichasUsuarioService fichasUsuarioService;
   private final SorteoCarnetService sorteoCarnetService;
   private final UsuarioService usuarioService;
+  private final PenaService penaService;
 
   /** Penalización por falta si la peña no la tiene configurada. */
   private static final int PENALIZACION_POR_FALTA_DEFECTO = 1;
@@ -139,7 +140,10 @@ public class EventoService {
   public EventoInscripcionDTO infoPublica(UUID eventoId) {
     EventoEntity evento = findEvento(eventoId);
     completarInfoAdmin(evento);
-    return EventoMapper.toInscripcionDTO(evento);
+    EventoInscripcionDTO dto = EventoMapper.toInscripcionDTO(evento);
+    // Los eventos todavía no cuelgan de una peña: se usa la de la instalación (ver AGENTS.md).
+    penaService.penaPrincipal().map(PenaEntity::getSlug).ifPresent(dto::setSlugPena);
+    return dto;
   }
 
   public List<InscripcionAdminDTO> getInscripciones(UUID eventoId) {

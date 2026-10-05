@@ -11,6 +11,7 @@ import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 import {EventoInscripcionDTO} from '@/interfaces/evento-inscripcion.dto';
 import {EventoService} from '@/services/evento.service';
+import {PenaPublicaService} from '@/core/pena/pena-publica.service';
 
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
@@ -31,6 +32,8 @@ export class InscripcionPublicaComponent implements OnInit {
     /** Un socio reconocido por su correo puede salir ya con plaza; el resto queda en espera. */
     confirmada = false;
     errorCarga = false;
+    /** true cuando ya se sabe qué cabecera pintar: así no asoma "FanOps" antes de la peña. */
+    cabeceraLista = false;
 
     nombre = '';
     email = '';
@@ -39,17 +42,26 @@ export class InscripcionPublicaComponent implements OnInit {
     private route = inject(ActivatedRoute);
     private eventoService = inject(EventoService);
     private messageService = inject(MessageService);
+    /**
+     * Identidad de la peña que organiza el evento: nombre, escudo y lema en la cabecera, y de paso
+     * su color en el tema y su nombre en el título de la pestaña (lo aplican los propios servicios).
+     */
+    readonly penaPublica = inject(PenaPublicaService);
 
     ngOnInit(): void {
         const id = this.route.snapshot.paramMap.get('id');
         if (!id) {
             this.errorCarga = true;
             this.loading = false;
+            this.cabeceraLista = true;
             return;
         }
         this.eventoService.infoEventoPublico(id).subscribe({
             next: (response) => {
                 this.evento = response.success ? response.data : null;
+                // El enlace no lleva la peña en la URL: llega con el evento.
+                this.penaPublica.cargar(this.evento?.slugPena)
+                    .subscribe(() => (this.cabeceraLista = true));
                 if (response.data?.inscripcionCerrada) {
                     this.messageService.add({
                         severity: 'warn',
@@ -62,6 +74,7 @@ export class InscripcionPublicaComponent implements OnInit {
             error: () => {
                 this.errorCarga = true;
                 this.loading = false;
+                this.cabeceraLista = true;
             }
         });
     }

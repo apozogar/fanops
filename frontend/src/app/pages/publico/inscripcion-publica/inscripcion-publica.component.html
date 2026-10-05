@@ -2,9 +2,20 @@
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4">
     <div class="w-full max-w-xl">
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">FanOps</h1>
-            <p class="text-muted-color">Inscripción a eventos de la peña</p>
+        <!-- Cabecera con la peña que organiza el evento. Mientras carga, o si no se conoce, sale la
+             marca genérica de FanOps. -->
+        <div class="flex flex-col items-center text-center mb-6 gap-2">
+            @if (penaPublica.pena(); as pena) {
+                @if (pena.logo) {
+                    <img [src]="pena.logo" [alt]="'Escudo de ' + pena.nombre"
+                         class="w-20 h-20 object-contain" />
+                }
+                <h1 class="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-0">{{ pena.nombre }}</h1>
+                <p class="text-muted-color">{{ pena.lema || 'Inscripción a eventos de la peña' }}</p>
+            } @else if (cabeceraLista) {
+                <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0">FanOps</h1>
+                <p class="text-muted-color">Inscripción a eventos de la peña</p>
+            }
         </div>
 
         <div *ngIf="loading" class="flex justify-center py-16">

@@ -48,4 +48,11 @@ public class EventoInscripcionDTO {
 
   /** Resumen del sorteo de carnets del evento. Null si el evento no sortea carnets. */
   private SorteoResumenDTO sorteo;
+
+  /**
+   * Dominio de la peña que organiza el evento. Solo en la información pública: el enlace de
+   * inscripción no lleva la peña en la URL, y con esto la página carga su nombre, escudo y color
+   * en lugar de la marca genérica de FanOps.
+   */
+  private String slugPena;
 }
