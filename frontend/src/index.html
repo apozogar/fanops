@@ -11,6 +11,14 @@
         <!-- Color de la barra del navegador en móvil. La aplicación tiene un único tema, claro. -->
         <meta name="theme-color" content="#ffffff" />
         <link rel="icon" type="image/png" href="assets/logo-fanops.png" />
+        <!-- PWA: al instalarla se abre a pantalla completa, como una app. En iOS hacen falta las
+             metas apple-*, porque ignora parte del manifest. -->
+        <link rel="manifest" href="manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="FanOps" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     </head>
 
     <body>

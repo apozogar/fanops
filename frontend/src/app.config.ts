@@ -1,7 +1,8 @@
 import { registerLocaleData } from '@angular/common';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
-import { ApplicationConfig, LOCALE_ID } from '@angular/core';
+import { ApplicationConfig, isDevMode, LOCALE_ID } from '@angular/core';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
 import Aura from '@primeuix/themes/aura';
@@ -43,6 +44,13 @@ export const appConfig: ApplicationConfig = {
         providePrimeNG({
             theme: { preset: Aura, options: { darkModeSelector: 'none' } },
             translation: TRADUCCION_PRIMENG
+        }),
+        // Service worker de la PWA: solo en producción, para no cachear nada mientras se desarrolla.
+        // Cachea el propio frontend (no la API) y es lo que permite instalar la app y abrirla sin
+        // esperar a la red. 'registerWhenStable' evita competir con la carga inicial.
+        provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
         }),
         MessageService,
         ConfirmationService,
