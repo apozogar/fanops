@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,14 @@ public class PenaService {
     String normalizado = normalizarSlug(slug);
     return repository.findBySlugIgnoreCase(normalizado)
         .orElseThrow(() -> new EntityNotFoundException("No hay ninguna peña con el dominio: " + slug));
+  }
+
+  /**
+   * La peña de la instalación. Los eventos todavía no cuelgan de ninguna peña y la peña es única
+   * por ahora (ver AGENTS.md), así que lo que se comparte fuera lleva la de menor id.
+   */
+  public Optional<PenaEntity> penaPrincipal() {
+    return repository.findAll(Sort.by("id")).stream().findFirst();
   }
 
   /** Imagen del logo de una peña, decodificada, con su tipo. */

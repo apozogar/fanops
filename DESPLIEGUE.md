@@ -49,9 +49,10 @@ comentada. Las que hay que revisar sí o sí:
   `SPRING_DATASOURCE_PASSWORD`) y sin `channel_binding`, que es un parámetro de `libpq` que el
   driver JDBC no entiende.
 - **`APP_JWT_SECRET`**: generar con `openssl rand -base64 48`. Cambiarlo cierra todas las sesiones.
-- **`PUBLIC_BASE_URL=https://fanops.es`**: de aquí salen los enlaces de los correos y la vista
-  previa del enlace de inscripción en WhatsApp (etiquetas Open Graph). Tiene que ser la URL HTTPS
-  pública real.
+- **`PUBLIC_BASE_URL=https://fanops.es`**: de aquí salen los enlaces de los correos (recuperar
+  contraseña, vincular la cuenta, avisos de inscripción). Si falta, apuntan a `localhost:5300` y no
+  funcionan fuera de tu ordenador. La vista previa del enlace en WhatsApp no depende de ella: sale
+  del dominio por el que llega la petición.
 - **Correo**: por defecto `APP_EMAIL_PROVEEDOR=resend` con `RESEND_API_KEY`. En el VPS los puertos
   SMTP de salida no están bloqueados, así que también vale `smtp` con las `SMTP_*`.
 - **`APP_SUPERADMIN_EMAIL` / `APP_SUPERADMIN_PASSWORD`**: solo se usan para crear el primer

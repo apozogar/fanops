@@ -1,9 +1,11 @@
 package com.softwells.fanops.controller;
 
+import com.softwells.fanops.service.CartelEventoService;
 import com.softwells.fanops.service.PrevisualizacionEnlaceService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.HtmlUtils;
 
 /**
@@ -35,6 +38,26 @@ public class PrevisualizacionEnlaceController {
   private static final String INDEX = "static/index.html";
 
   private final PrevisualizacionEnlaceService previsualizacion;
+  private final CartelEventoService cartelEvento;
+
+  /**
+   * Cartel del evento (PNG de 1200×630) para la vista previa del enlace. Público: lo descarga
+   * WhatsApp sin sesión. Se dibuja en cada petición, que es barato, y se deja una hora en caché;
+   * la URL ya lleva una versión que cambia cuando cambian los datos del evento.
+   */
+  @GetMapping(value = "/api/eventos/{id}/cartel.png", produces = MediaType.IMAGE_PNG_VALUE)
+  public ResponseEntity<byte[]> cartel(@PathVariable String id) {
+    UUID eventoId = uuid(id);
+    if (eventoId == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return cartelEvento.cartel(eventoId)
+        .map(png -> ResponseEntity.ok()
+            .contentType(MediaType.IMAGE_PNG)
+            .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+            .body(png))
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
 
   @GetMapping(value = "/inscripcion/{id}", produces = MediaType.TEXT_HTML_VALUE)
   public ResponseEntity<String> inscripcion(@PathVariable String id) throws IOException {
@@ -52,7 +75,10 @@ public class PrevisualizacionEnlaceController {
         html = html.replaceFirst("(?is)<title>.*?</title>", Matcher.quoteReplacement(
             "<title>" + HtmlUtils.htmlEscape(titulo.get(), "UTF-8") + "</title>"));
       }
-      Optional<String> etiquetas = previsualizacion.etiquetasInscripcion(eventoId);
+      // Origen tal como lo vio el cliente: detrás de Caddy, el esquema llega en
+      // X-Forwarded-Proto y lo aplica server.forward-headers-strategy=framework.
+      String origen = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+      Optional<String> etiquetas = previsualizacion.etiquetasInscripcion(eventoId, origen);
       if (etiquetas.isPresent()) {
         html = insertarEnCabecera(html, etiquetas.get());
       }

@@ -53,15 +53,19 @@ class PrevisualizacionEnlaceTest {
     evento.setNumeroPlazas(50);
     UUID uid = eventoService.save(evento).getUid();
 
-    mockMvc.perform(get("/inscripcion/" + uid))
+    mockMvc.perform(get("/inscripcion/" + uid).header("Host", "fanops.es")
+            .header("X-Forwarded-Proto", "https"))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString(
             "<meta property=\"og:title\" content=\"Betis - Osasuna · Inscripción\"")))
         .andExpect(content().string(containsString("Miércoles 9 de octubre")))
         .andExpect(content().string(containsString("Benito Villamarín")))
-        .andExpect(content().string(containsString("lunes 7 de octubre a las 20:00")))
-        .andExpect(content().string(containsString("15 € la plaza")))
-        .andExpect(content().string(containsString("/inscripcion/" + uid + "\"")))
+        .andExpect(content().string(containsString("⏰ Plazo hasta el lunes 7 a las 20:00")))
+        .andExpect(content().string(containsString("💶 15 € la plaza")))
+        .andExpect(content().string(not(containsString("📅"))))
+        // Las URLs salen del dominio por el que ha llegado la petición, no de la configuración.
+        .andExpect(content().string(containsString(
+            "<meta property=\"og:url\" content=\"https://fanops.es/inscripcion/" + uid + "\"")))
         .andExpect(content().string(containsString("<title>Betis - Osasuna · Inscripción")));
   }
 

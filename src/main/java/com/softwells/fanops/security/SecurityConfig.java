@@ -61,7 +61,8 @@ public class SecurityConfig {
                 "/api/auth/**",                       // Login, registro, recuperación de contraseña
                 "/api/pena/publica/**",               // Identidad de la peña por su dominio, para el login
                 "/api/eventos/*/inscripcion-publica", // Inscripción pública de no socios
-                "/api/eventos/*/info-publica"         // Info pública del evento para el formulario
+                "/api/eventos/*/info-publica",        // Info pública del evento para el formulario
+                "/api/eventos/*/cartel.png"           // Cartel de la vista previa del enlace (WhatsApp)
             ).permitAll()
 
             // --- Resto de la API: hace falta token. El detalle de roles va en cada controlador. ---

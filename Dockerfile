@@ -40,6 +40,10 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B package -DskipTests -Dcommit.id=$
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Fuentes para el cartel de los eventos (CartelEventoService), que se dibuja con Java2D: la
+# imagen Alpine no trae ninguna y sin ellas el texto no se pinta.
+RUN apk add --no-cache fontconfig font-dejavu
+
 ENV PORT=8080
 # MaxRAMPercentage: se calcula sobre el límite de memoria del contenedor (1,5 GB en
 # deploy/docker-compose.yml) y deja sitio para metaspace, hilos y buffers fuera del heap.

@@ -43,10 +43,15 @@ Frontend (desde `frontend/`):
     coincide con ninguna, entra como no socio (`EventoService.socioPorCorreo`).
   - **Vista previa del enlace público** (`/inscripcion/{id}`): WhatsApp y compañía no ejecutan
     JavaScript, así que `PrevisualizacionEnlaceController` sirve el `index.html` de la SPA con las
-    etiquetas Open Graph del evento ya puestas (título, fecha, lugar, plazo, precio y el escudo
-    de la peña vía `GET /api/pena/publica/{slug}/logo`). No lleva datos que cambian a cada rato,
-    como las plazas libres, porque las apps guardan la vista previa en caché. Las URLs salen de
-    `app.public-base-url` (`PUBLIC_BASE_URL`), que en producción tiene que ser la HTTPS real.
+    etiquetas Open Graph del evento ya puestas (título, fecha, lugar, plazo y precio). La imagen
+    es un **cartel de 1200×630** que se dibuja al vuelo con Java2D (`CartelEventoService`,
+    `GET /api/eventos/{id}/cartel.png`, público) con el color, escudo y lema de la peña; el
+    Dockerfile instala `font-dejavu` porque Alpine no trae fuentes. La URL del cartel lleva una
+    versión calculada con los datos del evento para que WhatsApp no reutilice uno viejo. No lleva
+    datos que cambian a cada rato,
+    como las plazas libres, porque las apps guardan la vista previa en caché. Las URLs de la
+    vista previa salen del dominio por el que llega la petición (Caddy pasa `X-Forwarded-Proto`),
+    no de `PUBLIC_BASE_URL`: así funcionan aunque falte esa variable.
   - Desde el **listado de socios** (modal de eventos del socio) la gestión puede apuntar a un
     socio que no usa la app, al evento o al sorteo del carnet
     (`POST /api/eventos/{id}/socios/{socioUid}/inscribir?sorteoCarnet=`). Sigue exactamente las
@@ -114,8 +119,8 @@ Guía completa en **`DESPLIEGUE.md`**. Lo esencial:
 - Configuración por variables de entorno en `deploy/.env` (no se commitea; plantilla en
   `deploy/.env.example`), con los mismos nombres que lee `application.yml`
   (`SPRING_DATASOURCE_URL`, `APP_JWT_SECRET`, `RESEND_API_KEY`, `PUBLIC_BASE_URL`...).
-- `PUBLIC_BASE_URL=https://fanops.es`: de ahí salen los enlaces de los correos y la vista previa
-  del enlace de inscripción en WhatsApp.
+- `PUBLIC_BASE_URL=https://fanops.es`: de ahí salen los enlaces de los correos (recuperar
+  contraseña, vincular cuenta, inscripciones). Si falta, apuntan a `localhost:5300`.
 - `SPRING_DATASOURCE_URL` es una URL **JDBC** (`jdbc:postgresql://host.docker.internal:5432/fanops`),
   no la cadena de `psql`: sin credenciales embebidas y sin `channel_binding`, que es un parámetro
   de `libpq` que el driver JDBC no entiende.
