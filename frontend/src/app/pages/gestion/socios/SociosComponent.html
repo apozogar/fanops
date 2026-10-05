@@ -1,129 +1,127 @@
-<div class="grid grid-cols-12 gap-8">
-    <div class="col-span-12 md:col-span-6 xl:col-span-3">
-        <div class="card mb-0">
-            <div class="flex justify-between mb-4">
-                <div>
-                    <span class="block text-muted-color font-medium mb-4">Socios</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSocios }}</div>
-                </div>
-                <div class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <fo-icon name="socios" [size]="22" class="text-cyan-500" />
-                </div>
+<!-- Resumen: en móvil dos por fila y compactas, para que el listado quede a la vista sin tanto scroll. -->
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 xl:gap-8">
+    <div class="card !mb-0 !p-3 md:!p-6">
+        <div class="flex justify-between items-start gap-2 md:mb-2">
+            <div class="min-w-0">
+                <span class="block text-muted-color font-medium text-sm md:text-base md:mb-3">Socios</span>
+                <div class="text-surface-900 dark:text-surface-0 font-semibold text-xl">{{ estadistica?.totalSocios }}</div>
             </div>
-            <span class="text-primary font-medium">{{ estadistica?.nuevosSocios }} nuevos </span>
-            <span class="text-muted-color">en el ultimo mes</span>
+            <div class="flex shrink-0 items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border w-8 h-8 md:w-10 md:h-10">
+                <fo-icon name="socios" [size]="20" class="text-cyan-500" />
+            </div>
         </div>
+        <div class="text-xs md:text-sm text-muted-color leading-snug truncate">+{{ estadistica?.nuevosSocios }} este mes</div>
     </div>
-    <div class="col-span-12 md:col-span-6 xl:col-span-3">
-        <div class="card mb-0">
-            <div class="flex justify-between mb-4">
-                <div>
-                    <span class="block text-muted-color font-medium mb-4">Socios Jóvenes</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJovenes }}</div>
-                </div>
-                <div class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <fo-icon name="usuario" [size]="22" class="text-orange-500" />
-                </div>
+    <div class="card !mb-0 !p-3 md:!p-6">
+        <div class="flex justify-between items-start gap-2 md:mb-2">
+            <div class="min-w-0">
+                <span class="block text-muted-color font-medium text-sm md:text-base md:mb-3">Jóvenes</span>
+                <div class="text-surface-900 dark:text-surface-0 font-semibold text-xl">{{ estadistica?.totalSociosJovenes }}</div>
             </div>
-            <span class="text-primary font-medium">Menores de {{ estadistica?.edadMayoria }}</span>
-            <span class="text-muted-color"> años</span>
+            <div class="flex shrink-0 items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border w-8 h-8 md:w-10 md:h-10">
+                <fo-icon name="usuario" [size]="20" class="text-orange-500" />
+            </div>
         </div>
+        <div class="text-xs md:text-sm text-muted-color leading-snug truncate">Menores de {{ estadistica?.edadMayoria }} años</div>
     </div>
-
-    <div class="col-span-12 md:col-span-6 xl:col-span-3">
-        <div class="card mb-0">
-            <div class="flex justify-between mb-4">
-                <div>
-                    <span class="block text-muted-color font-medium mb-4">Socios Jubilados</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalSociosJubilados }}</div>
-                </div>
-                <div class="flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <fo-icon name="socio" [size]="22" class="text-purple-500" />
-                </div>
+    <div class="card !mb-0 !p-3 md:!p-6">
+        <div class="flex justify-between items-start gap-2 md:mb-2">
+            <div class="min-w-0">
+                <span class="block text-muted-color font-medium text-sm md:text-base md:mb-3">Jubilados</span>
+                <div class="text-surface-900 dark:text-surface-0 font-semibold text-xl">{{ estadistica?.totalSociosJubilados }}</div>
             </div>
-            <span class="text-primary font-medium">Mayores de edad</span>
-            <span class="text-muted-color"> de jubilación</span>
+            <div class="flex shrink-0 items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border w-8 h-8 md:w-10 md:h-10">
+                <fo-icon name="socio" [size]="20" class="text-purple-500" />
+            </div>
         </div>
+        <div class="text-xs md:text-sm text-muted-color leading-snug truncate">Edad de jubilación</div>
     </div>
-
-    <div class="col-span-12 md:col-span-6 xl:col-span-3">
-        <div class="card mb-0">
-            <div class="flex justify-between mb-4">
-                <div>
-                    <span class="block text-muted-color font-medium mb-4">Socios con Impagos</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ estadistica?.totalImpagados }}</div>
-                </div>
-                <div class="flex items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <fo-icon name="aviso" [size]="22" class="text-red-500" />
-                </div>
+    <div class="card !mb-0 !p-3 md:!p-6">
+        <div class="flex justify-between items-start gap-2 md:mb-2">
+            <div class="min-w-0">
+                <span class="block text-muted-color font-medium text-sm md:text-base md:mb-3">Con impagos</span>
+                <div class="text-surface-900 dark:text-surface-0 font-semibold text-xl">{{ estadistica?.totalImpagados }}</div>
             </div>
-            <span class="text-primary font-medium">Cuotas devueltas</span>
-            <span class="text-muted-color"> o vencidas</span>
+            <div class="flex shrink-0 items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border w-8 h-8 md:w-10 md:h-10">
+                <fo-icon name="aviso" [size]="20" class="text-red-500" />
+            </div>
         </div>
+        <div class="text-xs md:text-sm text-muted-color leading-snug truncate">Devueltas o vencidas</div>
     </div>
 </div>
 
-<br />
-
-<div class="card">
+<div class="card !px-3 md:!px-6 mt-3 md:mt-8">
     <p-toast />
-    <p-toolbar styleClass="mb-6">
-        <ng-template #start>
-            <div class="flex flex-wrap gap-2">
-                <button foButton variant="secondary" size="icon" (click)="cargarSocios()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
-                    <fo-icon name="refrescar" />
-                </button>
-                <button foButton variant="primary" (click)="abrirNuevo()">
-                    <fo-icon name="anadir" />
-                    <span class="hidden md:inline">Nuevo Socio</span>
-                </button>
-                <button foButton variant="warning" (click)="cargarSocios('impagados')">
-                    <fo-icon name="filtrar" />
-                    <span class="hidden md:inline">Ver Impagados</span>
-                </button>
-                <!-- Indicador de filtro activo -->
-                @if (filtroActivo) {
-                <div class="flex items-center gap-2">
-                    <fo-icon name="info" class="text-blue-500" />
-                    <span class="font-medium text-blue-700 dark:text-blue-300"> Filtrando: <b>{{ filtroActivo | titlecase }}</b> </span>
-                    <button foButton variant="ghost" size="icon-sm" (click)="limpiarFiltros()" pTooltip="Limpiar filtro" aria-label="Limpiar filtro">
-                        <fo-icon name="cerrar" [size]="16" />
-                    </button>
-                </div>
-                }
-            </div>
-        </ng-template>
+    <!-- Barra de herramientas propia (sin p-toolbar): en móvil el buscador ocupa toda la fila y los
+         botones se quedan en iconos; el toolbar de PrimeNG los amontonaba. -->
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+        <div class="flex items-center gap-2">
+            <button foButton variant="secondary" size="icon" (click)="cargarSocios()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
+                <fo-icon name="refrescar" />
+            </button>
+            <button foButton variant="primary" (click)="abrirNuevo()" aria-label="Nuevo socio">
+                <fo-icon name="anadir" />
+                <span class="hidden md:inline">Nuevo Socio</span>
+            </button>
+            <button foButton variant="warning" (click)="cargarSocios('impagados')" aria-label="Ver impagados">
+                <fo-icon name="filtrar" />
+                <span class="hidden md:inline">Ver Impagados</span>
+            </button>
+            <button foButton variant="info" (click)="cobrosDialog = true" aria-label="Gestión de cobros">
+                <fo-icon name="banco" />
+                <span class="hidden md:inline">Gestión de Cobros</span>
+            </button>
+            <input type="file" #fileUpload style="display: none" (change)="onFileSelect($event)" accept=".xlsx, .xls" />
+            <button foButton variant="secondary" (click)="fileUpload.click()" aria-label="Importar socios">
+                <fo-icon name="subir" />
+                <span class="hidden md:inline">Importar</span>
+            </button>
+        </div>
+        <p-iconfield iconPosition="left" class="w-full md:w-auto">
+            <p-inputicon>
+                <fo-icon name="buscar" />
+            </p-inputicon>
+            <!-- Búsqueda por palabras: "Alberto Pozo" encuentra a "Pozo Garcia, Alberto". -->
+            <input
+                pInputText
+                type="text"
+                [ngModel]="terminoBusqueda"
+                (ngModelChange)="buscar($event)"
+                [ngModelOptions]="{ standalone: true }"
+                placeholder="Buscar por nombre, número, DNI, teléfono o email..."
+                aria-label="Buscar socios"
+                class="w-full md:w-80"
+            />
+        </p-iconfield>
+    </div>
+    <!-- Indicador de filtro activo -->
+    @if (filtroActivo) {
+    <div class="flex items-center gap-2 mb-3">
+        <fo-icon name="info" class="text-blue-500" />
+        <span class="font-medium text-blue-700 dark:text-blue-300"> Filtrando: <b>{{ filtroActivo | titlecase }}</b> </span>
+        <button foButton variant="ghost" size="icon-sm" (click)="limpiarFiltros()" pTooltip="Limpiar filtro" aria-label="Limpiar filtro">
+            <fo-icon name="cerrar" [size]="16" />
+        </button>
+    </div>
+    }
 
-        <ng-template #end>
-            <div class="flex flex-wrap gap-2 justify-end">
-                <p-iconfield iconPosition="left">
-                    <p-inputicon>
-                        <fo-icon name="buscar" />
-                    </p-inputicon>
-                    <!-- Búsqueda por palabras: "Alberto Pozo" encuentra a "Pozo Garcia, Alberto". -->
-                    <input
-                        pInputText
-                        type="text"
-                        [ngModel]="terminoBusqueda"
-                        (ngModelChange)="buscar($event)"
-                        [ngModelOptions]="{ standalone: true }"
-                        placeholder="Buscar por nombre, número, DNI, teléfono o email..."
-                        aria-label="Buscar socios"
-                        class="w-full sm:w-80"
-                    />
-                </p-iconfield>
-                <button foButton variant="info" (click)="cobrosDialog = true">
-                    <fo-icon name="banco" />
-                    <span class="hidden md:inline">Gestión de Cobros</span>
-                </button>
-                <input type="file" #fileUpload style="display: none" (change)="onFileSelect($event)" accept=".xlsx, .xls" />
-                <button foButton variant="secondary" (click)="fileUpload.click()">
-                    <fo-icon name="subir" />
-                    <span class="hidden md:inline">Importar</span>
-                </button>
-            </div>
-        </ng-template>
-    </p-toolbar>
+    <!-- Las acciones de cada socio, compartidas por la fila de escritorio y la tarjeta de móvil. -->
+    <ng-template #acciones let-socio let-grande="grande">
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full" (click)="mostrarCuotas(socio)" pTooltip="Ver Cuotas" tooltipPosition="top" aria-label="Ver cuotas"><fo-icon name="euro" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full" (click)="abrirHistorial(socio)" pTooltip="Eventos y faltas" tooltipPosition="top" aria-label="Ver historial de eventos y faltas"><fo-icon name="calendario" [size]="grande ? 20 : 16" /></button>
+        <button
+            foButton
+            variant="ghost"
+            [size]="grande ? 'icon' : 'icon-sm'"
+            class="rounded-full"
+            (click)="abrirCuenta(socio)"
+            [pTooltip]="socio.tieneUsuario ? 'Cambiar su contraseña' : 'Crear su cuenta de acceso'"
+            tooltipPosition="top"
+            [attr.aria-label]="socio.tieneUsuario ? 'Cambiar la contraseña del socio' : 'Crear la cuenta de acceso del socio'"
+        ><fo-icon name="llave" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full" (click)="editarSocio(socio)" pTooltip="Editar Socio" tooltipPosition="top" aria-label="Editar socio"><fo-icon name="editar" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full text-danger" (click)="eliminarSocio(socio)" pTooltip="Eliminar Socio" tooltipPosition="top" aria-label="Eliminar socio"><fo-icon name="eliminar" [size]="grande ? 20 : 16" /></button>
+    </ng-template>
 
     <p-table
         #dt
@@ -135,15 +133,15 @@
         dataKey="uid"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} socios"
         [showCurrentPageReport]="true"
-        class="mt-4"
+        styleClass="fo-tabla-socios"
     >
         <ng-template pTemplate="header">
-            <tr>
-                <th scope="col" class="hidden md:table-cell" style="width: 100px">Núm. Socio</th>
+            <tr class="hidden md:table-row">
+                <th scope="col" style="width: 100px">Núm. Socio</th>
                 <th scope="col">Nombre</th>
-                <th scope="col" class="hidden md:table-cell">Teléfono</th>
-                <th scope="col" class="hidden md:table-cell">Email</th>
-                <th scope="col" class="hidden md:table-cell">Estado</th>
+                <th scope="col">Teléfono</th>
+                <th scope="col">Email</th>
+                <th scope="col">Estado</th>
                 <th scope="col" class="hidden lg:table-cell">Acceso</th>
                 <th scope="col" class="hidden lg:table-cell" style="width: 110px">Faltas</th>
                 <th scope="col" style="min-width: 200px">Acciones</th>
@@ -151,8 +149,40 @@
         </ng-template>
         <ng-template pTemplate="body" let-socio>
             <tr>
+                <!-- Móvil: una tarjeta por socio, con lo esencial a la vista y las acciones debajo. -->
+                <td class="md:!hidden !p-0" [attr.colspan]="8">
+                    <div class="flex flex-col gap-2 px-1 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="fo-avatar fo-avatar-socio" aria-hidden="true">{{ iniciales(socio.nombre) }}</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-ink break-words leading-tight">{{ socio.nombre }}</div>
+                                <div class="text-sm text-ink-muted">Nº {{ socio.numeroSocio }}</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <p-tag [severity]="socio.activo ? 'success' : 'danger'" [value]="socio.activo ? 'Activo' : 'Inactivo'" />
+                            <p-tag [severity]="accesoSeverity(socio)" [value]="accesoTexto(socio)" />
+                            @if (socio.faltasAcumuladas) {
+                            <p-tag [severity]="socio.faltasPendientes ? 'danger' : 'warn'" [value]="faltasTexto(socio)" />
+                            }
+                        </div>
+                        @if (socio.telefono || socio.email) {
+                        <div class="flex flex-col gap-0.5 text-sm text-ink-muted">
+                            @if (socio.telefono) {
+                            <a class="fo-contacto" [href]="'tel:' + socio.telefono"><fo-icon name="telefono" [size]="14" />{{ socio.telefono }}</a>
+                            }
+                            @if (socio.email) {
+                            <a class="fo-contacto break-all" [href]="'mailto:' + socio.email"><fo-icon name="correo" [size]="14" />{{ socio.email }}</a>
+                            }
+                        </div>
+                        }
+                        <div class="flex items-center justify-between border-t border-line pt-1 -mx-1">
+                            <ng-container *ngTemplateOutlet="acciones; context: { $implicit: socio, grande: true }" />
+                        </div>
+                    </div>
+                </td>
                 <td class="hidden md:table-cell">{{ socio.numeroSocio }}</td>
-                <td>{{ socio.nombre }}</td>
+                <td class="hidden md:table-cell">{{ socio.nombre }}</td>
                 <td class="hidden md:table-cell">{{ socio.telefono }}</td>
                 <td class="hidden md:table-cell">{{ socio.email }}</td>
                 <td class="hidden md:table-cell">
@@ -177,58 +207,9 @@
                     <span class="text-muted-color">—</span>
                     }
                 </td>
-                <td style="min-width: 200px">
+                <td class="hidden md:table-cell" style="min-width: 200px">
                     <div class="flex items-center gap-1.5">
-                    <button
-                        foButton
-                        variant="ghost"
-                        size="icon-sm"
-                        class="rounded-full"
-                        (click)="mostrarCuotas(socio)"
-                        pTooltip="Ver Cuotas"
-                        tooltipPosition="top"
-                        aria-label="Ver cuotas"
-                    ><fo-icon name="euro" [size]="16" /></button>
-                    <button
-                        foButton
-                        variant="ghost"
-                        size="icon-sm"
-                        class="rounded-full"
-                        (click)="abrirHistorial(socio)"
-                        pTooltip="Eventos y faltas"
-                        tooltipPosition="top"
-                        aria-label="Ver historial de eventos y faltas"
-                    ><fo-icon name="calendario" [size]="16" /></button>
-                    <button
-                        foButton
-                        variant="ghost"
-                        size="icon-sm"
-                        class="rounded-full"
-                        (click)="abrirCuenta(socio)"
-                        [pTooltip]="socio.tieneUsuario ? 'Cambiar su contraseña' : 'Crear su cuenta de acceso'"
-                        tooltipPosition="top"
-                        [attr.aria-label]="socio.tieneUsuario ? 'Cambiar la contraseña del socio' : 'Crear la cuenta de acceso del socio'"
-                    ><fo-icon name="llave" [size]="16" /></button>
-                    <button
-                        foButton
-                        variant="ghost"
-                        size="icon-sm"
-                        class="rounded-full"
-                        (click)="editarSocio(socio)"
-                        pTooltip="Editar Socio"
-                        tooltipPosition="top"
-                        aria-label="Editar socio"
-                    ><fo-icon name="editar" [size]="16" /></button>
-                    <button
-                        foButton
-                        variant="ghost"
-                        size="icon-sm"
-                        class="rounded-full text-danger"
-                        (click)="eliminarSocio(socio)"
-                        pTooltip="Eliminar Socio"
-                        tooltipPosition="top"
-                        aria-label="Eliminar socio"
-                    ><fo-icon name="eliminar" [size]="16" /></button>
+                        <ng-container *ngTemplateOutlet="acciones; context: { $implicit: socio, grande: false }" />
                     </div>
                 </td>
             </tr>
