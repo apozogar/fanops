@@ -41,6 +41,12 @@ Frontend (desde `frontend/`):
     inscribe a esa ficha exactamente como desde la app: el correo es lo que valida al socio. En un
     multicarnet, con varias fichas en el mismo correo, se elige por el nombre escrito; si no
     coincide con ninguna, entra como no socio (`EventoService.socioPorCorreo`).
+  - **Vista previa del enlace público** (`/inscripcion/{id}`): WhatsApp y compañía no ejecutan
+    JavaScript, así que `PrevisualizacionEnlaceController` sirve el `index.html` de la SPA con las
+    etiquetas Open Graph del evento ya puestas (título, fecha, lugar, plazo, precio y el escudo
+    de la peña vía `GET /api/pena/publica/{slug}/logo`). No lleva datos que cambian a cada rato,
+    como las plazas libres, porque las apps guardan la vista previa en caché. Las URLs salen de
+    `app.public-base-url` (`PUBLIC_BASE_URL`), que en producción tiene que ser la HTTPS real.
   - Desde el **listado de socios** (modal de eventos del socio) la gestión puede apuntar a un
     socio que no usa la app, al evento o al sorteo del carnet
     (`POST /api/eventos/{id}/socios/{socioUid}/inscribir?sorteoCarnet=`). Sigue exactamente las
@@ -96,26 +102,24 @@ Frontend (desde `frontend/`):
 - La peña es **singleton** (ID 1), usado en cuotas, remesas SEPA y carnet.
 - El flujo SEPA genera cuotas y remesas `pain.008`; los retornos se procesan desde `/api/cobros`.
 
-## Despliegue (Fly.io Madrid + Neon Frankfurt)
+## Despliegue (VPS en Hetzner, https://fanops.es)
 
 Guía completa en **`DESPLIEGUE.md`**. Lo esencial:
 
-- Configuración en `fly.toml`: región `mad`, `min_machines_running = 1` y
-  `auto_stop_machines = 'off'`. La máquina **no se duerme**: es lo que quita el arranque en frío y
-  lo que hace que `SorteoCarnetScheduler` se ejecute de verdad cada minuto.
-- Base de datos en Neon, región `eu-central-1`, **endpoint directo** (el que no lleva `-pooler`):
-  con una sola instancia y su pool de HikariCP, el pooler solo añade un salto.
-- App y base de datos tienen que estar en la misma zona del mundo. Tenerlas separadas era lo que
-  hacía lento el despliegue anterior: ~150 ms por consulta, y una petición con diez consultas se
-  iba a segundo y medio de puro cable.
-- Secretos: `fly secrets set NOMBRE=valor`. **No existe interpolación de secretos en `fly.toml`**;
-  `{{ secrets.X }}` no se sustituye por nada. Los secretos se inyectan como variables de entorno
-  con su propio nombre, así que hay que nombrarlos igual que las variables que lee
-  `application.yml` (`SPRING_DATASOURCE_URL`, `APP_JWT_SECRET`, `RESEND_API_KEY`...). En `[env]`
-  van solo los valores no sensibles.
-- `SPRING_DATASOURCE_URL` es una URL **JDBC** (`jdbc:postgresql://host/fanops?sslmode=require`),
+- Al subir el código, el servidor lo despliega solo. El stack está en `deploy/`:
+  `docker-compose.yml` (la aplicación, construida con el `Dockerfile` de la raíz, más Caddy como
+  proxy inverso con HTTPS automático) y `Caddyfile`.
+- La base de datos es un Postgres que vive en el propio servidor, fuera de Docker: la aplicación
+  llega a él por `host.docker.internal`.
+- Configuración por variables de entorno en `deploy/.env` (no se commitea; plantilla en
+  `deploy/.env.example`), con los mismos nombres que lee `application.yml`
+  (`SPRING_DATASOURCE_URL`, `APP_JWT_SECRET`, `RESEND_API_KEY`, `PUBLIC_BASE_URL`...).
+- `PUBLIC_BASE_URL=https://fanops.es`: de ahí salen los enlaces de los correos y la vista previa
+  del enlace de inscripción en WhatsApp.
+- `SPRING_DATASOURCE_URL` es una URL **JDBC** (`jdbc:postgresql://host.docker.internal:5432/fanops`),
   no la cadena de `psql`: sin credenciales embebidas y sin `channel_binding`, que es un parámetro
   de `libpq` que el driver JDBC no entiende.
+- El contenedor de la aplicación va limitado a 1,5 GB (`mem_limit`) para que la JVM no se quede
+  con la RAM que necesita Postgres en la misma máquina.
 - El `Dockerfile` desempaqueta el jar y entrena un archivo CDS durante el build para recortar el
   arranque. Si ese paso falla, el build continúa y la JVM arranca sin él.
-- `render.yaml` se conserva solo como referencia del despliegue anterior.

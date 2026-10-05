@@ -16,8 +16,8 @@ import org.springframework.web.client.RestClient;
 /**
  * Envío por la API HTTP de Brevo (POST https://api.brevo.com/v3/smtp/email).
  *
- * Es el transporte para el plan gratuito de Render: al ir por HTTPS (443) no le afecta el
- * bloqueo de los puertos SMTP. Se activa con {@code app.email.proveedor=brevo} y necesita
+ * Sirve donde los puertos SMTP estén bloqueados: al ir por HTTPS (443) no le afecta ese
+ * bloqueo. Se activa con {@code app.email.proveedor=brevo} y necesita
  * {@code BREVO_API_KEY} y un {@code MAIL_FROM_ADDRESS} verificado en Brevo (remitente único o,
  * mejor, un dominio con SPF y DKIM configurados).
  */

@@ -15,8 +15,9 @@ import org.springframework.stereotype.Service;
 /**
  * Envío por SMTP. Es el transporte por defecto y el que se usa en desarrollo (Mailtrap).
  *
- * No sirve en el plan gratuito de Render, que bloquea la salida a los puertos SMTP: allí hay que
- * poner {@code app.email.proveedor=brevo} (o {@code resend}) para salir por HTTPS. Ver
+ * No sirve donde se bloquee la salida a los puertos SMTP: allí hay que poner
+ * {@code app.email.proveedor=brevo} (o {@code resend}) para salir por HTTPS. En el VPS no hay
+ * bloqueo, así que es una opción válida. Ver
  * {@link BrevoEmailSender} y {@link ResendEmailSender}.
  */
 @Service

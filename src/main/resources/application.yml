@@ -9,13 +9,13 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       # Una sola instancia con poca concurrencia: un pool pequeño rinde mejor que el
-      # default de 10 y no agota el límite de conexiones del plan de Neon.
+      # default de 10 y deja conexiones libres en el Postgres compartido del servidor.
       maximum-pool-size: ${DB_POOL_MAX:5}
       minimum-idle: ${DB_POOL_MIN:1}
       connection-timeout: 10000
       idle-timeout: 300000
-      # Por debajo del corte de conexiones ociosas del pooler de Neon, para que sea Hikari
-      # quien recicle la conexión y no el servidor quien la cierre en mitad de una consulta.
+      # Por debajo de los cortes habituales de conexiones ociosas, para que sea Hikari quien
+      # recicle la conexión y no el servidor quien la cierre en mitad de una consulta.
       max-lifetime: 900000
       keepalive-time: 120000
 
@@ -61,7 +61,7 @@ server:
     enabled: true
     mime-types: text/html,text/css,text/plain,text/javascript,application/javascript,application/json,application/xml,image/svg+xml
     min-response-size: 1024
-  # Detrás del proxy de Fly (o de Cloudflare) la petición llega por HTTP con las cabeceras
+  # Detrás del proxy inverso (Caddy en el VPS) la petición llega por HTTP con las cabeceras
   # X-Forwarded-*; sin esto Spring cree que el esquema es http y genera enlaces incorrectos.
   forward-headers-strategy: framework
 
@@ -92,16 +92,15 @@ management:
         enabled: true
       group:
         # /management/health sigue comprobando la base de datos, que es lo que queremos
-        # para el health check del despliegue (de paso mantiene despierto el compute de
-        # Neon). /management/health/liveness solo mira que el proceso esté vivo: es la
-        # alternativa si en algún momento interesa no tocar la base de datos en cada ping.
+        # para vigilar el despliegue a mano. /management/health/liveness solo mira que el
+        # proceso esté vivo: es el que usa el healthcheck de Docker (deploy/docker-compose.yml),
+        # para que un corte de la base de datos no haga reiniciar la aplicación en bucle.
         liveness:
           include: livenessState
   health:
     # El indicador del correo abre una conexión al host SMTP y lo cuenta como salud de la
-    # aplicación. En Render eso es contraproducente: con los puertos SMTP bloqueados daría DOWN
-    # y el health check del servicio (healthCheckPath) lo reiniciaría en bucle, aunque la
-    # aplicación esté perfectamente. Si el correo falla, se ve en el error del envío.
+    # aplicación: un proveedor de correo caído pondría la aplicación en DOWN aunque esté
+    # perfectamente. Si el correo falla, se ve en el error del envío.
     mail:
       enabled: false
 
@@ -112,8 +111,8 @@ app:
       # OBLIGATORIO: configura APP_JWT_SECRET en producción (base64, mínimo 32 bytes).
       secret: ${APP_JWT_SECRET:eW91ci1zdXBlci1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1hbmQtc2VjdXJlLWFuZC1hdC1sZWFzdC0yNTYtYml0cw==}
       expiration: ${APP_JWT_EXPIRATION:1209600000}  # 14 dias en milisegundos
-  # Base URL pública de la aplicación (para enlaces en emails/WhatsApp).
-  # En Fly.io se puede inyectar con FLY_APP_URL.
+  # Base URL pública de la aplicación (enlaces de los correos y vista previa en WhatsApp).
+  # En producción, la HTTPS real del dominio (PUBLIC_BASE_URL en deploy/.env).
   public-base-url: ${PUBLIC_BASE_URL:http://localhost:5300}
   # Bootstrap del primer usuario superadmin (solo se crea si no existe ya ningún
   # usuario con ROLE_SUPERADMIN). OBLIGATORIO cambiar estos valores en producción
@@ -127,23 +126,23 @@ app:
     expiracion-horas: ${APP_VINCULACION_EXPIRACION_HORAS:48}
 
   # Transporte del correo saliente.
-  #   smtp   -> relay SMTP clásico (desarrollo con Mailtrap, o cualquier proveedor en un plan
-  #             de pago de Render).
-  #   brevo  -> API HTTP de Brevo, que sale por el 443. Válida en el plan gratuito de Render,
-  #             que bloquea los puertos SMTP (25, 465 y 587).
+  #   smtp   -> relay SMTP clásico (desarrollo con Mailtrap, o cualquier proveedor: en el VPS
+  #             los puertos SMTP de salida no están bloqueados).
+  #   brevo  -> API HTTP de Brevo, que sale por el 443. Útil donde los puertos SMTP
+  #             (25, 465 y 587) estén bloqueados.
   #   resend -> API HTTP de Resend (https://resend.com), también por el 443. Alternativa más
   #             simple de configurar: una única API key, y para pruebas se puede enviar desde
   #             onboarding@resend.dev sin verificar ningún dominio.
   email:
     proveedor: ${APP_EMAIL_PROVEEDOR:resend}
-    remitente-nombre: ${MAIL_FROM_NAME:fanops.onrender.com}
+    remitente-nombre: ${MAIL_FROM_NAME:FanOps}
     brevo:
       url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
       api-key: ${BREVO_API_KEY:}
     resend:
       url: ${RESEND_API_URL:https://api.resend.com/emails}
       # Sin valor por defecto a propósito: la clave se inyecta por entorno
-      # (`fly secrets set RESEND_API_KEY=...`) y nunca se commitea. Si falta, el envío
+      # (RESEND_API_KEY en deploy/.env) y nunca se commitea. Si falta, el envío
       # simplemente no sale y queda registrado (ver ResendEmailSender).
       api-key: ${RESEND_API_KEY:}
 

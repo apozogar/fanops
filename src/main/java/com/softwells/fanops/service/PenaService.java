@@ -8,6 +8,7 @@ import java.text.Normalizer;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -50,6 +51,32 @@ public class PenaService {
     String normalizado = normalizarSlug(slug);
     return repository.findBySlugIgnoreCase(normalizado)
         .orElseThrow(() -> new EntityNotFoundException("No hay ninguna peña con el dominio: " + slug));
+  }
+
+  /** Imagen del logo de una peña, decodificada, con su tipo. */
+  public record LogoPena(String tipo, byte[] contenido) {
+  }
+
+  /**
+   * Logo de la peña como imagen, para poder enlazarlo desde fuera (la vista previa de un enlace
+   * en WhatsApp necesita una URL, no un data URI). Vacío si no tiene logo subido: los antiguos
+   * guardados como URL ya se pueden enlazar directamente.
+   */
+  public Optional<LogoPena> logo(String slug) {
+    String logo = findBySlug(slug).getLogo();
+    if (logo == null) {
+      return Optional.empty();
+    }
+    var matcher = PATRON_DATA_URI.matcher(logo.trim());
+    if (!matcher.matches()) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(new LogoPena(matcher.group(1).toLowerCase(),
+          Base64.getMimeDecoder().decode(matcher.group(2))));
+    } catch (IllegalArgumentException base64Roto) {
+      return Optional.empty();
+    }
   }
 
   public List<PenaEntity> findAll() {

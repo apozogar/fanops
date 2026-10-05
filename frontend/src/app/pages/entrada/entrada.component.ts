@@ -27,10 +27,10 @@ const MINIMO_VISIBLE_MS = 2000;
  * Mensajes que se van sucediendo mientras se espera.
  *
  * El segundo y el tercero solo llegan a verse si la espera se alarga, que es lo que pasa cuando
- * el backend está dormido (en Render se suspende por inactividad y el primer arranque cuesta
- * bastantes segundos). Contar lo que está pasando evita que parezca que se ha quedado colgado.
+ * el backend tarda en responder (por ejemplo, justo después de un despliegue, mientras arranca la
+ * JVM). Contar lo que está pasando evita que parezca que se ha quedado colgado.
  */
-const MENSAJES = ['Estamos preparando tu peña…', 'El servidor estaba en reposo, lo estamos despertando…', 'Ya queda menos, gracias por la paciencia.'];
+const MENSAJES = ['Estamos preparando tu peña…', 'Está tardando un poco más de lo normal…', 'Ya queda menos, gracias por la paciencia.'];
 
 /** Cada cuánto se pasa al siguiente mensaje. */
 const CADENCIA_MENSAJES_MS = 4000;

@@ -72,7 +72,7 @@ public class AuthController {
   }
 
   /**
-   * IP real del cliente. En despliegue hay un proxy delante (Fly.io), así que la IP de socket
+   * IP real del cliente. En despliegue hay un proxy delante (Caddy en el VPS), así que la IP de socket
    * ({@code getRemoteAddr}) sería la del proxy: se prioriza el primer salto de
    * {@code X-Forwarded-For}, que es el cliente original.
    */

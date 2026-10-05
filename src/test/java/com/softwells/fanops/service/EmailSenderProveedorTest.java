@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * Con {@code app.email.proveedor=brevo}, que es la configuración que corre en Render, el
+ * Con {@code app.email.proveedor=brevo} (el envío por API HTTP en lugar de SMTP), el
  * contexto tiene que arrancar con el sender de la API HTTP y sin el de SMTP.
  *
  * Sin esta comprobación, una errata en la condición de los beans no se vería hasta el despliegue:

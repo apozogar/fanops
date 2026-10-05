@@ -20,10 +20,10 @@
                 "-f",
                 "C:/dev/git/personal/fanops/pom.xml",
                 "spring-boot:run",
-                "-Dspring-boot.run.arguments=--server.port=8095",
+                "-Dspring-boot.run.arguments=--server.port=8187",
                 "-Dspring-boot.run.jvmArguments=-Djdk.net.unixdomain.tmpdir=C:/dev/tmp-jvm"
             ],
-            "port": 8095
+            "port": 8187
         }
     ]
 }

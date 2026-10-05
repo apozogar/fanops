@@ -41,9 +41,8 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 ENV PORT=8080
-# MaxRAMPercentage: el contenedor tiene 1 GB y la JVM necesita dejar sitio para metaspace,
-# hilos y buffers fuera del heap. TieredStopAtLevel=1 recorta el arranque a costa de algo
-# de rendimiento pico, un intercambio que compensa en una app con esta carga.
+# MaxRAMPercentage: se calcula sobre el límite de memoria del contenedor (1,5 GB en
+# deploy/docker-compose.yml) y deja sitio para metaspace, hilos y buffers fuera del heap.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Duser.timezone=Europe/Madrid -Dfile.encoding=UTF-8"
 
 COPY --from=build /app/target/*.jar app.jar

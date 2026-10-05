@@ -1,0 +1,95 @@
+package com.softwells.fanops.controller;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.softwells.fanops.model.EventoEntity;
+import com.softwells.fanops.model.PenaEntity;
+import com.softwells.fanops.repository.PenaRepository;
+import com.softwells.fanops.service.EventoService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Vista previa del enlace de inscripción en WhatsApp y compañía: sin sesión, la página tiene que
+ * llevar ya en el HTML las etiquetas Open Graph del evento, porque esas aplicaciones no ejecutan
+ * el JavaScript del frontend.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class PrevisualizacionEnlaceTest {
+
+  @Autowired
+  private MockMvc mockMvc;
+  @Autowired
+  private EventoService eventoService;
+  @Autowired
+  private PenaRepository penaRepository;
+
+  @Test
+  @DisplayName("El enlace de un evento lleva título, fecha, plazo y precio en las etiquetas OG")
+  void enlaceConEtiquetas() throws Exception {
+    EventoEntity evento = new EventoEntity();
+    evento.setNombreEvento("Betis - Osasuna");
+    evento.setFechaEvento(LocalDate.of(2030, 10, 9));
+    evento.setFechaLimiteInscripcion(LocalDateTime.of(2030, 10, 7, 20, 0));
+    evento.setUbicacion("Benito Villamarín");
+    evento.setCostePlaza(new BigDecimal("15.00"));
+    evento.setNumeroPlazas(50);
+    UUID uid = eventoService.save(evento).getUid();
+
+    mockMvc.perform(get("/inscripcion/" + uid))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(
+            "<meta property=\"og:title\" content=\"Betis - Osasuna · Inscripción\"")))
+        .andExpect(content().string(containsString("Miércoles 9 de octubre")))
+        .andExpect(content().string(containsString("Benito Villamarín")))
+        .andExpect(content().string(containsString("lunes 7 de octubre a las 20:00")))
+        .andExpect(content().string(containsString("15 € la plaza")))
+        .andExpect(content().string(containsString("/inscripcion/" + uid + "\"")))
+        .andExpect(content().string(containsString("<title>Betis - Osasuna · Inscripción")));
+  }
+
+  @Test
+  @DisplayName("Un evento que no existe sirve la página normal, sin etiquetas")
+  void eventoInexistente() throws Exception {
+    mockMvc.perform(get("/inscripcion/" + UUID.randomUUID()))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("og:title"))));
+    mockMvc.perform(get("/inscripcion/no-es-un-uuid"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("og:title"))));
+  }
+
+  @Test
+  @DisplayName("El logo de la peña se sirve como imagen pública")
+  void logoComoImagen() throws Exception {
+    byte[] png = {(byte) 0x89, 'P', 'N', 'G', 1, 2, 3};
+    PenaEntity pena = new PenaEntity();
+    String slug = "pena-logo-" + UUID.randomUUID().toString().substring(0, 8);
+    pena.setNombre("Peña con logo");
+    pena.setSlug(slug);
+    pena.setLogo("data:image/png;base64," + Base64.getEncoder().encodeToString(png));
+    penaRepository.save(pena);
+
+    mockMvc.perform(get("/api/pena/publica/" + slug + "/logo"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Type", "image/png"))
+        .andExpect(content().bytes(png));
+  }
+}

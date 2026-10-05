@@ -6,9 +6,12 @@ import com.softwells.fanops.controller.dto.PenaRequestDTO;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.service.PenaService;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,6 +48,21 @@ public class PenaController {
     PenaPublicaDto dto = new PenaPublicaDto(pena.getNombre(), pena.getSlug(), pena.getLogo(),
         pena.getLema(), pena.getColor());
     return ResponseEntity.ok(new ApiResponse<>(true, "Peña recuperada", dto));
+  }
+
+  /**
+   * Logo de la peña como imagen. Es público porque lo piden las aplicaciones de mensajería para
+   * la vista previa del enlace de inscripción, sin sesión ninguna.
+   */
+  @GetMapping("/publica/{slug}/logo")
+  @PreAuthorize("permitAll()")
+  public ResponseEntity<byte[]> logo(@PathVariable("slug") String slug) {
+    return service.logo(slug)
+        .map(logo -> ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(logo.tipo()))
+            .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePublic())
+            .body(logo.contenido()))
+        .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
   @GetMapping("/{id}")

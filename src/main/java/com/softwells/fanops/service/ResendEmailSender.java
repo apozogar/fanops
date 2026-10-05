@@ -16,8 +16,8 @@ import org.springframework.web.client.RestClient;
 /**
  * Envío por la API HTTP de Resend (POST https://api.resend.com/emails).
  *
- * Es otro transporte válido para el plan gratuito de Render: al ir por HTTPS (443) no le afecta
- * el bloqueo de los puertos SMTP. Se activa con {@code app.email.proveedor=resend} y necesita
+ * Es el transporte por defecto en producción: al ir por HTTPS (443) no depende de que los
+ * puertos SMTP estén abiertos y basta una única API key. Se activa con {@code app.email.proveedor=resend} y necesita
  * {@code RESEND_API_KEY}. Para pruebas se puede usar como remitente {@code onboarding@resend.dev}
  * sin verificar ningún dominio; para producción real hay que verificar un dominio propio en
  * Resend y usar un remitente de ese dominio en {@code MAIL_FROM_ADDRESS}.
