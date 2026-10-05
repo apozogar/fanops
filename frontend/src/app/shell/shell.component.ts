@@ -9,6 +9,7 @@ import { ShellHeaderComponent } from './shell-header.component';
 import { ShellSidebarComponent } from './shell-sidebar.component';
 import { ShellBottomNavComponent } from './shell-bottom-nav.component';
 import { ShellAccountPanelComponent } from './shell-account-panel.component';
+import { ShellInstalarAppComponent } from './shell-instalar-app.component';
 
 /**
  * Shell de la aplicación: sustituye al layout de la plantilla de PrimeNG.
@@ -21,7 +22,7 @@ import { ShellAccountPanelComponent } from './shell-account-panel.component';
 @Component({
     selector: 'fo-shell',
     standalone: true,
-    imports: [RouterOutlet, ShellHeaderComponent, ShellSidebarComponent, ShellBottomNavComponent, ShellAccountPanelComponent],
+    imports: [RouterOutlet, ShellHeaderComponent, ShellSidebarComponent, ShellBottomNavComponent, ShellAccountPanelComponent, ShellInstalarAppComponent],
     template: `
         <div class="min-h-dvh bg-app">
             <fo-shell-header (openAccount)="accountOpen.set(true)" />
@@ -37,9 +38,8 @@ import { ShellAccountPanelComponent } from './shell-account-panel.component';
                        pb-[calc(var(--fo-tabbar-h)+var(--fo-safe-bottom)+1rem)]
                        lg:pb-8 lg:pl-[var(--fo-sidebar-w)]"
             >
-                <div
-                    class="mx-auto w-full max-w-[var(--fo-content-max-w)] px-[max(1rem,var(--fo-safe-left))] py-4 md:px-6 md:py-6"
-                >
+                <div class="mx-auto w-full max-w-[var(--fo-content-max-w)] px-[max(1rem,var(--fo-safe-left))] py-4 md:px-6 md:py-6">
+                    <fo-shell-instalar-app />
                     <router-outlet />
                 </div>
             </main>
