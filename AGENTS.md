@@ -45,9 +45,11 @@ Frontend (desde `frontend/`):
     JavaScript, así que `PrevisualizacionEnlaceController` sirve el `index.html` de la SPA con las
     etiquetas Open Graph del evento ya puestas (título, fecha, lugar, plazo y precio). La imagen
     es un **cartel de 1200×630** que se dibuja al vuelo con Java2D (`CartelEventoService`,
-    `GET /api/eventos/{id}/cartel.png`, público) con el color, escudo y lema de la peña; el
-    Dockerfile instala `font-dejavu` porque Alpine no trae fuentes. La URL del cartel lleva una
-    versión calculada con los datos del evento para que WhatsApp no reutilice uno viejo. No lleva
+    `GET /api/eventos/{id}/cartel/{version}.jpg`, público) con el color, escudo y lema de la
+    peña; el Dockerfile instala `font-dejavu` porque Alpine no trae fuentes. La URL del cartel y
+    el enlace que se copia desde la tabla de eventos (`?v=`) llevan una versión calculada con los
+    datos del evento, para que WhatsApp no reutilice una vista previa vieja o fallida. Si la
+    imagen sale grande arriba o en miniatura lo decide WhatsApp en el dispositivo que envía. No lleva
     datos que cambian a cada rato,
     como las plazas libres, porque las apps guardan la vista previa en caché. Las URLs de la
     vista previa salen del dominio por el que llega la petición (Caddy pasa `X-Forwarded-Proto`),

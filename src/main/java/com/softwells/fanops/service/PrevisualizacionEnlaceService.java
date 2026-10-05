@@ -5,7 +5,6 @@ import com.softwells.fanops.model.PenaEntity;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +53,10 @@ public class PrevisualizacionEnlaceService {
     String descripcion = descripcion(evento);
     String origen = base.replaceFirst("/+$", "");
     String url = origen + "/inscripcion/" + eventoId;
-    String cartel = origen + "/api/eventos/" + eventoId + "/cartel.png?v=" + version(evento);
+    // La versión va en la ruta y no como parámetro: hay rastreadores que tratan peor las imágenes
+    // con query string, y la vista grande de WhatsApp es caprichosa.
+    String cartel = origen + "/api/eventos/" + eventoId + "/cartel/"
+        + CartelEventoService.version(evento) + ".jpg";
 
     StringBuilder html = new StringBuilder();
     html.append(meta("description", descripcion));
@@ -65,7 +67,8 @@ public class PrevisualizacionEnlaceService {
     html.append(og("og:description", descripcion));
     pena.ifPresent(p -> html.append(og("og:site_name", p.getNombre())));
     html.append(og("og:image", cartel));
-    html.append(og("og:image:type", "image/png"));
+    html.append(og("og:image:secure_url", cartel));
+    html.append(og("og:image:type", "image/jpeg"));
     html.append(og("og:image:width", String.valueOf(CartelEventoService.ANCHO)));
     html.append(og("og:image:height", String.valueOf(CartelEventoService.ALTO)));
     html.append(og("og:image:alt", "Cartel de " + evento.getNombreEvento()));
@@ -114,17 +117,6 @@ public class PrevisualizacionEnlaceService {
       partes.add("💶 " + TextosEvento.euros(evento.getCostePlaza()) + " la plaza");
     }
     return String.join(" · ", partes);
-  }
-
-  /**
-   * Huella de lo que sale en el cartel. Va en la URL de la imagen: WhatsApp guarda la imagen por
-   * URL, así que si se cambia la fecha o el plazo del evento la URL cambia y no se queda con el
-   * cartel viejo.
-   */
-  private static String version(EventoInscripcionDTO evento) {
-    return Integer.toHexString(Objects.hash(evento.getNombreEvento(), evento.getFechaEvento(),
-        evento.getUbicacion(), evento.getFechaLimiteInscripcion(), evento.getCostePlaza(),
-        evento.isInscripcionCerrada()));
   }
 
   private static String og(String propiedad, String valor) {

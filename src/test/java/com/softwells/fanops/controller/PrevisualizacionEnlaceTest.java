@@ -1,5 +1,6 @@
 package com.softwells.fanops.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,10 +13,13 @@ import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.service.EventoService;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +71,26 @@ class PrevisualizacionEnlaceTest {
         .andExpect(content().string(containsString(
             "<meta property=\"og:url\" content=\"https://fanops.es/inscripcion/" + uid + "\"")))
         .andExpect(content().string(containsString("<title>Betis - Osasuna · Inscripción")));
+  }
+
+  @Test
+  @DisplayName("La vista previa apunta al cartel JPEG con la versión en la ruta, y se sirve")
+  void cartelVersionado() throws Exception {
+    EventoEntity evento = new EventoEntity();
+    evento.setNombreEvento("Betis - Oporto");
+    evento.setFechaEvento(LocalDate.now().plusDays(8));
+    UUID uid = eventoService.save(evento).getUid();
+
+    String html = mockMvc.perform(get("/inscripcion/" + uid).header("Host", "fanops.es")
+            .header("X-Forwarded-Proto", "https"))
+        .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+    Matcher imagen = Pattern.compile("og:image\" content=\"https://fanops\\.es(/api/eventos/"
+        + uid + "/cartel/[0-9a-f]+\\.jpg)\"").matcher(html);
+    assertThat(imagen.find()).as(html).isTrue();
+
+    mockMvc.perform(get(imagen.group(1)))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Type", "image/jpeg"));
   }
 
   @Test

@@ -12,6 +12,7 @@ import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.font.TextAttribute;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
@@ -23,10 +24,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Cartel de un evento para la vista previa del enlace en WhatsApp: 1200×630, el formato que esas
- * aplicaciones pintan a todo el ancho del mensaje.
+ * aplicaciones pintan a todo el ancho del mensaje cuando eligen la vista grande.
  *
  * <p>Se dibuja al vuelo con los datos del evento y la identidad de la peña (color, escudo y
  * lema), así que no hay que diseñar nada a mano y cambiar el evento cambia el cartel. Igual que la
@@ -52,6 +58,9 @@ public class CartelEventoService {
 
   public static final int ANCHO = 1200;
   public static final int ALTO = 630;
+
+  /** Versión del diseño del cartel; subirla invalida las vistas previas guardadas por WhatsApp. */
+  private static final int FORMATO = 2;
 
   private static final Color COLOR_POR_DEFECTO = new Color(0x00742d);
   private static final Color TINTA_OSCURA = new Color(0x0f172a);
@@ -74,7 +83,11 @@ public class CartelEventoService {
 
   private volatile String familia;
 
-  /** PNG del cartel, o vacío si el evento no existe. */
+  /**
+   * JPEG del cartel, o vacío si el evento no existe. JPEG y no PNG por peso: un cartel con
+   * degradado pesa en PNG más del doble, y WhatsApp es exigente con el tamaño de la imagen de la
+   * vista previa (las pesadas las reduce a miniatura o las descarta).
+   */
   public Optional<byte[]> cartel(UUID eventoId) {
     EventoInscripcionDTO evento;
     try {
@@ -85,11 +98,38 @@ public class CartelEventoService {
     PenaEntity pena = penaService.penaPrincipal().orElse(null);
 
     BufferedImage imagen = dibujar(evento, pena);
-    try (ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
-      ImageIO.write(imagen, "png", salida);
-      return Optional.of(salida.toByteArray());
+    try {
+      return Optional.of(jpeg(imagen));
     } catch (IOException e) {
       throw new IllegalStateException("No se pudo generar el cartel del evento", e);
+    }
+  }
+
+  /**
+   * Huella de lo que sale en el cartel y en la vista previa. Va en la URL de la imagen y en el
+   * enlace que se comparte: WhatsApp guarda la vista previa por URL, así que si cambia la fecha o
+   * el plazo del evento cambia la URL y no se queda con lo viejo. {@code FORMATO} se sube a mano
+   * cuando cambia el diseño, por lo mismo.
+   */
+  public static String version(EventoInscripcionDTO evento) {
+    return Integer.toHexString(Objects.hash(FORMATO, evento.getNombreEvento(),
+        evento.getFechaEvento(), evento.getUbicacion(), evento.getFechaLimiteInscripcion(),
+        evento.getCostePlaza(), evento.isInscripcionCerrada()));
+  }
+
+  private static byte[] jpeg(BufferedImage imagen) throws IOException {
+    ImageWriter escritor = ImageIO.getImageWritersByFormatName("jpeg").next();
+    ImageWriteParam parametros = escritor.getDefaultWriteParam();
+    parametros.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+    parametros.setCompressionQuality(0.9f);
+    try (ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        ImageOutputStream flujo = ImageIO.createImageOutputStream(salida)) {
+      escritor.setOutput(flujo);
+      escritor.write(null, new IIOImage(imagen, null, null), parametros);
+      flujo.flush();
+      return salida.toByteArray();
+    } finally {
+      escritor.dispose();
     }
   }
 
@@ -147,7 +187,11 @@ public class CartelEventoService {
       double escala = Math.min((double) hueco / img.getWidth(), (double) hueco / img.getHeight());
       int w = (int) Math.round(img.getWidth() * escala);
       int h = (int) Math.round(img.getHeight() * escala);
+      // Recortado al círculo: un escudo cuadrado con fondo propio asomaría las esquinas.
+      Shape antes = g.getClip();
+      g.setClip(new Ellipse2D.Double(x + 4, y + 4, DIAMETRO_ESCUDO - 8, DIAMETRO_ESCUDO - 8));
       g.drawImage(img, x + (DIAMETRO_ESCUDO - w) / 2, y + (DIAMETRO_ESCUDO - h) / 2, w, h, null);
+      g.setClip(antes);
       return;
     }
 

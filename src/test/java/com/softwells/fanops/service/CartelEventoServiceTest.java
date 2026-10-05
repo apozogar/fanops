@@ -32,7 +32,7 @@ class CartelEventoServiceTest {
   private EventoService eventoService;
 
   @Test
-  @DisplayName("Genera un PNG de 1200×630 con un evento completo")
+  @DisplayName("Genera un JPEG de 1200×630 con un evento completo")
   void cartelCompleto() throws Exception {
     EventoEntity evento = new EventoEntity();
     evento.setNombreEvento("Betis - Oporto");
@@ -42,9 +42,11 @@ class CartelEventoServiceTest {
     evento.setCostePlaza(new BigDecimal("10.00"));
     evento.setNumeroPlazas(50);
 
-    byte[] png = generar(evento, "completo");
+    byte[] jpeg = generar(evento, "completo");
 
-    BufferedImage imagen = ImageIO.read(new ByteArrayInputStream(png));
+    // Por peso: WhatsApp reduce a miniatura o descarta las imágenes pesadas.
+    assertThat(jpeg.length).isLessThan(200 * 1024);
+    BufferedImage imagen = ImageIO.read(new ByteArrayInputStream(jpeg));
     assertThat(imagen.getWidth()).isEqualTo(CartelEventoService.ANCHO);
     assertThat(imagen.getHeight()).isEqualTo(CartelEventoService.ALTO);
   }
@@ -75,7 +77,7 @@ class CartelEventoServiceTest {
     byte[] png = cartelEventoService.cartel(uid).orElseThrow();
     Path carpeta = Path.of("target", "carteles");
     Files.createDirectories(carpeta);
-    Files.write(carpeta.resolve(nombre + ".png"), png);
+    Files.write(carpeta.resolve(nombre + ".jpg"), png);
     return png;
   }
 }

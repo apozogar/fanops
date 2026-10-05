@@ -41,20 +41,22 @@ public class PrevisualizacionEnlaceController {
   private final CartelEventoService cartelEvento;
 
   /**
-   * Cartel del evento (PNG de 1200×630) para la vista previa del enlace. Público: lo descarga
-   * WhatsApp sin sesión. Se dibuja en cada petición, que es barato, y se deja una hora en caché;
-   * la URL ya lleva una versión que cambia cuando cambian los datos del evento.
+   * Cartel del evento (JPEG de 1200×630) para la vista previa del enlace. Público: lo descarga
+   * WhatsApp sin sesión. Se dibuja en cada petición, que es barato. La versión de la ruta solo
+   * sirve para que WhatsApp no reutilice un cartel viejo (ver CartelEventoService.version): el
+   * cartel siempre sale con los datos actuales, así que se acepta cualquiera.
    */
-  @GetMapping(value = "/api/eventos/{id}/cartel.png", produces = MediaType.IMAGE_PNG_VALUE)
-  public ResponseEntity<byte[]> cartel(@PathVariable String id) {
+  @GetMapping(value = "/api/eventos/{id}/cartel/{version}.jpg",
+      produces = MediaType.IMAGE_JPEG_VALUE)
+  public ResponseEntity<byte[]> cartel(@PathVariable String id, @PathVariable String version) {
     UUID eventoId = uuid(id);
     if (eventoId == null) {
       return ResponseEntity.notFound().build();
     }
     return cartelEvento.cartel(eventoId)
         .map(png -> ResponseEntity.ok()
-            .contentType(MediaType.IMAGE_PNG)
-            .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+            .contentType(MediaType.IMAGE_JPEG)
+            .cacheControl(CacheControl.maxAge(Duration.ofDays(7)).cachePublic())
             .body(png))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }

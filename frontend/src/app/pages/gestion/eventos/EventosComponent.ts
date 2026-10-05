@@ -431,9 +431,14 @@ export class EventosComponent implements OnInit {
         return (evento.numInscritos ?? 0) < evento.numeroPlazas;
     }
 
+    /**
+     * Copia el enlace público de inscripción. Lleva una versión (`?v=`) que cambia con los datos
+     * del evento: WhatsApp guarda la vista previa de cada URL, y sin ella un enlace compartido una
+     * vez con una vista previa fallida o desfasada se quedaría así para siempre.
+     */
     copiarEnlacePublico(evento: Evento) {
         if (!evento.uid) return;
-        const enlace = window.location.origin + '/inscripcion/' + evento.uid;
+        const enlace = window.location.origin + '/inscripcion/' + evento.uid + '?v=' + versionEnlace(evento);
         navigator.clipboard?.writeText(enlace).then(() => {
             this.messageService.add({
                 severity: 'success',
@@ -642,6 +647,26 @@ export class EventosComponent implements OnInit {
             }
         });
     }
+}
+
+/** Versión del formato de la vista previa; subirla da URLs nuevas a todos los enlaces. */
+const FORMATO_VISTA_PREVIA = 2;
+
+/** Huella corta de lo que sale en la vista previa del enlace (djb2 en base 36). */
+function versionEnlace(evento: Evento): string {
+    const datos = [
+        FORMATO_VISTA_PREVIA,
+        evento.nombreEvento,
+        evento.fechaEvento ? new Date(evento.fechaEvento).getTime() : '',
+        evento.ubicacion ?? '',
+        evento.fechaLimiteInscripcion ? new Date(evento.fechaLimiteInscripcion).getTime() : '',
+        evento.costePlaza ?? ''
+    ].join('|');
+    let hash = 5381;
+    for (let i = 0; i < datos.length; i++) {
+        hash = ((hash << 5) + hash + datos.charCodeAt(i)) | 0;
+    }
+    return (hash >>> 0).toString(36);
 }
 
 /** Texto comparable en la búsqueda: sin tildes ni mayúsculas. */
