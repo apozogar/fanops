@@ -1,12 +1,13 @@
 <div class="carnet-container">
-    <div class="carnet-header-main flex space-around">
+    <div class="carnet-header-main">
         <div class="carnet-title">
             <h2>{{ penaInfo?.nombre || 'Cargando...' }}</h2>
             <h3>Mis Carnets de Socio</h3>
         </div>
-        <div class="header-icons">
-            <fo-icon name="anadir" class="add-icon" pTooltip="Añadir Nuevo Socio"  (click)="abrirDialogoNuevoSocio()" />
-        </div>
+        <button foButton variant="secondary" (click)="abrirDialogoNuevoSocio()" aria-label="Añadir un socio, por ejemplo un hijo">
+            <fo-icon name="anadir" [size]="18" />
+            <span>Añadir</span>
+        </button>
     </div>
 
     <p-carousel [value]="socios" [numVisible]="1" [numScroll]="1" [circular]="false" styleClass="full-width-carousel" [showNavigators]="socios.length > 1" [showIndicators]="socios.length > 1">
@@ -48,21 +49,33 @@
     </p-carousel>
 </div>
 
-<!-- Dialogo para añadir nuevo socio -->
-<p-dialog header="Añadir Nuevo Socio" [(visible)]="displayNuevoSocioDialog" [modal]="true" [style]="{width: '50vw', 'min-width': '450px', 'max-width': '700px'}" (onHide)="cerrarDialogoNuevoSocio()">
-    @if (socioFormComponent) {
-    <app-socio-form [socio]="nuevoSocio" (save)="guardarNuevoSocio($event)">
-        <!-- Proyectamos los botones de acción en el footer del formulario -->
-        <div footer class="flex justify-end gap-2">
-            <button foButton variant="ghost" (click)="cerrarDialogoNuevoSocio()">Cancelar</button>
-            <!-- El botón de guardar ahora está dentro del componente del formulario para que el (ngSubmit) funcione -->
-            <button foButton variant="primary" type="submit" [disabled]="socioFormComponent.isFormInvalid()">
+<!-- Dialogo para añadir nuevo socio (un hijo, la pareja...). El formulario va siempre dentro: el
+     diálogo ya lo crea solo cuando se abre, y antes se condicionaba a una referencia que solo
+     existe una vez pintado, así que salía vacío. -->
+<p-dialog
+    header="Añadir socio"
+    [(visible)]="displayNuevoSocioDialog"
+    [modal]="true"
+    [draggable]="false"
+    [dismissableMask]="true"
+    [style]="{ width: '640px' }"
+    [breakpoints]="{ '960px': '95vw' }"
+    (onHide)="cerrarDialogoNuevoSocio()"
+>
+    <p class="text-sm text-muted-color mb-5">Se añadirá a tu cuenta con tu mismo correo. Solo el nombre es obligatorio.</p>
+    <app-socio-form [socio]="nuevoSocio" (save)="guardarNuevoSocio($event)" />
+
+    <!-- Fuera del formulario para que queden siempre a la vista al desplazarlo; `form` los enlaza
+         con él, así que Guardar sigue enviándolo y validándolo. -->
+    <ng-template #footer>
+        <div class="flex gap-2 w-full">
+            <button foButton variant="secondary" type="button" class="flex-1" (click)="cerrarDialogoNuevoSocio()">Cancelar</button>
+            <button foButton variant="primary" type="submit" form="formulario-socio" class="flex-1">
                 <fo-icon name="check" />
                 <span>Guardar</span>
             </button>
         </div>
-    </app-socio-form>
-    }
+    </ng-template>
 </p-dialog>
 
 <!-- Toast para notificaciones -->

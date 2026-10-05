@@ -19,6 +19,10 @@
 }
 
 .carnet-header-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 0.5rem;
 }
 
@@ -30,21 +34,6 @@
     font-family: 'Arial', sans-serif;
     width: 100%;
     margin-bottom: 1rem;
-}
-
-.header-icons {
-    display: flex;
-    gap: 1rem;
-}
-
-.edit-icon, .add-icon {
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: color 0.2s ease-in-out;
-
-    &:hover {
-        color: #d1d5db;
-    }
 }
 
 .carnet-title h2, .carnet-title h3 {

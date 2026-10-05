@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, ElementRef } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MessageService } from 'primeng/api';
@@ -6,7 +6,6 @@ import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { BadgeModule } from 'primeng/badge';
 import { ButtonModule } from 'primeng/button';
-import { Tooltip } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastModule } from 'primeng/toast';
@@ -21,7 +20,7 @@ import { UiButtonDirective } from '@/ui/ui-button.directive';
 @Component({
     selector: 'app-carnet-socio',
     standalone: true,
-    imports: [UiButtonDirective, IconComponent, CardModule, TableModule, BadgeModule, ButtonModule, Tooltip, DialogModule, InputTextModule, FormsModule, ToastModule, Carousel, SocioFormComponent],
+    imports: [UiButtonDirective, IconComponent, CardModule, TableModule, BadgeModule, ButtonModule, DialogModule, InputTextModule, FormsModule, ToastModule, Carousel, SocioFormComponent],
     providers: [MessageService],
     templateUrl: 'CarnetSocioComponent.html',
     styleUrl: 'CarnetSocioComponent.scss'
@@ -32,8 +31,6 @@ export class CarnetSocioComponent implements OnInit {
 
     displayNuevoSocioDialog: boolean = false;
     nuevoSocio: Partial<Socio> = {};
-
-    @ViewChild(SocioFormComponent) socioFormComponent!: SocioFormComponent;
 
     private http = inject(HttpClient);
     private messageService = inject(MessageService);
