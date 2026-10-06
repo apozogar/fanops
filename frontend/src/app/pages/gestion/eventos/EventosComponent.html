@@ -1,71 +1,91 @@
-<div class="grid grid-cols-12 gap-8">
-    <div class="col-span-12 md:col-span-6 xl:col-span-3">
-        <div class="card mb-0">
-            <div class="flex justify-between mb-4">
-                <div>
-                    <span class="block text-muted-color font-medium mb-4">Eventos</span>
-                    <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                        {{ numEventos }}
-                    </div>
-                </div>
-                <div
-                    class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border"
-                    style="width: 2.5rem; height: 2.5rem">
-                    <fo-icon name="calendario" [size]="22" class="text-cyan-500" />
-                </div>
-            </div>
-            <span class="text-primary font-medium">{{ numEventosPendientes }} pendientes</span>
+<div class="card !mb-0 !p-3 md:!p-6">
+    <div class="flex justify-between items-start gap-2 md:mb-2">
+        <div class="min-w-0">
+            <span class="block text-muted-color font-medium text-sm md:text-base md:mb-3">Eventos</span>
+            <div class="text-surface-900 dark:text-surface-0 font-semibold text-xl">{{ numEventos }}</div>
+        </div>
+        <div class="flex shrink-0 items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border w-8 h-8 md:w-10 md:h-10">
+            <fo-icon name="calendario" [size]="20" class="text-cyan-500" />
         </div>
     </div>
+    <div class="text-xs md:text-sm text-muted-color leading-snug">{{ numEventosPendientes }} pendientes</div>
 </div>
 
-<br/>
-
-<div class="card">
+<div class="card !px-3 md:!px-6 mt-3 md:mt-8">
     <p-toast></p-toast>
 
-    <p-toolbar class="mb-6">
-        <ng-template #start>
-            <div class="flex flex-wrap gap-2">
-                <button foButton variant="secondary" size="icon" (click)="cargarEventos()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
-                    <fo-icon name="refrescar" />
-                </button>
-                <button foButton variant="primary" (click)="abrirNuevo()">
-                    <fo-icon name="anadir" />
-                    <span>Nuevo Evento</span>
-                </button>
-                <button foButton variant="secondary" (click)="abrirValoresPorDefecto()"
-                        pTooltip="Con qué valores se propone un evento nuevo"
-                        tooltipPosition="top">
-                    <fo-icon name="ajustes" />
-                    <span>Valores por defecto</span>
-                </button>
-            </div>
-        </ng-template>
+    <!-- Barra propia (sin p-toolbar): en móvil el buscador ocupa la fila entera y los botones se
+         quedan en iconos. "Nuevo evento" pasa a botón flotante (más abajo) donde hay barra inferior. -->
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+        <div class="flex items-center gap-2">
+            <button foButton variant="secondary" size="icon" (click)="cargarEventos()" pTooltip="Refrescar" tooltipPosition="top" aria-label="Refrescar">
+                <fo-icon name="refrescar" />
+            </button>
+            <button foButton variant="primary" class="max-lg:!hidden" (click)="abrirNuevo()">
+                <fo-icon name="anadir" />
+                <span>Nuevo Evento</span>
+            </button>
+            <button foButton variant="secondary" (click)="abrirValoresPorDefecto()"
+                    pTooltip="Con qué valores se propone un evento nuevo"
+                    tooltipPosition="top" aria-label="Valores por defecto de un evento nuevo">
+                <fo-icon name="ajustes" />
+                <span class="hidden md:inline">Valores por defecto</span>
+            </button>
+        </div>
+        <p-iconfield iconPosition="left" class="w-full md:w-auto">
+            <p-inputicon>
+                <fo-icon name="buscar" />
+            </p-inputicon>
+            <input pInputText type="text" class="w-full md:w-72"
+                   (input)="dt?.filterGlobal($any($event.target).value, 'contains')"
+                   aria-label="Buscar eventos"
+                   placeholder="Búsqueda por palabra"/>
+        </p-iconfield>
+    </div>
 
-        <ng-template #center>
-            <p-iconfield iconPosition="left" class="ml-auto">
-                <p-inputicon>
-                    <fo-icon name="buscar" />
-                </p-inputicon>
-                <input pInputText type="text"
-                       (input)="dt?.filterGlobal($event.target.value, 'contains')"
-                       placeholder="Búsqueda por palabra"/>
-            </p-iconfield>
-        </ng-template>
-    </p-toolbar>
+    <!-- Acciones de cada evento, compartidas por la fila de escritorio y la tarjeta de móvil. -->
+    <ng-template #acciones let-evento let-grande="grande">
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                (click)="abrirInscripciones(evento)" pTooltip="Ver Inscritos"
+                tooltipPosition="top" aria-label="Ver inscritos"
+        ><fo-icon name="socios" [size]="grande ? 20 : 16" /></button>
+        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
+                [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                [loading]="celebrandoSorteo === evento.uid"
+                (click)="celebrarSorteo(evento)"
+                pTooltip="Celebrar ya el sorteo de carnets"
+                tooltipPosition="top" aria-label="Celebrar el sorteo de carnets"
+        ><fo-icon name="entrada" [size]="grande ? 20 : 16" /></button>
+        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
+                [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                (click)="abrirBombo(evento)"
+                pTooltip="Ver el bombo del sorteo"
+                tooltipPosition="top" aria-label="Ver el bombo del sorteo"
+        ><fo-icon name="ajustes" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                (click)="copiarEnlacePublico(evento)"
+                pTooltip="Copiar enlace público (no socios)"
+                tooltipPosition="top" aria-label="Copiar enlace público"
+        ><fo-icon name="compartir" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                (click)="editarEvento(evento)" pTooltip="Editar evento"
+                tooltipPosition="top" aria-label="Editar evento"
+        ><fo-icon name="editar" [size]="grande ? 20 : 16" /></button>
+        <button foButton variant="ghost" [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full text-danger"
+                (click)="eliminarEvento(evento)" pTooltip="Eliminar evento"
+                tooltipPosition="top" aria-label="Eliminar evento"
+        ><fo-icon name="eliminar" [size]="grande ? 20 : 16" /></button>
+    </ng-template>
 
     <p-table #dt [value]="eventos" [rows]="10" [paginator]="true" [loading]="loading"
              [rowHover]="true" dataKey="uid" [globalFilterFields]="['nombreEvento', 'ubicacion']"
              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} eventos"
              [showCurrentPageReport]="true">
         <ng-template pTemplate="header">
-            <tr>
+            <tr class="hidden md:table-row">
                 <th>Nombre</th>
                 <th>Fecha</th>
                 <th>Fin inscripción</th>
-<!--                <th>Ubicación</th>-->
-<!--                <th>Coste Estimado</th>-->
                 <th>Confirmados</th>
                 <th>En espera</th>
                 <th>Acciones</th>
@@ -73,9 +93,37 @@
         </ng-template>
         <ng-template pTemplate="body" let-evento>
             <tr [pSelectableRow]="evento">
-                <td>{{ evento.nombreEvento }}</td>
-                <td>{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</td>
-                <td>
+                <!-- Móvil: una tarjeta por evento, con las acciones debajo. -->
+                <td class="md:!hidden !p-0" colspan="6">
+                    <div class="flex flex-col gap-2 px-1 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="fo-avatar" aria-hidden="true"><fo-icon name="calendario" [size]="20" /></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-ink break-words leading-tight">{{ evento.nombreEvento }}</div>
+                                <div class="text-sm text-ink-muted">{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
+                                   [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—') + ' plazas'"></p-tag>
+                            @if (evento.numEnEspera > 0) {
+                            <p-tag severity="warn" [value]="evento.numEnEspera + ' en espera'"></p-tag>
+                            }
+                            @if (evento.inscripcionCerrada) {
+                            <p-tag severity="danger" value="Inscripción cerrada"></p-tag>
+                            }
+                        </div>
+                        @if (evento.fechaLimiteInscripcion) {
+                        <div class="text-sm text-ink-muted">Inscripción hasta {{ evento.fechaLimiteInscripcion | date:'dd/MM HH:mm' }}</div>
+                        }
+                        <div class="flex items-center justify-between border-t border-line pt-1 -mx-1">
+                            <ng-container *ngTemplateOutlet="acciones; context: { $implicit: evento, grande: true }" />
+                        </div>
+                    </div>
+                </td>
+                <td class="hidden md:table-cell">{{ evento.nombreEvento }}</td>
+                <td class="hidden md:table-cell">{{ evento.fechaEvento | date:'dd/MM/yyyy' }}</td>
+                <td class="hidden md:table-cell">
                     <ng-container *ngIf="evento.fechaLimiteInscripcion; else sinPlazo">
                         <span>{{ evento.fechaLimiteInscripcion | date:'dd/MM/yyyy HH:mm' }}</span>
                         <p-tag *ngIf="evento.inscripcionCerrada" severity="danger" value="Cerrado"
@@ -85,55 +133,32 @@
                         <span class="text-muted-color">—</span>
                     </ng-template>
                 </td>
-<!--                <td>{{ evento.ubicacion }}</td>-->
-<!--                <td>{{ evento.costeTotalEstimado | currency:'EUR' }}</td>-->
-                <td>
+                <td class="hidden md:table-cell">
                     <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
                            [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—')"></p-tag>
                 </td>
-                <td>
+                <td class="hidden md:table-cell">
                     <p-tag *ngIf="evento.numEnEspera > 0" severity="warn"
                            [value]="evento.numEnEspera"></p-tag>
                     <span *ngIf="!evento.numEnEspera" class="text-muted-color">0</span>
                 </td>
-                <td>
+                <td class="hidden md:table-cell">
                     <div class="flex items-center gap-1.5">
-                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
-                                (click)="abrirInscripciones(evento)" pTooltip="Ver Inscritos"
-                                tooltipPosition="top" aria-label="Ver inscritos"
-                        ><fo-icon name="socios" [size]="16" /></button>
-                        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
-                                size="icon-sm" class="rounded-full"
-                                [loading]="celebrandoSorteo === evento.uid"
-                                (click)="celebrarSorteo(evento)"
-                                pTooltip="Celebrar ya el sorteo de carnets"
-                                tooltipPosition="top" aria-label="Celebrar el sorteo de carnets"
-                        ><fo-icon name="entrada" [size]="16" /></button>
-                        <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
-                                size="icon-sm" class="rounded-full"
-                                (click)="abrirBombo(evento)"
-                                pTooltip="Ver el bombo del sorteo"
-                                tooltipPosition="top" aria-label="Ver el bombo del sorteo"
-                        ><fo-icon name="ajustes" [size]="16" /></button>
-                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
-                                (click)="copiarEnlacePublico(evento)"
-                                pTooltip="Copiar enlace público (no socios)"
-                                tooltipPosition="top" aria-label="Copiar enlace público"
-                        ><fo-icon name="compartir" [size]="16" /></button>
-                        <button foButton variant="ghost" size="icon-sm" class="rounded-full"
-                                (click)="editarEvento(evento)" pTooltip="Editar evento"
-                                tooltipPosition="top" aria-label="Editar evento"
-                        ><fo-icon name="editar" [size]="16" /></button>
-                        <button foButton variant="ghost" size="icon-sm" class="rounded-full text-danger"
-                                (click)="eliminarEvento(evento)" pTooltip="Eliminar evento"
-                                tooltipPosition="top" aria-label="Eliminar evento"
-                        ><fo-icon name="eliminar" [size]="16" /></button>
+                        <ng-container *ngTemplateOutlet="acciones; context: { $implicit: evento, grande: false }" />
                     </div>
                 </td>
             </tr>
         </ng-template>
     </p-table>
 </div>
+
+<!-- Botón flotante: solo donde hay barra inferior (móvil y tablet). Se coloca justo encima de ella. -->
+<button foButton variant="primary" size="icon" type="button"
+        class="lg:!hidden fixed right-4 z-30 !w-14 !h-14 rounded-full shadow-lg"
+        style="bottom: calc(var(--fo-tabbar-h) + var(--fo-safe-bottom) + 1rem)"
+        (click)="abrirNuevo()" aria-label="Nuevo evento">
+    <fo-icon name="anadir" [size]="26" />
+</button>
 
 <p-dialog [(visible)]="eventoDialog" [style]="{ width: '760px', maxWidth: '95vw' }"
           header="Detalles del Evento" [modal]="true">
