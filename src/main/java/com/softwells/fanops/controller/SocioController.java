@@ -117,7 +117,7 @@ public class SocioController {
 
 
   @PostMapping("/importar")
-  @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+  @PreAuthorize("hasAuthority('ROLE_SUPERADMIN')")
   public ResponseEntity<ApiResponse<String>> importarSociosDesdeExcel(
       @RequestParam("file") MultipartFile file) {
     if (file.isEmpty()) {

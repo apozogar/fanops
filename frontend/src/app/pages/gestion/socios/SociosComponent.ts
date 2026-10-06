@@ -31,6 +31,7 @@ import {UiButtonDirective} from "@/ui/ui-button.directive";
 import {IconComponent} from "@/ui/icon/icon.component";
 import {UiPasswordComponent} from "@/ui/ui-password.component";
 import {coincideBusqueda} from "@/core/busqueda/busqueda-flexible";
+import {AuthService} from "@/pages/auth/auth.service";
 
 @Component({
     selector: 'app-socios',
@@ -108,8 +109,14 @@ export class SociosComponent implements OnInit {
         private readonly socioService: SocioService,
         private readonly eventoService: EventoService,
         private readonly messageService: MessageService,
-        private readonly confirmationService: ConfirmationService
+        private readonly confirmationService: ConfirmationService,
+        private readonly auth: AuthService
     ) {
+    }
+
+    /** Importar socios desde Excel es cosa del superadmin: el admin de una peña no ve el botón. */
+    get puedeImportar(): boolean {
+        return this.auth.isSuperAdmin();
     }
 
     ngOnInit(): void {
