@@ -1,3 +1,4 @@
+import { SwUpdateService } from '@/core/pwa/sw-update.service';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -54,6 +55,7 @@ export class ShellComponent {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
     private readonly activePena = inject(ActivePenaService);
+    private readonly swUpdate = inject(SwUpdateService); // Inicia la detección de actualizaciones
 
     protected readonly accountOpen = signal(false);
 

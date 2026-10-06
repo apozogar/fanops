@@ -155,15 +155,15 @@ mail:
 # Notificaciones por WhatsApp (Meta Business Cloud API)
 whatsapp:
   # Si está desactivado o faltan credenciales, las notificaciones se envían solo por email
-  enabled: ${WHATSAPP_ENABLED:false}
+  enabled: ${WHATSAPP_ENABLED:true}
   api-version: ${WHATSAPP_API_VERSION:v21.0}
   # ID de la cuenta de WhatsApp Business (WABA): permite crear sola la plantilla genérica
-  waba-id: ${WHATSAPP_WABA_ID:}
+  waba-id: ${WHATSAPP_WABA_ID:1673201654461017}
   # Con plantilla el aviso llega siempre; con false se manda texto libre (solo dentro de 24 h)
-  usar-plantilla: ${WHATSAPP_USAR_PLANTILLA:true}
+  usar-plantilla: ${WHATSAPP_USAR_PLANTILLA:false}
   plantilla:
-    nombre: ${WHATSAPP_PLANTILLA_NOMBRE:aviso_lista_espera}
+    nombre: ${WHATSAPP_PLANTILLA_NOMBRE:aviso_general}
     idioma: ${WHATSAPP_PLANTILLA_IDIOMA:es}
-    crear-al-arrancar: ${WHATSAPP_PLANTILLA_CREAR:true}
-  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
-  access-token: ${WHATSAPP_ACCESS_TOKEN:}
+    crear-al-arrancar: ${WHATSAPP_PLANTILLA_CREAR:false}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:1395875583603297}
+  access-token: ${WHATSAPP_ACCESS_TOKEN:EAAggoxLfgXsBSuBTfXCTpH8pfdH0fKR80RTIZBsineR8mRnQZC0tyZAMxERSfNtBImb9xlzuMNMDlKk6msQELlziMCYVRxF2RnFytJetBZBF62MCINHfdXM1ZAP3etFIORWqKSk1JNbFJpqpIauQj5pAS1TO0MpGMsCB90ZBCgymPERspNoFGfKv82PBzRabwZAwzfjZAPQnZA1yyaZB9mmqcSwtLNgKkwm3AjJ6XNZAstTxiEsh1LLUq1nPDy0woC2dxZAIwYhJ68m8EDLZB8R3Fku5uBgZDZD}
