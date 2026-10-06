@@ -1,6 +1,6 @@
 <p-table [value]="cuotas" [rows]="10" [paginator]="cuotas.length > 10" responsiveLayout="scroll">
     <ng-template pTemplate="header">
-        <tr>
+        <tr class="hidden md:table-row">
             <th>Mes</th>
             <th>Año</th>
             <th>Importe</th>
@@ -9,15 +9,35 @@
     </ng-template>
     <ng-template pTemplate="body" let-cuota>
         <tr>
-            <td>{{ cuota.mes }}</td>
-            <td>{{ cuota.anio }}</td>
-            <td>{{ cuota.importe | currency:'EUR':'symbol':'1.2-2' }}</td>
-            <td class="text-center">
+            <!-- Móvil: una línea por cuota con el periodo, el importe y el estado a la vista, sin
+                 columnas que obliguen a desplazar la tabla. -->
+            <td class="md:!hidden !px-1 !py-3" colspan="4">
+                <div class="flex items-center gap-3">
+                    <div class="fo-avatar" [class.fo-avatar-socio]="cuota.estado === 'PAGADA'"
+                         [class.fo-avatar-falta]="cuota.estado !== 'PAGADA'" aria-hidden="true">
+                        <fo-icon [name]="cuota.estado === 'PAGADA' ? 'check' : 'euro'" [size]="20" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-ink leading-tight">{{ cuota.mes }} {{ cuota.anio }}</div>
+                        <div class="text-sm text-ink-muted">{{ cuota.importe | currency:'EUR':'symbol':'1.2-2' }}</div>
+                    </div>
+                    <p-tag [value]="cuota.estado" [severity]="getSeverity(cuota.estado)"></p-tag>
+                </div>
+            </td>
+            <td class="hidden md:table-cell">{{ cuota.mes }}</td>
+            <td class="hidden md:table-cell">{{ cuota.anio }}</td>
+            <td class="hidden md:table-cell">{{ cuota.importe | currency:'EUR':'symbol':'1.2-2' }}</td>
+            <td class="hidden md:table-cell text-center">
                 <p-badge style="width: 100%"
                          [value]="cuota.estado"
                          [severity]="getSeverity(cuota.estado)">
                 </p-badge>
             </td>
+        </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+        <tr>
+            <td colspan="4" class="text-center py-6 text-muted-color">Todavía no hay cuotas.</td>
         </tr>
     </ng-template>
 </p-table>
