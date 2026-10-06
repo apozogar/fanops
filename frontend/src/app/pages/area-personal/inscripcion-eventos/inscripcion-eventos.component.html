@@ -61,6 +61,15 @@
                             </div>
                         }
                     </div>
+                    @if (evento.plazasLibres === 0 && !evento.inscripcionCerrada) {
+                        <div role="alert"
+                             class="flex items-start gap-2 rounded-lg p-3 text-sm bg-warn-soft text-warn-soft-fg">
+                            <fo-icon name="aviso" class="mt-0.5" />
+                            <span><strong>No quedan plazas en el bus.</strong> Si te apuntas entrarás en lista
+                                de espera: el sistema o alguien de la peña te informará por WhatsApp si se
+                                libera una plaza.</span>
+                        </div>
+                    }
                     <!-- Una fila por ficha de socio de la cuenta: en un multicarnet deja ver
                          a quién se está apuntando en vez de operar sobre un socio indeterminado. -->
                     <div class="flex flex-col gap-2 border-t border-token pt-3"

@@ -72,6 +72,14 @@
                 </fo-tag>
                 <fo-tag *ngIf="!evento.inscripcionCerrada" tone="info">{{ fechaLimiteTexto() }}</fo-tag>
 
+                <div *ngIf="!evento.inscripcionCerrada && evento.plazasLibres === 0" role="alert"
+                     class="flex items-start gap-2 rounded-lg p-3 text-sm bg-warn-soft text-warn-soft-fg">
+                    <fo-icon name="aviso" class="mt-0.5" />
+                    <span><strong>No quedan plazas en el bus.</strong> Si te apuntas entrarás en lista de
+                        espera: el sistema o alguien de la peña te informará por WhatsApp si se libera
+                        una plaza.</span>
+                </div>
+
                 <div *ngIf="!evento.inscripcionCerrada" class="flex flex-col gap-4 mt-2">
                     <div>
                         <label for="nombre" class="block font-semibold mb-1">Nombre y apellidos *</label>

@@ -157,5 +157,13 @@ whatsapp:
   # Si está desactivado o faltan credenciales, las notificaciones se envían solo por email
   enabled: ${WHATSAPP_ENABLED:false}
   api-version: ${WHATSAPP_API_VERSION:v21.0}
+  # ID de la cuenta de WhatsApp Business (WABA): permite crear sola la plantilla genérica
+  waba-id: ${WHATSAPP_WABA_ID:}
+  # Con plantilla el aviso llega siempre; con false se manda texto libre (solo dentro de 24 h)
+  usar-plantilla: ${WHATSAPP_USAR_PLANTILLA:true}
+  plantilla:
+    nombre: ${WHATSAPP_PLANTILLA_NOMBRE:aviso_lista_espera}
+    idioma: ${WHATSAPP_PLANTILLA_IDIOMA:es}
+    crear-al-arrancar: ${WHATSAPP_PLANTILLA_CREAR:true}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
   access-token: ${WHATSAPP_ACCESS_TOKEN:}

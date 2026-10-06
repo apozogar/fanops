@@ -7,11 +7,18 @@ import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.SolicitudCarnetEntity;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -45,23 +52,144 @@ public class NotificacionService {
   @Value("${whatsapp.access-token:}")
   private String whatsappAccessToken;
 
+  /** ID de la cuenta de WhatsApp Business (WABA); solo hace falta para crear la plantilla. */
+  @Value("${whatsapp.waba-id:}")
+  private String whatsappWabaId;
+
+  /**
+   * Con plantilla (lo normal) el aviso llega siempre; con texto libre solo si el destinatario
+   * escribió al número en las últimas 24 h, así que queda para pruebas.
+   */
+  @Value("${whatsapp.usar-plantilla:true}")
+  private boolean whatsappUsarPlantilla;
+
+  @Value("${whatsapp.plantilla.nombre:aviso_lista_espera}")
+  private String whatsappPlantillaNombre;
+
+  @Value("${whatsapp.plantilla.idioma:es}")
+  private String whatsappPlantillaIdioma;
+
+  @Value("${whatsapp.plantilla.crear-al-arrancar:true}")
+  private boolean whatsappCrearPlantilla;
+
+  /**
+   * Texto fijo de la plantilla. Habla de una solicitud concreta del destinatario (su plaza en la
+   * lista de espera) y no lleva nada promocional: es lo que Meta pide para clasificarla como
+   * utilidad, que es más barata que marketing y no exige consentimiento de marketing. Solo se
+   * usa para avisos de lista de espera; el resto de avisos van por email.
+   */
+  private static final String PLANTILLA_TEXTO = "Hola {{1}}, te escribimos por tu solicitud de "
+      + "plaza o carnet en un evento de la peña. Novedad en tu inscripción: {{2}} Un saludo de "
+      + "tu peña.";
+  private static final int MAX_NOMBRE = 60;
+  private static final int MAX_NOVEDAD = 500;
+  private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+  /**
+   * El WhatsApp es a menudo el único aviso que lee el socio (la peña casi no usa el correo), así
+   * que la novedad lleva todo lo necesario sin tener que abrir nada: qué evento, cuándo, dónde y
+   * el enlace con el resto.
+   */
+  private String detalleEvento(EventoEntity evento) {
+    String lugar = evento.getUbicacion() != null && !evento.getUbicacion().isBlank()
+        ? ", " + evento.getUbicacion().trim() : "";
+    return "'" + evento.getNombreEvento() + "' (" + evento.getFechaEvento().format(FECHA)
+        + lugar + ")";
+  }
+
+  private String enlaceEvento(EventoEntity evento) {
+    return " Más información: " + publicBaseUrl + "/inscripcion/" + evento.getUid();
+  }
+
+  /**
+   * Crea en Meta la plantilla genérica si aún no existe, para no tener que darla de alta a
+   * mano. Meta la revisa antes de dejar usarla (en las de categoría utilidad suele tardar
+   * minutos); mientras tanto los envíos fallan y se registran en el log.
+   */
+  @EventListener(ApplicationReadyEvent.class)
+  public void asegurarPlantilla() {
+    if (!whatsappEnabled || !whatsappUsarPlantilla || !whatsappCrearPlantilla
+        || whatsappWabaId.isBlank() || whatsappAccessToken.isBlank()) {
+      return;
+    }
+    try {
+      String base = "https://graph.facebook.com/" + whatsappApiVersion + "/" + whatsappWabaId
+          + "/message_templates";
+      // Meta devuelve JSON con Content-Type text/javascript, que RestClient no convierte solo:
+      // se lee como texto y se mira lo justo (si hay plantilla y en qué estado está).
+      String existentes = restClientBuilder.build().get()
+          .uri(base + "?name=" + whatsappPlantillaNombre)
+          .header(HttpHeaders.AUTHORIZATION, "Bearer " + whatsappAccessToken)
+          .retrieve().body(String.class);
+      if (existentes != null && !existentes.replaceAll("\\s", "").contains("\"data\":[]")) {
+        Matcher estado = Pattern.compile("\"status\"\\s*:\\s*\"(\\w+)\"").matcher(existentes);
+        log.info("Plantilla de WhatsApp '{}' ya existe: {}", whatsappPlantillaNombre,
+            estado.find() ? estado.group(1) : "?");
+        return;
+      }
+      Map<String, Object> body = Map.of(
+          "name", whatsappPlantillaNombre,
+          "language", whatsappPlantillaIdioma,
+          "category", "UTILITY",
+          "components", List.of(Map.of(
+              "type", "BODY",
+              "text", PLANTILLA_TEXTO,
+              "example", Map.of("body_text", List.of(List.of(
+                  "Alberto",
+                  "Ha quedado una plaza libre para 'Betis - Sevilla' (20/10/2026, Estadio) y tu "
+                      + "inscripción ha sido confirmada. Más información: "
+                      + "https://fanops.es/inscripcion/abc"))))));
+      restClientBuilder.build().post().uri(base)
+          .header(HttpHeaders.AUTHORIZATION, "Bearer " + whatsappAccessToken)
+          .contentType(MediaType.APPLICATION_JSON)
+          .body(body)
+          .retrieve().toBodilessEntity();
+      log.info("Plantilla de WhatsApp '{}' enviada a Meta para su aprobación",
+          whatsappPlantillaNombre);
+    } catch (Exception e) {
+      log.error("No se pudo comprobar/crear la plantilla de WhatsApp '{}'",
+          whatsappPlantillaNombre, e);
+    }
+  }
+
   public void enviarConfirmacionInscripcionPublica(EventoInscripcionEntity inscripcion,
       EventoEntity evento) {
     String asunto = "Inscripción a " + evento.getNombreEvento();
     String cuerpo = cuerpoInscripcion(evento, inscripcion.getEstado(), publicBaseUrl);
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
-        inscripcion.getTelefono());
+        inscripcion.getTelefono(), null);
   }
 
-  public void enviarPromocionEspera(EventoInscripcionEntity inscripcion, EventoEntity evento) {
+  /**
+   * Aviso de plazas que acaban de quedar libres para las inscripciones promocionadas de la lista
+   * de espera. Se agrupa por contacto (email + teléfono): en un multicarnet los hijos comparten
+   * los del titular, y un aviso por ficha supondría un correo y, sobre todo, un WhatsApp de pago
+   * por cada una.
+   */
+  public void enviarPromocionEspera(List<EventoInscripcionEntity> promocionadas,
+      EventoEntity evento) {
+    if (promocionadas == null || promocionadas.isEmpty()) {
+      return;
+    }
     String asunto = "¡Tienes plaza para " + evento.getNombreEvento() + "!";
-    String cuerpo =
-        "Hola " + inscripcion.getNombre() + ",\n\n"
-            + "¡Enhorabuena! Ha quedado una plaza libre para '" + evento.getNombreEvento()
-            + "' (" + evento.getFechaEvento() + ") y tu inscripción ha sido confirmada.\n\n"
-            + "Nos vemos allí. ¡Vamos mi Betis!";
-    enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
-        inscripcion.getTelefono());
+    Map<Map.Entry<String, String>, List<EventoInscripcionEntity>> porContacto =
+        promocionadas.stream().collect(Collectors.groupingBy(
+            i -> Map.entry(i.getEmail() != null ? i.getEmail() : "",
+                i.getTelefono() != null ? i.getTelefono() : ""),
+            LinkedHashMap::new, Collectors.toList()));
+
+    porContacto.forEach((contacto, grupo) -> {
+      String nombres = grupo.stream().map(EventoInscripcionEntity::getNombre)
+          .collect(Collectors.joining(", "));
+      boolean varias = grupo.size() > 1;
+      String novedad = "Ha quedado " + (varias ? "plaza libre para " + nombres + " en "
+          : "una plaza libre para ") + detalleEvento(evento) + " y la inscripción "
+          + (varias ? "de cada uno ha sido confirmada." : "ha sido confirmada.")
+          + enlaceEvento(evento);
+      String cuerpo = "Hola " + nombres + ",\n\n¡Enhorabuena! " + novedad
+          + "\n\nNos vemos allí. ¡Vamos mi Betis!";
+      enviar(contacto.getKey(), nombres, asunto, cuerpo, contacto.getValue(), novedad);
+    });
   }
 
   /**
@@ -99,7 +227,7 @@ public class NotificacionService {
             i.getTelefono() != null ? i.getTelefono() : ""))
         .distinct()
         .forEach(contacto -> enviar(contacto.getKey(), inscripciones.get(0).getNombre(), asunto,
-            cuerpo.toString(), contacto.getValue()));
+            cuerpo.toString(), contacto.getValue(), null));
   }
 
   /** Aviso a quien un administrador da de baja de un evento. */
@@ -111,7 +239,7 @@ public class NotificacionService {
             + evento.getFechaEvento() + ") ha sido dada de baja por la organización.\n\n"
             + "Si crees que se trata de un error, ponte en contacto con nosotros.";
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
-        inscripcion.getTelefono());
+        inscripcion.getTelefono(), null);
   }
 
   /**
@@ -140,7 +268,8 @@ public class NotificacionService {
           .append(", aunque queden plazas libres.");
     }
     cuerpo.append("\n\nSi crees que se trata de un error, ponte en contacto con nosotros.");
-    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono());
+    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono(),
+        null);
   }
 
   /**
@@ -175,8 +304,44 @@ public class NotificacionService {
       cuerpo.append("\n\nPuedes ver el sorteo completo aquí: ")
           .append(publicBaseUrl).append("/inscripcion/").append(evento.getUid());
 
-      enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono());
+      enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono(),
+          null);
     }
+
+    // WhatsApp: un solo mensaje por teléfono con el resultado de todas las fichas que lo
+    // comparten (multicarnet), porque cada plantilla se cobra.
+    extraidos.stream()
+        .collect(Collectors.groupingBy(
+            s -> s.getSocio().getTelefono() != null ? s.getSocio().getTelefono() : "",
+            LinkedHashMap::new, Collectors.toList()))
+        .forEach((telefono, grupo) -> {
+          String nombres = grupo.stream().map(s -> s.getSocio().getNombre())
+              .collect(Collectors.joining(", "));
+          enviarWhatsApp(telefono, nombres,
+              novedadSorteo(grupo, evento, numeroCarnets));
+        });
+  }
+
+  private String novedadSorteo(List<SolicitudCarnetEntity> grupo, EventoEntity evento,
+      int numeroCarnets) {
+    String suplente = "si un ganador renuncia, el carnet pasa por ese orden";
+    StringBuilder texto = new StringBuilder("Resultado del sorteo de carnets de ")
+        .append(detalleEvento(evento)).append(": ");
+    if (grupo.size() == 1) {
+      SolicitudCarnetEntity s = grupo.get(0);
+      texto.append(s.getEstado() == EstadoSolicitudCarnet.GANADORA
+          ? "¡enhorabuena, te ha tocado carnet! Si no vas a poder ir, avísanos cuanto antes."
+          : "esta vez no ha habido suerte, eres el suplente número "
+              + (s.getPosicionSorteo() - numeroCarnets) + " (" + suplente + ").");
+    } else {
+      texto.append(grupo.stream()
+          .map(s -> s.getSocio().getNombre() + ": "
+              + (s.getEstado() == EstadoSolicitudCarnet.GANADORA ? "carnet conseguido"
+                  : "suplente número " + (s.getPosicionSorteo() - numeroCarnets)))
+          .collect(Collectors.joining("; ")))
+          .append(". Los suplentes: ").append(suplente).append(".");
+    }
+    return texto.append(enlaceEvento(evento)).toString();
   }
 
   /** Aviso al suplente que hereda el carnet de un ganador que ha renunciado. */
@@ -188,7 +353,10 @@ public class NotificacionService {
         + evento.getNombreEvento() + "' (" + evento.getFechaEvento() + ") y, como eras el "
         + "primer suplente, pasa a ser tuyo.\n\n"
         + "Nos vemos allí. ¡Vamos mi Betis!";
-    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo, socio.getTelefono());
+    String novedad = "Uno de los ganadores del sorteo ha devuelto su carnet para "
+        + detalleEvento(evento) + " y, como eras el primer suplente, pasa a ser tuyo."
+        + enlaceEvento(evento);
+    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo, socio.getTelefono(), novedad);
   }
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,
@@ -205,8 +373,15 @@ public class NotificacionService {
         + "Más información: " + enlace;
   }
 
+  /**
+   * Siempre por email; por WhatsApp solo si hay {@code novedadWhatsApp} (una frase corta, que es
+   * lo que entra en la plantilla). Cada plantilla de WhatsApp se cobra, así que se reserva para
+   * lo que no puede esperar a que alguien mire el correo: una plaza o un carnet que acaba de
+   * quedar libre y el resultado del sorteo de carnets. Confirmaciones, bajas y faltas van solo
+   * por email.
+   */
   private void enviar(String email, String nombre, String asunto, String cuerpo,
-      String telefono) {
+      String telefono, String novedadWhatsApp) {
     if (email != null && !email.isBlank()) {
       // Aquí el fallo sí se registra y sigue, al contrario que en los correos de acceso: estos
       // avisos salen dentro de operaciones que ya han cambiado datos (confirmar una plaza,
@@ -218,10 +393,18 @@ public class NotificacionService {
         log.error("Error enviando email a {} (asunto: {})", email, asunto, e);
       }
     }
-    enviarWhatsApp(telefono, asunto + "\n\n" + cuerpo);
+    if (novedadWhatsApp != null) {
+      enviarWhatsApp(telefono, nombre, novedadWhatsApp);
+    }
   }
 
-  private void enviarWhatsApp(String telefono, String texto) {
+  /** Meta no admite saltos de línea, tabulaciones ni más de 4 espacios seguidos en una variable. */
+  private static String parametro(String texto, int max) {
+    String limpio = texto.replaceAll("\\s+", " ").trim();
+    return limpio.length() <= max ? limpio : limpio.substring(0, max - 1) + "…";
+  }
+
+  private void enviarWhatsApp(String telefono, String nombre, String novedad) {
     if (!whatsappEnabled || whatsappPhoneNumberId == null || whatsappPhoneNumberId.isBlank()
         || whatsappAccessToken == null || whatsappAccessToken.isBlank()) {
       return; // WhatsApp no configurado: degradación a email
@@ -233,12 +416,24 @@ public class NotificacionService {
     try {
       String url = "https://graph.facebook.com/" + whatsappApiVersion + "/"
           + whatsappPhoneNumberId + "/messages";
-      Map<String, Object> body = Map.of(
-          "messaging_product", "whatsapp",
-          "to", numero,
-          "type", "text",
-          "text", Map.of("body", texto)
-      );
+      Map<String, Object> body = whatsappUsarPlantilla
+          ? Map.of(
+              "messaging_product", "whatsapp",
+              "to", numero,
+              "type", "template",
+              "template", Map.of(
+                  "name", whatsappPlantillaNombre,
+                  "language", Map.of("code", whatsappPlantillaIdioma),
+                  "components", List.of(Map.of(
+                      "type", "body",
+                      "parameters", List.of(
+                          Map.of("type", "text", "text", parametro(nombre, MAX_NOMBRE)),
+                          Map.of("type", "text", "text", parametro(novedad, MAX_NOVEDAD)))))))
+          : Map.of(
+              "messaging_product", "whatsapp",
+              "to", numero,
+              "type", "text",
+              "text", Map.of("body", "Hola " + nombre + ", " + novedad));
       restClientBuilder.build()
           .post()
           .uri(url)

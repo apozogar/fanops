@@ -608,20 +608,23 @@ public class EventoService {
     enEspera.sort(Comparator.comparing(EventoInscripcionEntity::isSocioPrioritario).reversed()
         .thenComparing(EventoInscripcionEntity::getFechaInscripcion));
 
-    int promocionadas = 0;
+    List<EventoInscripcionEntity> promocionadas = new ArrayList<>();
     for (EventoInscripcionEntity inscripcion : enEspera) {
       if (!hayHueco(evento, confirmadas)) {
         break;
       }
       inscripcion.setEstado(EstadoInscripcion.CONFIRMADA);
       inscripcionRepository.save(inscripcion);
-      notificacionService.enviarPromocionEspera(inscripcion, evento);
+      promocionadas.add(inscripcion);
       confirmadas++;
-      promocionadas++;
     }
 
-    perdonarCancelacionesTardiasCubiertas(eventoId, promocionadas);
-    return promocionadas;
+    // Un solo aviso por contacto: si se promocionan varias fichas de un multicarnet, el titular
+    // recibe un único correo y un único WhatsApp (que es lo que se cobra).
+    notificacionService.enviarPromocionEspera(promocionadas, evento);
+
+    perdonarCancelacionesTardiasCubiertas(eventoId, promocionadas.size());
+    return promocionadas.size();
   }
 
   /**
