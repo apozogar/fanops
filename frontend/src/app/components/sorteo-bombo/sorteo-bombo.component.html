@@ -218,36 +218,6 @@
                 }
             }
 
-            <!-- Comprobación: el hash se publica antes y la semilla se revela al celebrarse,
-                 que es lo que demuestra que no se cambió al ver quién se había apuntado. -->
-            <details class="verificacion">
-                <summary>
-                    <fo-icon name="llave" [size]="14" />
-                    <span>Cómo comprobar que el sorteo es limpio</span>
-                </summary>
-                <div class="flex flex-col gap-2 pt-2">
-                    <div>
-                        <span class="text-xs text-ink-muted">Huella de la semilla (publicada al programar el sorteo)</span>
-                        <code class="codigo">{{ s.hashSemilla }}</code>
-                    </div>
-                    @if (s.semilla) {
-                        <div>
-                            <span class="text-xs text-ink-muted">Semilla (revelada al celebrarlo)</span>
-                            <code class="codigo">{{ s.semilla }}</code>
-                        </div>
-                        <p class="text-xs text-ink-muted">
-                            El SHA-256 de la semilla es la huella de arriba, así que la semilla
-                            estaba decidida antes de saber quién participaba. Con ella y la lista
-                            de participantes sale exactamente este mismo orden.
-                        </p>
-                    } @else {
-                        <p class="text-xs text-ink-muted">
-                            La semilla se guarda desde ahora y se publica al celebrarse el sorteo.
-                            Cuando eso pase podrás comprobar que su huella es la de arriba.
-                        </p>
-                    }
-                </div>
-            </details>
         </div>
     }
 }

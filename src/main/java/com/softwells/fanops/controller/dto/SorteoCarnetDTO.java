@@ -43,12 +43,6 @@ public class SorteoCarnetDTO {
    */
   private boolean ajustePapeletasPermitido;
 
-  /** SHA-256 de la semilla. Se publica desde el principio. */
-  private String hashSemilla;
-
-  /** Semilla del sorteo. Null hasta que se celebra: antes solo se conoce su hash. */
-  private String semilla;
-
   /** Participantes; en orden de extracción una vez celebrado el sorteo. */
   private List<ParticipanteSorteoDTO> participantes;
 

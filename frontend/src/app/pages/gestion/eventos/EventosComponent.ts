@@ -77,6 +77,8 @@ export class EventosComponent implements OnInit {
     asignandoPlazas: boolean = false;
     /** Evento cuyo sorteo de carnets se está adelantando. */
     celebrandoSorteo: string | null = null;
+    /** Evento cuyo sorteo de carnets se está reiniciando. */
+    reiniciandoSorteo: string | null = null;
     /** Bombo abierto en el diálogo de papeletas; null mientras carga. */
     bomboDialog: boolean = false;
     bombo: SorteoCarnet | null = null;
@@ -224,6 +226,53 @@ export class EventosComponent implements OnInit {
                 + 'ahora, quien no se haya apuntado se queda fuera y no se puede deshacer. '
                 + '¿Continuar?',
             accept: () => this.ejecutarSorteo(evento)
+        });
+    }
+
+    /** Solo se reinicia un sorteo que ya se ha celebrado. */
+    puedeReiniciarSorteo(evento: Evento): boolean {
+        return !!evento.plazasCarnet && !!evento.sorteoCelebrado;
+    }
+
+    /**
+     * Deshace el resultado del sorteo y vuelve a abrir el bombo. Se conserva la semilla: con el
+     * mismo bombo saldría el mismo reparto, así que no sirve para repetirlo hasta que salga otro.
+     * Se pregunta antes porque los ganadores ya recibieron el aviso de su carnet.
+     */
+    reiniciarSorteo(evento: Evento) {
+        if (!evento.uid) return;
+        this.confirmationService.confirm({
+            header: 'Reiniciar el sorteo',
+            message: `Se deshará el resultado del sorteo de carnets de '${evento.nombreEvento}' y el `
+                + 'bombo volverá a estar abierto hasta la fecha del sorteo del evento. Quien renunció '
+                + 'a su carnet sale del bombo. Con los mismos participantes y papeletas, al volver a '
+                + 'celebrarlo saldrá el mismo resultado. Los ganadores ya recibieron su aviso: '
+                + 'conviene avisarles. ¿Continuar?',
+            acceptLabel: 'Reiniciar',
+            rejectLabel: 'Cancelar',
+            accept: () => {
+                this.reiniciandoSorteo = evento.uid!;
+                this.sorteoCarnetService.reiniciar(evento.uid!).subscribe({
+                    next: (resp) => {
+                        this.reiniciandoSorteo = null;
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: 'Sorteo reiniciado',
+                            detail: resp.message || 'El bombo vuelve a estar abierto.'
+                        });
+                        this.cargarEventos();
+                    },
+                    error: (err) => {
+                        this.reiniciandoSorteo = null;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'No se pudo reiniciar',
+                            detail: err.error?.message || 'No se pudo reiniciar el sorteo.',
+                            life: 8000
+                        });
+                    }
+                });
+            }
         });
     }
 

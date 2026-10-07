@@ -49,6 +49,11 @@ export class SorteoCarnetService {
     return this.http.post<ApiResponse<SorteoCarnet>>(`${this.base(eventoUid)}/celebrar`, {});
   }
 
+  /** Reabre un sorteo ya celebrado, con la misma semilla (administración). */
+  reiniciar(eventoUid: string): Observable<ApiResponse<SorteoCarnet>> {
+    return this.http.post<ApiResponse<SorteoCarnet>>(`${this.base(eventoUid)}/reiniciar`, {});
+  }
+
   /** Fija las papeletas extra de un participante (administración). 0 las quita. */
   ajustarPapeletasExtra(eventoUid: string, socioUid: string, papeletasExtra: number): Observable<ApiResponse<SorteoCarnet>> {
     return this.http.put<ApiResponse<SorteoCarnet>>(`${this.base(eventoUid)}/papeletas-extra/${socioUid}`,

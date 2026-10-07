@@ -56,6 +56,13 @@
                 pTooltip="Celebrar ya el sorteo de carnets"
                 tooltipPosition="top" aria-label="Celebrar el sorteo de carnets"
         ><fo-icon name="entrada" [size]="grande ? 20 : 16" /></button>
+        <button *ngIf="puedeReiniciarSorteo(evento)" foButton variant="ghost"
+                [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
+                [loading]="reiniciandoSorteo === evento.uid"
+                (click)="reiniciarSorteo(evento)"
+                pTooltip="Reiniciar el sorteo de carnets"
+                tooltipPosition="top" aria-label="Reiniciar el sorteo de carnets"
+        ><fo-icon name="refrescar" [size]="grande ? 20 : 16" /></button>
         <button *ngIf="puedeSortear(evento)" foButton variant="ghost"
                 [size]="grande ? 'icon' : 'icon-sm'" class="rounded-full"
                 (click)="abrirBombo(evento)"

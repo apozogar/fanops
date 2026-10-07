@@ -17,6 +17,7 @@ import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.EventoInscripcionRepository;
 import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.repository.SocioRepository;
+import com.softwells.fanops.repository.SorteoCarnetRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Flujo completo del sorteo de carnets contra la base de datos real.
  *
  * Aquí no se comprueba el azar (de eso va {@link SorteoAleatorioTest}) sino lo que rodea al
- * bombo: que programar el evento deja la semilla comprometida, que celebrarlo reparte exactamente
+ * bombo: que programar el evento deja la semilla fijada, que celebrarlo reparte exactamente
  * los carnets que hay y deja al resto ordenado como suplentes, y que una renuncia mueve la lista
  * sin repetir el sorteo.
  */
@@ -58,9 +59,11 @@ class SorteoCarnetFlowTest {
   private UsuarioRepository usuarioRepository;
   @Autowired
   private PenaRepository penaRepository;
+  @Autowired
+  private SorteoCarnetRepository sorteoRepository;
 
   @Test
-  @DisplayName("Programar un evento con carnets deja la semilla comprometida y el bombo abierto")
+  @DisplayName("Programar un evento con carnets deja la semilla fijada y el bombo abierto")
   void programarDejaElBomboAbierto() {
     cuentaConFichas(1);
     EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2));
@@ -71,10 +74,9 @@ class SorteoCarnetFlowTest {
     assertThat(sorteo.isAbierto()).isTrue();
     assertThat(sorteo.getEstado()).isEqualTo(EstadoSorteo.PROGRAMADO);
     assertThat(sorteo.getPlazasCarnet()).isEqualTo(CARNETS);
-    assertThat(sorteo.getHashSemilla()).hasSize(64);
-    assertThat(sorteo.getSemilla())
-        .as("la semilla no se enseña antes de celebrarlo: permitiría calcular el resultado")
-        .isNull();
+    assertThat(sorteoRepository.findByEventoUid(evento.getUid()).orElseThrow().getHashSemilla())
+        .as("la semilla queda fijada al programar el sorteo")
+        .hasSize(64);
   }
 
   @Test
@@ -88,9 +90,6 @@ class SorteoCarnetFlowTest {
 
     assertThat(sorteo.getEstado()).isEqualTo(EstadoSorteo.EJECUTADO);
     assertThat(sorteo.isAbierto()).isFalse();
-    assertThat(sorteo.getSemilla())
-        .as("al celebrarlo la semilla se revela, para que cualquiera pueda rehacer el sorteo")
-        .isNotNull();
 
     assertThat(sorteo.getParticipantes()).hasSize(5);
     assertThat(sorteo.getParticipantes())
@@ -236,6 +235,76 @@ class SorteoCarnetFlowTest {
   // ----------------------------------------------------------------
   // Utilidades del test
   // ----------------------------------------------------------------
+
+  @Test
+  @DisplayName("Reiniciar un sorteo celebrado reabre el bombo con todos pendientes")
+  void reiniciarReabreElBombo() {
+    List<SocioEntity> fichas = cuentaConFichas(4);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    apuntar(evento.getUid(), fichas);
+    sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    SorteoCarnetDTO reabierto = sorteoCarnetService.reiniciar(evento.getUid());
+
+    assertThat(reabierto.getEstado()).isEqualTo(EstadoSorteo.PROGRAMADO);
+    assertThat(reabierto.isAbierto()).isTrue();
+    assertThat(reabierto.getParticipantes()).hasSize(4)
+        .allSatisfy(p -> {
+          assertThat(p.getEstado()).isEqualTo(EstadoSolicitudCarnet.PENDIENTE);
+          assertThat(p.getPosicion()).isNull();
+        });
+  }
+
+  @Test
+  @DisplayName("Reiniciar no sirve para repetir: con el mismo bombo sale el mismo resultado")
+  void reiniciarMantieneLaSemilla() {
+    List<SocioEntity> fichas = cuentaConFichas(6);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    apuntar(evento.getUid(), fichas);
+    SorteoCarnetDTO primero = sorteoCarnetService.celebrarAhora(evento.getUid());
+    String semilla = sorteoRepository.findByEventoUid(evento.getUid()).orElseThrow().getSemilla();
+
+    sorteoCarnetService.reiniciar(evento.getUid());
+    SorteoCarnetDTO segundo = sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    assertThat(sorteoRepository.findByEventoUid(evento.getUid()).orElseThrow().getSemilla())
+        .isEqualTo(semilla);
+    assertThat(segundo.getParticipantes().stream().map(p -> p.getSocioUid()).toList())
+        .isEqualTo(primero.getParticipantes().stream().map(p -> p.getSocioUid()).toList());
+  }
+
+  @Test
+  @DisplayName("Al reiniciar, quien renunció a su carnet sale del bombo")
+  void reiniciarSacaALosQueRenunciaron() {
+    List<SocioEntity> fichas = cuentaConFichas(4);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    apuntar(evento.getUid(), fichas);
+    UUID ganador = sorteoCarnetService.celebrarAhora(evento.getUid())
+        .getParticipantes().get(0).getSocioUid();
+    sorteoCarnetService.renunciar(evento.getUid(), ganador);
+
+    SorteoCarnetDTO reabierto = sorteoCarnetService.reiniciar(evento.getUid());
+
+    assertThat(reabierto.getParticipantes()).hasSize(3)
+        .noneMatch(p -> p.getSocioUid().equals(ganador));
+  }
+
+  @Test
+  @DisplayName("No se reinicia un sorteo sin celebrar ni uno con la fecha ya pasada")
+  void reiniciarSoloSiTieneSentido() {
+    cuentaConFichas(1);
+    EventoEntity abierto = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    assertThatThrownBy(() -> sorteoCarnetService.reiniciar(abierto.getUid()))
+        .isInstanceOf(IllegalStateException.class);
+
+    EventoEntity celebrado = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    sorteoCarnetService.celebrarAhora(celebrado.getUid());
+    celebrado.setFechaSorteoCarnet(LocalDateTime.now().minusHours(1));
+    eventoService.save(celebrado);
+    assertThatThrownBy(() -> sorteoCarnetService.reiniciar(celebrado.getUid()))
+        .as("con la fecha pasada el planificador lo volvería a celebrar al momento")
+        .isInstanceOf(IllegalStateException.class);
+  }
 
   private EstadoSolicitudCarnet estadoDe(SorteoCarnetDTO sorteo, UUID socioUid) {
     return sorteo.getParticipantes().stream()

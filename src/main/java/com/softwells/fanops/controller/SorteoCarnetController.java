@@ -114,6 +114,18 @@ public class SorteoCarnetController {
   }
 
   /**
+   * Reabre un sorteo ya celebrado con la misma semilla (ver SorteoCarnetService.reiniciar):
+   * volver a celebrarlo con el mismo bombo da el mismo resultado.
+   */
+  @PostMapping("/reiniciar")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<ApiResponse<SorteoCarnetDTO>> reiniciar(@PathVariable UUID id) {
+    SorteoCarnetDTO sorteo = sorteoCarnetService.reiniciar(id);
+    return ResponseEntity.ok(new ApiResponse<>(true, "Sorteo reiniciado: el bombo vuelve a estar "
+        + "abierto.", sorteo));
+  }
+
+  /**
    * Fija las papeletas extra de un participante. Solo la gestión, solo con la opción activada
    * para la peña y solo antes de celebrarse el sorteo.
    */

@@ -97,15 +97,20 @@ Frontend (desde `frontend/`):
     sorteo no se ha celebrado. Se suman a las del historial al fijar el peso, y se publican
     aparte (`papeletasExtra`) para que el reparto siga siendo comprobable. Si la peña desactiva
     la opción, las que hubiera dejan de contar.
-  - La semilla se genera al **programar** el evento y no se regenera nunca; hasta que el sorteo se
-    celebra solo se publica su SHA-256. Eso es lo que permite adelantarlo sin que cambie el
-    resultado y lo que hace el sorteo comprobable desde fuera (`SorteoAleatorio`).
+  - La semilla se genera al **programar** el evento y no se regenera nunca (`SorteoAleatorio`):
+    eso es lo que permite adelantarlo o reiniciarlo sin que cambie el resultado. Ni la semilla ni
+    su SHA-256 se publican (la peña prefirió no enseñarlos): la API no los devuelve.
   - Al celebrarse se vacía el bombo entero y se guarda el orden completo (`posicionSorteo`): los
     `plazasCarnet` primeros son `GANADORA` y el resto `SUPLENTE`. Una renuncia pasa el carnet al
     primer suplente, nunca se vuelve a sortear. El front solo reproduce ese orden guardado.
   - Se celebra solo (`SorteoCarnetScheduler`, cada minuto) y también de forma perezosa al
     consultarlo, porque en un despliegue dormido puede no haber nadie a la hora exacta. Un admin
     puede adelantarlo con `POST /api/eventos/{id}/sorteo-carnet/celebrar`.
+  - Un admin puede **reiniciar** un sorteo celebrado (`POST .../sorteo-carnet/reiniciar`): se
+    deshace el resultado y el bombo vuelve a abrirse con la **misma semilla**, así que con los
+    mismos participantes y papeletas sale el mismo reparto (no sirve para repetir hasta que salga
+    otro). Quien renunció al carnet sale del bombo. Exige que la fecha de sorteo del evento sea
+    futura; si no, el planificador lo volvería a celebrar al momento.
 - La peña es **singleton** (ID 1), usado en cuotas, remesas SEPA y carnet.
 - El flujo SEPA genera cuotas y remesas `pain.008`; los retornos se procesan desde `/api/cobros`.
 

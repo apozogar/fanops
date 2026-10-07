@@ -263,6 +263,58 @@ public class SorteoCarnetService {
     return construirDto(evento);
   }
 
+  /**
+   * Deshace un sorteo ya celebrado y vuelve a dejar el bombo abierto (acción de gestión), por
+   * ejemplo si se celebró antes de tiempo o hay que corregir quién estaba dentro.
+   *
+   * <p>Se conserva la <strong>misma semilla</strong>: con los mismos participantes y papeletas,
+   * volver a celebrarlo da exactamente el mismo resultado, así que reiniciar no sirve para repetir
+   * el sorteo hasta que salga otro reparto. Lo que cambie el resultado tiene que ser un cambio en
+   * el bombo (alguien que entra o sale, o unas papeletas).
+   *
+   * <p>Quien renunció a su carnet sale del bombo: ya dijo que no lo quería. Al resto se le borra
+   * la posición y vuelve a quedar pendiente; como el historial de papeletas solo cuenta sorteos
+   * celebrados, este deja de contar hasta que se vuelva a celebrar.
+   *
+   * <p>La fecha del sorteo del evento tiene que ser futura: con una pasada, el planificador lo
+   * volvería a celebrar en menos de un minuto.
+   */
+  public SorteoCarnetDTO reiniciar(UUID eventoId) {
+    EventoEntity evento = findEvento(eventoId);
+    SorteoCarnetEntity sorteo = sorteoRepository.findByEventoUidParaEjecutar(eventoId)
+        .orElseThrow(() -> new EntityNotFoundException("Este evento no sortea carnets."));
+    if (!sorteo.estaEjecutado()) {
+      throw new IllegalStateException(
+          "El sorteo todavía no se ha celebrado: no hay nada que reiniciar.");
+    }
+    if (!sorteaCarnets(evento) || !evento.getFechaSorteoCarnet().isAfter(LocalDateTime.now())) {
+      throw new IllegalStateException("Para reiniciar el sorteo, pon antes en el evento una fecha "
+          + "de sorteo futura: con la de ahora se volvería a celebrar al momento.");
+    }
+
+    for (SolicitudCarnetEntity solicitud :
+        solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(eventoId)) {
+      if (solicitud.getEstado() == EstadoSolicitudCarnet.RENUNCIADA) {
+        solicitudRepository.delete(solicitud);
+        continue;
+      }
+      solicitud.setEstado(EstadoSolicitudCarnet.PENDIENTE);
+      solicitud.setPosicionSorteo(null);
+      solicitud.setPesoSorteo(null);
+      solicitudRepository.save(solicitud);
+    }
+
+    sorteo.setEstado(EstadoSorteo.PROGRAMADO);
+    sorteo.setFechaEjecucion(null);
+    sorteo.setFechaProgramada(evento.getFechaSorteoCarnet());
+    sorteo.setNumeroCarnets(evento.getPlazasCarnet());
+    sorteoRepository.save(sorteo);
+    log.info("Sorteo de carnets reiniciado para el evento {}; se celebrará el {}", eventoId,
+        sorteo.getFechaProgramada());
+
+    return construirDto(evento);
+  }
+
   /** Eventos cuyo sorteo ya debería estar celebrado. Lo consulta el planificador. */
   @Transactional(readOnly = true)
   public List<UUID> eventosConSorteoVencido() {
@@ -442,10 +494,9 @@ public class SorteoCarnetService {
         .abierto(!sorteo.estaEjecutado())
         .admiteSolicitudes(admiteSolicitudes(evento, sorteo))
         .ajustePapeletasPermitido(ajustePapeletasPermitido(sorteo))
-        .hashSemilla(sorteo.getHashSemilla())
-        // La semilla solo se revela con el sorteo ya celebrado: antes permitiría calcular el
-        // resultado por adelantado y elegir cuándo apuntarse en consecuencia.
-        .semilla(sorteo.estaEjecutado() ? sorteo.getSemilla() : null)
+        // La semilla y su huella no salen de aquí: la peña prefirió no publicarlas. Con la semilla
+        // a la vista, sobre todo tras reiniciar un sorteo, se podría calcular el resultado según
+        // quién entrase en el bombo.
         .participantes(participantes)
         .misSocios(misSocios)
         .build();

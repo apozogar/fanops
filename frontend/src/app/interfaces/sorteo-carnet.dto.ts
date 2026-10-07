@@ -63,10 +63,6 @@ export interface SorteoCarnet {
   admiteSolicitudes: boolean;
   /** true si la peña de quien consulta permite papeletas extra y el sorteo no se ha celebrado. */
   ajustePapeletasPermitido: boolean;
-  /** SHA-256 de la semilla, publicado desde que se programa el sorteo. */
-  hashSemilla?: string;
-  /** Semilla del sorteo. null hasta que se celebra. */
-  semilla?: string | null;
   /** En orden de extracción una vez celebrado el sorteo. */
   participantes: ParticipanteSorteo[];
   misSocios: SocioSolicitudCarnet[];
