@@ -24,6 +24,7 @@ import {ParticipanteSorteo, SorteoCarnet} from '@/interfaces/sorteo-carnet.dto';
 import {ValoresEventoService} from '@/services/valores-evento.service';
 import {ValoresEvento} from '@/interfaces/valores-evento.dto';
 import {fechaRelativaAlEvento} from '@/core/eventos/fechas-por-defecto';
+import {deFechaLocal} from '@/core/fechas/fechas-locales';
 
 import { IconComponent } from '@/ui/icon/icon.component';
 import { UiButtonDirective } from '@/ui/ui-button.directive';
@@ -182,7 +183,8 @@ export class EventosComponent implements OnInit {
                     this.eventos = response.data;
                     this.numEventos = this.eventos.length;
                     this.eventos.forEach((p) => {
-                        p.fechaEvento = new Date(p.fechaEvento);
+                        // Día local: new Date('yyyy-MM-dd') lo leería como medianoche UTC.
+                        p.fechaEvento = deFechaLocal(p.fechaEvento) as Date;
                         if (p.fechaLimiteInscripcion) {
                             p.fechaLimiteInscripcion = new Date(p.fechaLimiteInscripcion);
                         }

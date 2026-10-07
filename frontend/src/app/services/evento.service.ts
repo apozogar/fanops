@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { AsistenciaEvento, EventoInscripcionDTO, FaltaEvento, HistorialSocio, InscripcionAdmin, InscripcionPublicaRequest, InscripcionSocioRequest, SocioInscripcion } from '@/interfaces/evento-inscripcion.dto';
 import { Evento } from '@/interfaces/evento.interface';
 import { environment } from '../../environments/environment';
+import {aFechaHoraLocal, aFechaLocal} from '@/core/fechas/fechas-locales';
 import { ApiResponse } from '@/interfaces/api-response.interface';
 
 @Injectable({
@@ -35,10 +36,18 @@ export class EventoService {
   }
 
   guardarEvento(evento: Partial<Evento>): Observable<ApiResponse<Evento>> {
+    // Las fechas van como fecha y hora locales: un Date en el JSON viaja en UTC y el backend, que
+    // las guarda sin zona, se quedaba con el día anterior (ver fechas-locales.ts).
+    const cuerpo = {
+      ...evento,
+      fechaEvento: aFechaLocal(evento.fechaEvento),
+      fechaLimiteInscripcion: aFechaHoraLocal(evento.fechaLimiteInscripcion),
+      fechaSorteoCarnet: aFechaHoraLocal(evento.fechaSorteoCarnet)
+    };
     if (evento.uid) {
-      return this.http.put<ApiResponse<Evento>>(`${this.apiUrl}/${evento.uid}`, evento);
+      return this.http.put<ApiResponse<Evento>>(`${this.apiUrl}/${evento.uid}`, cuerpo);
     } else {
-      return this.http.post<ApiResponse<Evento>>(this.apiUrl, evento);
+      return this.http.post<ApiResponse<Evento>>(this.apiUrl, cuerpo);
     }
   }
 
