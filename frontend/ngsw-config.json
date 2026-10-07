@@ -15,7 +15,13 @@
             "installMode": "prefetch",
             "updateMode": "prefetch",
             "resources": {
-                "files": ["/favicon.ico", "/index.html", "/manifest.webmanifest", "/*.css", "/*.js"]
+                "files": [
+                    "/favicon.ico",
+                    "/index.html",
+                    "/manifest.webmanifest",
+                    "/*.css",
+                    "/*.js"
+                ]
             }
         },
         {
@@ -23,18 +29,12 @@
             "installMode": "lazy",
             "updateMode": "prefetch",
             "resources": {
-                "files": ["/assets/**", "/icons/**", "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
-            }
-        }
-    ],
-    "dataGroups": [
-        {
-            "name": "api",
-            "urls": ["/api/**"],
-            "cacheConfig": {
-                "strategy": "performance",
-                "maxAge": "1d",
-                "maxSize": 100
+                "files": [
+                    "/assets/**",
+                    "/icons/**",
+                    "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)",
+                    "!/api/**"
+                ]
             }
         }
     ]
