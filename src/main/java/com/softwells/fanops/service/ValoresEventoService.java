@@ -41,6 +41,7 @@ public class ValoresEventoService {
 
     entidad.setPlazas(valores.getPlazas());
     entidad.setCostePlaza(valores.getCostePlaza());
+    entidad.setCostePlazaNoSocio(valores.getCostePlazaNoSocio());
     entidad.setCarnets(valores.getCarnets());
     entidad.setCosteCarnet(valores.getCosteCarnet());
     entidad.setCosteTotalEstimado(valores.getCosteTotalEstimado());
@@ -56,6 +57,7 @@ public class ValoresEventoService {
     return ValoresEventoDTO.builder()
         .plazas(entidad.getPlazas())
         .costePlaza(entidad.getCostePlaza())
+        .costePlazaNoSocio(entidad.getCostePlazaNoSocio())
         .carnets(entidad.getCarnets())
         .costeCarnet(entidad.getCosteCarnet())
         .costeTotalEstimado(entidad.getCosteTotalEstimado())

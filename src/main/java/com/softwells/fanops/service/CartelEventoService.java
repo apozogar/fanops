@@ -60,7 +60,7 @@ public class CartelEventoService {
   public static final int ALTO = 630;
 
   /** Versión del diseño del cartel; subirla invalida las vistas previas guardadas por WhatsApp. */
-  private static final int FORMATO = 2;
+  private static final int FORMATO = 3;
 
   private static final Color COLOR_POR_DEFECTO = new Color(0x00742d);
   private static final Color TINTA_OSCURA = new Color(0x0f172a);
@@ -114,7 +114,7 @@ public class CartelEventoService {
   public static String version(EventoInscripcionDTO evento) {
     return Integer.toHexString(Objects.hash(FORMATO, evento.getNombreEvento(),
         evento.getFechaEvento(), evento.getUbicacion(), evento.getFechaLimiteInscripcion(),
-        evento.getCostePlaza(), evento.isInscripcionCerrada()));
+        evento.getCostePlaza(), evento.getCostePlazaNoSocio(), evento.isInscripcionCerrada()));
   }
 
   private static byte[] jpeg(BufferedImage imagen) throws IOException {
@@ -334,9 +334,9 @@ public class CartelEventoService {
     } else {
       etiquetas.add(new Etiqueta("Inscripción abierta", Color.WHITE, tintaResaltada));
     }
-    if (evento.getCostePlaza() != null) {
-      etiquetas.add(new Etiqueta(TextosEvento.euros(evento.getCostePlaza()) + " la plaza",
-          conAlfa(tinta, 45), tinta));
+    String precio = TextosEvento.precioPlaza(evento.getCostePlaza(), evento.getCostePlazaNoSocio());
+    if (precio != null) {
+      etiquetas.add(new Etiqueta(precio, conAlfa(tinta, 45), tinta));
     }
     return etiquetas;
   }

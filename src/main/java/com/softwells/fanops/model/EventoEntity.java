@@ -60,6 +60,12 @@ public class EventoEntity {
   private BigDecimal costePlaza;
 
   /**
+   * Lo que paga por la plaza quien no es socio. Null significa "sin indicar": en ese caso se
+   * cobra lo mismo que a un socio ({@link #costePlazaPara}).
+   */
+  private BigDecimal costePlazaNoSocio;
+
+  /**
    * Lo que paga quien va con uno de los carnets sorteados. Es aparte del anterior porque suele
    * ser otra cifra: el carnet no lleva autobús, o la entrada cuesta distinto.
    */
@@ -108,4 +114,9 @@ public class EventoEntity {
         && LocalDateTime.now().isAfter(fechaLimiteInscripcion);
   }
 
+
+  /** Lo que paga por la plaza un socio o, si no lo es, un no socio. Null si no se ha indicado. */
+  public BigDecimal costePlazaPara(boolean socio) {
+    return !socio && costePlazaNoSocio != null ? costePlazaNoSocio : costePlaza;
+  }
 }

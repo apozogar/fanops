@@ -49,6 +49,23 @@ final class TextosEvento {
     return formato.format(importe);
   }
 
+  /**
+   * El precio de la plaza para el mensaje: "10 € la plaza" si es el mismo para todos, o
+   * "10 € socios · 15 € no socios" si cambia. Null si no hay precio.
+   */
+  static String precioPlaza(BigDecimal socio, BigDecimal noSocio) {
+    if (socio == null && noSocio == null) {
+      return null;
+    }
+    if (noSocio == null || (socio != null && socio.compareTo(noSocio) == 0)) {
+      return euros(socio) + " la plaza";
+    }
+    if (socio == null) {
+      return euros(noSocio) + " no socios";
+    }
+    return euros(socio) + " socios · " + euros(noSocio) + " no socios";
+  }
+
   private static String capitalizar(String texto) {
     return texto.isEmpty() ? texto : Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
   }

@@ -48,6 +48,12 @@
                                 <span>{{ evento.costePlaza | currency: 'EUR' }} por plaza</span>
                             </div>
                         }
+                        @if (evento.costePlazaNoSocio != null && evento.costePlazaNoSocio !== evento.costePlaza) {
+                            <div class="flex items-center gap-2 text-ink-muted">
+                                <fo-icon name="euro" />
+                                <span>{{ evento.costePlazaNoSocio | currency: 'EUR' }} para no socios</span>
+                            </div>
+                        }
                         @if (evento.enListaEspera > 0) {
                             <div class="flex items-center gap-2 text-warning">
                                 <fo-icon name="espera" />

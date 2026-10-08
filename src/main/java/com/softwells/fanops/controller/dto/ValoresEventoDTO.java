@@ -20,6 +20,7 @@ public class ValoresEventoDTO {
 
   private Integer plazas;
   private BigDecimal costePlaza;
+  private BigDecimal costePlazaNoSocio;
   private Integer carnets;
   private BigDecimal costeCarnet;
   private BigDecimal costeTotalEstimado;

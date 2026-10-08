@@ -48,6 +48,9 @@ public class ValoresEventoPenaEntity {
   /** Lo que paga cada socio por su plaza. */
   private BigDecimal costePlaza;
 
+  /** Lo que paga por su plaza quien no es socio. */
+  private BigDecimal costePlazaNoSocio;
+
   /** Carnets que se sortean. */
   private Integer carnets;
 

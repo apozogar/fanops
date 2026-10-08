@@ -7,6 +7,8 @@ export interface ValoresEvento {
   plazas?: number | null;
   /** Lo que paga cada socio por su plaza. */
   costePlaza?: number | null;
+  /** Lo que paga por su plaza quien no es socio. */
+  costePlazaNoSocio?: number | null;
   /** Carnets que se sortean. */
   carnets?: number | null;
   /** Lo que paga quien se lleva un carnet. */

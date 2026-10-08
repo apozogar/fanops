@@ -119,4 +119,16 @@ export class InscripcionPublicaComponent implements OnInit {
             }
         });
     }
+
+    /** "10 € por plaza" o, si cambia para quien no es socio, "10 € socios · 15 € no socios". */
+    precioPlaza(evento: EventoInscripcionDTO): string {
+        const euros = (n: number) => new Intl.NumberFormat('es-ES', {style: 'currency', currency: 'EUR',
+            minimumFractionDigits: Number.isInteger(n) ? 0 : 2}).format(n);
+        const socio = evento.costePlaza;
+        const noSocio = evento.costePlazaNoSocio;
+        if (socio == null && noSocio == null) return '';
+        if (noSocio == null || noSocio === socio) return `${euros(socio!)} por plaza`;
+        if (socio == null) return `${euros(noSocio)} no socios`;
+        return `${euros(socio)} socios · ${euros(noSocio)} no socios`;
+    }
 }

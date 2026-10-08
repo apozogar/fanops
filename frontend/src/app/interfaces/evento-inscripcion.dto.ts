@@ -24,6 +24,8 @@ export interface EventoInscripcionDTO {
   ubicacion?: string;
   /** Lo que paga cada socio por la plaza. Ausente si no se ha indicado. */
   costePlaza?: number | null;
+  /** Lo que paga por la plaza quien no es socio. Ausente: paga lo mismo que un socio. */
+  costePlazaNoSocio?: number | null;
   /** Lo que paga quien va con carnet sorteado. Ausente si no se ha indicado. */
   costeCarnet?: number | null;
   inscripcionCerrada: boolean;
@@ -75,6 +77,8 @@ export interface InscripcionAdmin {
   fechaInscripcion: Date;
   socioUid?: string | null;
   numeroSocio?: number | null;
+  /** Lo que le toca pagar por la plaza (precio de socio o de no socio). */
+  importe?: number | null;
   nombre: string;
   email: string;
   telefono?: string;

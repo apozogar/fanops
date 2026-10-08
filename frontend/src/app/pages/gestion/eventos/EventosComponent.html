@@ -226,6 +226,12 @@
                                        mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
                         <span class="text-xs text-ink-muted">Lo que paga cada socio.</span>
                     </div>
+                    <div class="sm:col-span-3 min-w-0 flex flex-col gap-1.5">
+                        <label for="costePlazaNoSocio" class="text-sm font-medium">Coste no socio</label>
+                        <p-inputNumber id="costePlazaNoSocio" class="w-full" styleClass="w-full" inputStyleClass="w-full" [(ngModel)]="evento.costePlazaNoSocio"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                        <span class="text-xs text-ink-muted">Vacío: lo mismo que un socio.</span>
+                    </div>
                 </div>
             </section>
 
@@ -454,6 +460,11 @@
                                 <fo-tag *ngIf="inscripcion.numeroSocio != null" tone="neutral">Nº {{ inscripcion.numeroSocio }}</fo-tag>
                                 <fo-tag *ngIf="inscripcion.numeroSocio == null" tone="info">No socio</fo-tag>
                                 <fo-tag *ngIf="inscripcion.socioPrioritario" tone="success">Al día</fo-tag>
+                                <!-- Lo que tiene que pagar, para validarlo en la puerta. -->
+                                <fo-tag *ngIf="inscripcion.importe != null" tone="accent">
+                                    <fo-icon name="euro" [size]="14" />
+                                    <span>{{ inscripcion.importe | currency: 'EUR' }}</span>
+                                </fo-tag>
                                 <fo-tag *ngIf="inscripcion.faltasAcumuladas > 0" tone="warn">
                                     {{ inscripcion.faltasAcumuladas }} falta{{ inscripcion.faltasAcumuladas === 1 ? '' : 's' }}
                                 </fo-tag>
@@ -581,6 +592,13 @@
                         <p-inputNumber id="valoresCostePlaza" class="w-full" styleClass="w-full"
                                        inputStyleClass="w-full"
                                        [(ngModel)]="valoresEnEdicion.costePlaza"
+                                       mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
+                    </div>
+                    <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
+                        <label for="valoresCostePlazaNoSocio" class="text-sm font-medium">Coste no socio</label>
+                        <p-inputNumber id="valoresCostePlazaNoSocio" class="w-full" styleClass="w-full"
+                                       inputStyleClass="w-full"
+                                       [(ngModel)]="valoresEnEdicion.costePlazaNoSocio"
                                        mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
                     </div>
                 </div>

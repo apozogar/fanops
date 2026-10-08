@@ -22,6 +22,9 @@ public class EventoInscripcionDTO {
   /** Lo que paga cada persona por la plaza. Null si no se ha indicado. */
   private BigDecimal costePlaza;
 
+  /** Lo que paga por la plaza quien no es socio. Null si no se ha indicado (paga lo mismo). */
+  private BigDecimal costePlazaNoSocio;
+
   /** Lo que paga quien va con carnet sorteado. Null si no se ha indicado. */
   private BigDecimal costeCarnet;
 

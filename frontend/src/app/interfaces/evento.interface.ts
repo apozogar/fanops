@@ -10,6 +10,8 @@ export interface Evento {
     numeroPlazas?: number;
     /** Lo que paga cada socio por la plaza del evento. */
     costePlaza?: number;
+    /** Lo que paga por la plaza quien no es socio. Vacío: lo mismo que un socio. */
+    costePlazaNoSocio?: number;
     /** Lo que paga quien va con uno de los carnets sorteados. */
     costeCarnet?: number;
     /** Carnets que se sortean (0 o vacío = el evento no sortea carnets). */

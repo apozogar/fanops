@@ -2,6 +2,7 @@ package com.softwells.fanops.controller.dto;
 
 import com.softwells.fanops.enums.AsistenciaEvento;
 import com.softwells.fanops.enums.EstadoInscripcion;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Builder;
@@ -21,6 +22,9 @@ public class InscripcionAdminDTO {
   private String nombre;
   private String email;
   private String telefono;
+
+  /** Lo que le toca pagar por la plaza (precio de socio o de no socio). Null si no hay precio. */
+  private BigDecimal importe;
 
   /** Resultado de pasar lista. PENDIENTE mientras no se haya pasado. */
   private AsistenciaEvento asistencia;

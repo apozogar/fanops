@@ -60,6 +60,10 @@
                         <fo-icon name="ubicacion" />
                         <span>{{ evento.ubicacion }}</span>
                     </div>
+                    <div *ngIf="evento.costePlaza != null || evento.costePlazaNoSocio != null" class="flex items-center gap-2">
+                        <fo-icon name="euro" />
+                        <span>{{ precioPlaza(evento) }}</span>
+                    </div>
                     <div class="flex items-center gap-2">
                         <fo-icon name="socios" />
                         <span>{{ evento.plazasLibres < 0 ? 'Plazas ilimitadas' : evento.plazasLibres + ' plazas libres' }}</span>

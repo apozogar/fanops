@@ -367,6 +367,7 @@ export class EventosComponent implements OnInit {
             nombreEvento: '',
             numeroPlazas: porDefecto.plazas ?? undefined,
             costePlaza: porDefecto.costePlaza ?? undefined,
+            costePlazaNoSocio: porDefecto.costePlazaNoSocio ?? undefined,
             plazasCarnet: porDefecto.carnets ?? undefined,
             costeCarnet: porDefecto.costeCarnet ?? undefined,
             costeTotalEstimado: porDefecto.costeTotalEstimado ?? undefined
@@ -701,7 +702,7 @@ export class EventosComponent implements OnInit {
 }
 
 /** Versión del formato de la vista previa; subirla da URLs nuevas a todos los enlaces. */
-const FORMATO_VISTA_PREVIA = 2;
+const FORMATO_VISTA_PREVIA = 3;
 
 /** Huella corta de lo que sale en la vista previa del enlace (djb2 en base 36). */
 function versionEnlace(evento: Evento): string {
@@ -711,7 +712,8 @@ function versionEnlace(evento: Evento): string {
         evento.fechaEvento ? new Date(evento.fechaEvento).getTime() : '',
         evento.ubicacion ?? '',
         evento.fechaLimiteInscripcion ? new Date(evento.fechaLimiteInscripcion).getTime() : '',
-        evento.costePlaza ?? ''
+        evento.costePlaza ?? '',
+        evento.costePlazaNoSocio ?? ''
     ].join('|');
     let hash = 5381;
     for (let i = 0; i < datos.length; i++) {

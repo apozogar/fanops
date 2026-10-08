@@ -34,6 +34,7 @@ public class EventoMapper {
         .fechaLimiteInscripcion(evento.getFechaLimiteInscripcion())
         .ubicacion(evento.getUbicacion())
         .costePlaza(evento.getCostePlaza())
+        .costePlazaNoSocio(evento.getCostePlazaNoSocio())
         .costeCarnet(evento.getCosteCarnet())
         .inscripcionCerrada(evento.isInscripcionCerrada())
         .plazasOcupadas(evento.getNumInscritos())
@@ -54,6 +55,8 @@ public class EventoMapper {
         .fechaInscripcion(inscripcion.getFechaInscripcion())
         .socioUid(socio != null ? socio.getUid() : null)
         .numeroSocio(socio != null ? socio.getNumeroSocio() : null)
+        .importe(inscripcion.getEvento() != null
+            ? inscripcion.getEvento().costePlazaPara(socio != null) : null)
         .nombre(inscripcion.getNombre())
         .email(inscripcion.getEmail())
         .telefono(inscripcion.getTelefono())

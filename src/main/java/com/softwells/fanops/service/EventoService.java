@@ -193,6 +193,7 @@ public class EventoService {
     eventoExistente.setDescripcion(eventoDetails.getDescripcion());
     eventoExistente.setNumeroPlazas(eventoDetails.getNumeroPlazas());
     eventoExistente.setCostePlaza(eventoDetails.getCostePlaza());
+    eventoExistente.setCostePlazaNoSocio(eventoDetails.getCostePlazaNoSocio());
     eventoExistente.setCosteCarnet(eventoDetails.getCosteCarnet());
     eventoExistente.setCosteTotalEstimado(eventoDetails.getCosteTotalEstimado());
     eventoExistente.setCosteTotalReal(eventoDetails.getCosteTotalReal());

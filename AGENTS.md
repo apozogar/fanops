@@ -72,8 +72,11 @@ Frontend (desde `frontend/`):
     no es una fecha concreta sino "dos días antes, a las ocho". El formulario las calcula al
     elegir la fecha del evento (`fechaRelativaAlEvento`), solo en eventos nuevos y solo si el
     campo sigue vacío.
-- **Costes de un evento**: `costePlaza` y `costeCarnet` son lo que paga cada persona (la plaza y,
-  aparte, ir con carnet sorteado) y se enseñan al socio; `costeTotalEstimado` / `costeTotalReal`
+- **Costes de un evento**: `costePlaza` (socios) y `costePlazaNoSocio` (si queda vacío, los no
+  socios pagan lo mismo: `EventoEntity.costePlazaPara`) y `costeCarnet` son lo que paga cada persona (la plaza y,
+  aparte, ir con carnet sorteado). La lista de inscritos de gestión enseña el `importe` de cada
+  uno (según tenga ficha de socio o no) para validarlo en la puerta; el mensaje del enlace y el
+  cartel dicen los dos precios si difieren (`TextosEvento.precioPlaza`) y se enseñan al socio; `costeTotalEstimado` / `costeTotalReal`
   son los totales del evento y solo los ve la gestión. Null significa "sin indicar", que no es lo
   mismo que 0.
 - **Sorteo de carnets**: recurso aparte de las plazas de bus, con su propia inscripción

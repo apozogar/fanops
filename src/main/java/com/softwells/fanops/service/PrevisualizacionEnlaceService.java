@@ -113,8 +113,9 @@ public class PrevisualizacionEnlaceService {
     } else {
       partes.add("✅ Inscripción abierta");
     }
-    if (evento.getCostePlaza() != null) {
-      partes.add("💶 " + TextosEvento.euros(evento.getCostePlaza()) + " la plaza");
+    String precio = TextosEvento.precioPlaza(evento.getCostePlaza(), evento.getCostePlazaNoSocio());
+    if (precio != null) {
+      partes.add("💶 " + precio);
     }
     return String.join(" · ", partes);
   }
