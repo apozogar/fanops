@@ -21,6 +21,7 @@ import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.FaltaEventoEntity;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
+import com.softwells.fanops.model.SolicitudCarnetEntity;
 import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.CuotaRepository;
 import com.softwells.fanops.repository.EventoInscripcionRepository;
@@ -35,9 +36,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -637,6 +640,66 @@ public class EventoService {
    */
   public int asignarPlazas(UUID eventoId) {
     return promoverListaEspera(eventoId);
+  }
+
+  /**
+   * La ficha de un socio se ha creado o cambiado: sus inscripciones en eventos próximos se ponen
+   * al día con ella (nombre, contacto y si está al día con la cuota) y las de quien se apuntó por
+   * el enlace como no socio, con un correo que ahora es el de esta ficha, pasan a ser suyas. Sin
+   * esto, corregir el correo de una ficha no cambiaría nada en un evento ya abierto: seguiría
+   * como "no socio" y con el precio de no socio.
+   */
+  @EventListener
+  void alActualizarseUnaFicha(FichaActualizadaEvent evento) {
+    SocioEntity socio = socioRepository.findById(evento.socioUid()).orElse(null);
+    if (socio == null) {
+      return;
+    }
+    LocalDate hoy = LocalDate.now();
+    boolean alDia = esSocioAlDia(socio);
+
+    for (EventoInscripcionEntity inscripcion :
+        inscripcionRepository.findBySocioUidAndEventoFechaEventoGreaterThanEqual(socio.getUid(),
+            hoy)) {
+      copiarFicha(inscripcion, socio, alDia);
+    }
+
+    Set<String> correos = new LinkedHashSet<>();
+    if (socio.getEmail() != null && !socio.getEmail().isBlank()) {
+      correos.add(socio.getEmail().trim().toLowerCase(Locale.ROOT));
+    }
+    if (socio.getUsuario() != null && socio.getUsuario().getEmail() != null) {
+      correos.add(socio.getUsuario().getEmail().trim().toLowerCase(Locale.ROOT));
+    }
+    for (String correo : correos) {
+      for (EventoInscripcionEntity inscripcion :
+          inscripcionRepository
+              .findByEmailIgnoreCaseAndSocioIsNullAndEventoFechaEventoGreaterThanEqual(correo,
+                  hoy)) {
+        UUID eventoId = inscripcion.getEvento().getUid();
+        SocioEntity candidata = socioPorCorreo(correo, inscripcion.getNombre());
+        if (candidata != null && candidata.getUid().equals(socio.getUid())
+            && !inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+          inscripcion.setSocio(socio);
+          copiarFicha(inscripcion, socio, alDia);
+        }
+      }
+      for (SolicitudCarnetEntity solicitud : sorteoCarnetService.invitadosPendientesCon(correo)) {
+        SocioEntity candidata = socioPorCorreo(correo, solicitud.getNombreInvitado());
+        if (candidata != null && candidata.getUid().equals(socio.getUid())) {
+          sorteoCarnetService.vincularInvitado(solicitud, socio);
+        }
+      }
+    }
+  }
+
+  private void copiarFicha(EventoInscripcionEntity inscripcion, SocioEntity socio,
+      boolean alDia) {
+    inscripcion.setNombre(socio.getNombre());
+    inscripcion.setEmail(socio.getEmail());
+    inscripcion.setTelefono(socio.getTelefono());
+    inscripcion.setSocioPrioritario(alDia);
+    inscripcionRepository.save(inscripcion);
   }
 
   /** Tras celebrarse un sorteo con plazas reservadas, las que sobran pasan a la lista de espera. */

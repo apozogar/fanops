@@ -65,6 +65,12 @@ Frontend (desde `frontend/`):
     usar `nombreParticipante()/emailParticipante()` y `esInvitado()`, no `getSocio()`. El
     resultado le llega por correo (`NotificacionService.enviarResultadoSorteoCarnet`); no hay
     consulta pública del resultado.
+  - Al crear o modificar una ficha (`FichaActualizadaEvent`, que escucha
+    `EventoService.alActualizarseUnaFicha`), sus inscripciones en eventos que no han pasado copian
+    nombre, contacto y "al día", y las inscripciones y entradas al bombo de quien se apuntó por
+    el enlace como no socio con el correo de esa ficha (o el de su cuenta) pasan a ser suyas. Solo
+    si ese correo la identifica sin duda (mismo criterio que `socioPorCorreo`) y la ficha no
+    estaba ya inscrita.
   - Desde el **listado de socios** (modal de eventos del socio) la gestión puede apuntar a un
     socio que no usa la app, al evento o al sorteo del carnet
     (`POST /api/eventos/{id}/socios/{socioUid}/inscribir?sorteoCarnet=`). Sigue exactamente las

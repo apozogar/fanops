@@ -246,6 +246,62 @@ class InscripcionPublicaFlowTest {
         .isInstanceOf(IllegalStateException.class);
   }
 
+  @Test
+  @DisplayName("Si la ficha pasa a tener el correo de una inscripción de no socio, esa inscripción es suya")
+  void laInscripcionDeNoSocioSeEnlazaConLaFichaAlActualizarla() {
+    EventoEntity evento = evento();
+    eventoService.inscribirPublico(evento.getUid(), peticion("Juan Pérez", EMAIL_FICHA));
+    assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(),
+        EMAIL_FICHA)).isTrue();
+
+    // La ficha existía con otro correo; la gestión lo corrige después de que se apuntara.
+    SocioEntity socio = ficha("Juan Pérez García", "otro.correo@fanops.local", null);
+    socio.setEmail(EMAIL_FICHA);
+    socioRepository.saveAndFlush(socio);
+    eventoService.alActualizarseUnaFicha(new FichaActualizadaEvent(socio.getUid()));
+
+    EventoInscripcionEntity inscripcion = inscripcionRepository
+        .findByEventoUidAndSocioUid(evento.getUid(), socio.getUid()).orElseThrow();
+    assertThat(inscripcion.getNombre()).isEqualTo("Juan Pérez García");
+  }
+
+  @Test
+  @DisplayName("Al actualizar la ficha, sus inscripciones en eventos próximos copian los datos nuevos")
+  void laInscripcionDeUnSocioSeActualizaConSuFicha() {
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+    EventoEntity evento = evento();
+    eventoService.inscribirPublico(evento.getUid(), peticion("Juan Pérez", EMAIL_FICHA));
+
+    socio.setTelefono("600111222");
+    socio.setNombre("Juan Pérez Ruiz");
+    socioRepository.saveAndFlush(socio);
+    eventoService.alActualizarseUnaFicha(new FichaActualizadaEvent(socio.getUid()));
+
+    EventoInscripcionEntity inscripcion = inscripcionRepository
+        .findByEventoUidAndSocioUid(evento.getUid(), socio.getUid()).orElseThrow();
+    assertThat(inscripcion.getTelefono()).isEqualTo("600111222");
+    assertThat(inscripcion.getNombre()).isEqualTo("Juan Pérez Ruiz");
+  }
+
+  @Test
+  @DisplayName("Una entrada al bombo de un no socio pasa a ser la de su ficha al enlazarla")
+  void laEntradaAlBomboDeUnInvitadoSeEnlazaConLaFicha() {
+    EventoEntity evento = eventoConSorteo();
+    evento.setSorteoAbiertoATodos(true);
+    eventoService.save(evento);
+    InscripcionPublicaRequest request = peticion("Juan Pérez", EMAIL_FICHA);
+    request.setIncluirSorteo(true);
+    eventoService.inscribirPublico(evento.getUid(), request);
+
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+    eventoService.alActualizarseUnaFicha(new FichaActualizadaEvent(socio.getUid()));
+
+    assertThat(solicitudRepository.existsByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
+        .as("la entrada pasa a ser de la ficha, con su historial de papeletas").isTrue();
+    assertThat(solicitudRepository.existsByEventoUidAndEmailInvitadoIgnoreCase(evento.getUid(),
+        EMAIL_FICHA)).isFalse();
+  }
+
   private EventoEntity eventoConSorteo() {
     EventoEntity evento = new EventoEntity();
     evento.setNombreEvento("Partido con sorteo");

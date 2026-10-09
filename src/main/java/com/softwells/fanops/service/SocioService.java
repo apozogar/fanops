@@ -85,6 +85,7 @@ public class SocioService {
   private final UsuarioService usuarioService;
   private final VinculacionSocioService vinculacionSocioService;
   private final RoleHierarchy roleHierarchy;
+  private final org.springframework.context.ApplicationEventPublisher eventos;
 
   @Transactional
   public SocioEntity crear(SocioEntity socio) {
@@ -102,7 +103,9 @@ public class SocioService {
     // El socio se da de alta en la peña de trabajo de quien lo está creando (admin de su peña,
     // o la peña que el superadmin tenga seleccionada en ese momento).
     socio.setPena(usuarioService.obtenerPenaDelUsuarioAutenticado());
-    return socioRepository.save(socio);
+    SocioEntity guardado = socioRepository.save(socio);
+    eventos.publishEvent(new FichaActualizadaEvent(guardado.getUid()));
+    return guardado;
   }
 
   public SocioEntity registrarSocio(RegisterRequest request) {
@@ -304,7 +307,9 @@ public class SocioService {
       existente.getUsuario().setRoles(socioData.getUsuario().getRoles());
     }
 
-    return socioRepository.save(existente);
+    SocioEntity guardado = socioRepository.save(existente);
+    eventos.publishEvent(new FichaActualizadaEvent(guardado.getUid()));
+    return guardado;
   }
 
 

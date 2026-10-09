@@ -24,6 +24,9 @@ public interface SolicitudCarnetRepository extends JpaRepository<SolicitudCarnet
 
   boolean existsByEventoUidAndEmailInvitadoIgnoreCase(UUID eventoUid, String email);
 
+  /** Entradas al bombo de quien no es socio, hechas con ese correo. */
+  List<SolicitudCarnetEntity> findByEmailInvitadoIgnoreCaseAndSocioIsNull(String email);
+
   /**
    * Participaciones del socio en sorteos ya celebrados, de la más antigua a la más reciente. Es
    * el historial con el que se calculan las papeletas: cuantas más veces se ha quedado sin

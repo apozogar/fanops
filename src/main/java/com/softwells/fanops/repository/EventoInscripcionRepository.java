@@ -31,6 +31,14 @@ public interface EventoInscripcionRepository
 
   long countByEventoUidAndEstadoAndOrigenSorteoTrue(UUID eventoUid, EstadoInscripcion estado);
 
+  /** Inscripciones de un socio en eventos que todavía no han pasado. */
+  List<EventoInscripcionEntity> findBySocioUidAndEventoFechaEventoGreaterThanEqual(UUID socioUid,
+      java.time.LocalDate desde);
+
+  /** Inscripciones sin ficha (no socios) hechas con ese correo en eventos que no han pasado. */
+  List<EventoInscripcionEntity> findByEmailIgnoreCaseAndSocioIsNullAndEventoFechaEventoGreaterThanEqual(
+      String email, java.time.LocalDate desde);
+
   boolean existsByEventoUidAndEmailIgnoreCase(UUID eventoUid, String email);
 
   long countByEventoUidAndEstado(UUID eventoUid, EstadoInscripcion estado);

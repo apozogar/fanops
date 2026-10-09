@@ -194,6 +194,29 @@ public class SorteoCarnetService {
     log.info("Invitado apuntado al sorteo de carnets del evento {}", eventoId);
   }
 
+  /**
+   * Entradas al bombo de quien no es socio hechas con ese correo, para enlazarlas a su ficha si
+   * resulta que lo es. Solo las de sorteos que todavía no se han celebrado.
+   */
+  public List<SolicitudCarnetEntity> invitadosPendientesCon(String email) {
+    return solicitudRepository.findByEmailInvitadoIgnoreCaseAndSocioIsNull(email).stream()
+        .filter(s -> !estaCelebrado(s.getEvento().getUid()))
+        .collect(Collectors.toList());
+  }
+
+  /** Convierte la entrada de un invitado en la de su ficha de socio (con su historial). */
+  public void vincularInvitado(SolicitudCarnetEntity solicitud, SocioEntity socio) {
+    UUID eventoId = solicitud.getEvento().getUid();
+    if (solicitudRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+      return; // la ficha ya está en el bombo: no se duplica
+    }
+    solicitud.setSocio(socio);
+    solicitud.setNombreInvitado(null);
+    solicitud.setEmailInvitado(null);
+    solicitud.setTelefonoInvitado(null);
+    solicitudRepository.save(solicitud);
+  }
+
   /** Saca del bombo una ficha del usuario. Solo antes de celebrarse el sorteo. */
   public SorteoCarnetDTO anularSolicitud(UUID eventoId, UUID socioUid) {
     EventoEntity evento = findEvento(eventoId);
