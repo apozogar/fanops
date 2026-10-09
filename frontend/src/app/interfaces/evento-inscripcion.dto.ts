@@ -68,6 +68,8 @@ export interface InscripcionPublicaRequest {
   nombre: string;
   email: string;
   telefono?: string;
+  /** Entrar también en el sorteo de carnets; solo vale para socios. */
+  incluirSorteo?: boolean;
 }
 
 export interface InscripcionAdmin {

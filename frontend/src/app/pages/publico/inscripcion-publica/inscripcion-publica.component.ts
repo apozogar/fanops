@@ -38,6 +38,8 @@ export class InscripcionPublicaComponent implements OnInit {
     nombre = '';
     email = '';
     telefono = '';
+    incluirSorteo = false;
+    enSorteo = false;
 
     private route = inject(ActivatedRoute);
     private eventoService = inject(EventoService);
@@ -97,11 +99,13 @@ export class InscripcionPublicaComponent implements OnInit {
         this.eventoService.inscribirPublico(this.evento.uid, {
             nombre: this.nombre.trim(),
             email: this.email.trim(),
-            telefono: this.telefono.trim() || undefined
+            telefono: this.telefono.trim() || undefined,
+            incluirSorteo: this.incluirSorteo
         }).subscribe({
             next: (resp) => {
                 this.enviado = true;
                 this.confirmada = resp.data === 'CONFIRMADA';
+                this.enSorteo = this.incluirSorteo;
                 this.enviando = false;
                 this.messageService.add({
                     severity: 'success',

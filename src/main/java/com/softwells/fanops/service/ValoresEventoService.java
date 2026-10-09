@@ -44,6 +44,7 @@ public class ValoresEventoService {
     entidad.setCostePlazaNoSocio(valores.getCostePlazaNoSocio());
     entidad.setCarnets(valores.getCarnets());
     entidad.setCosteCarnet(valores.getCosteCarnet());
+    entidad.setSorteoAbiertoATodos(valores.getSorteoAbiertoATodos());
     entidad.setCosteTotalEstimado(valores.getCosteTotalEstimado());
     entidad.setDiasAntesFinInscripcion(valores.getDiasAntesFinInscripcion());
     entidad.setHoraFinInscripcion(valores.getHoraFinInscripcion());
@@ -60,6 +61,7 @@ public class ValoresEventoService {
         .costePlazaNoSocio(entidad.getCostePlazaNoSocio())
         .carnets(entidad.getCarnets())
         .costeCarnet(entidad.getCosteCarnet())
+        .sorteoAbiertoATodos(entidad.getSorteoAbiertoATodos())
         .costeTotalEstimado(entidad.getCosteTotalEstimado())
         .diasAntesFinInscripcion(entidad.getDiasAntesFinInscripcion())
         .horaFinInscripcion(entidad.getHoraFinInscripcion())

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!--
+    Quien entra en el sorteo de carnets sin ser socio no tiene ficha, así que socio_uid pasa a
+    admitir null (sus datos van en nombre_invitado / email_invitado / telefono_invitado, que crea
+    Hibernate). Hibernate no relaja una restricción NOT NULL que ya existe, de ahí este changeSet.
+
+    BD nueva: la tabla aún no existe cuando corre Liquibase y Hibernate la crea ya nullable.
+  -->
+  <changeSet id="005-1-solicitud-carnet-socio-nullable" author="fanops">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="solicitudes_carnet"/>
+    </preConditions>
+    <dropNotNullConstraint tableName="solicitudes_carnet" columnName="socio_uid"
+                           columnDataType="uuid"/>
+  </changeSet>
+
+</databaseChangeLog>

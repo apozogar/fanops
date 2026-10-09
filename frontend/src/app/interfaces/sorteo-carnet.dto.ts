@@ -20,6 +20,8 @@ export interface SocioSolicitudCarnet {
 export interface ParticipanteSorteo {
   socioUid: string;
   numeroSocio?: number | null;
+  /** true si entró sin ser socio; entonces `socioUid` es el uid de su solicitud. */
+  invitado: boolean;
   nombre: string;
   /** Papeletas totales, extra incluidas. */
   papeletas: number;
@@ -39,6 +41,8 @@ export interface SorteoResumen {
   estado: EstadoSorteo;
   /** true si todavía se puede entrar en el bombo (sorteo sin celebrar y plazo del evento abierto). */
   admiteSolicitudes: boolean;
+  /** true si el bombo admite también a quien no es socio. */
+  abiertoATodos: boolean;
   participantes: number;
   misSocios: SocioSolicitudCarnet[];
 }

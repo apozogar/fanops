@@ -23,6 +23,7 @@ public class ValoresEventoDTO {
   private BigDecimal costePlazaNoSocio;
   private Integer carnets;
   private BigDecimal costeCarnet;
+  private Boolean sorteoAbiertoATodos;
   private BigDecimal costeTotalEstimado;
 
   /** Días antes del evento en que cierra la inscripción, y a qué hora. */

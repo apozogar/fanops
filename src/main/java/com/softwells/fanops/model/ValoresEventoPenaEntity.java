@@ -57,6 +57,9 @@ public class ValoresEventoPenaEntity {
   /** Lo que paga quien se lleva un carnet. */
   private BigDecimal costeCarnet;
 
+  /** Si el sorteo de carnets admite también a quien no es socio. Null: no se sugiere. */
+  private Boolean sorteoAbiertoATodos;
+
   /** Coste total estimado del evento, para las cuentas de la peña. */
   private BigDecimal costeTotalEstimado;
 

@@ -14,6 +14,8 @@ export interface Evento {
     costePlazaNoSocio?: number;
     /** Lo que paga quien va con uno de los carnets sorteados. */
     costeCarnet?: number;
+    /** true si el sorteo admite también a quien no es socio (enlace público). */
+    sorteoAbiertoATodos?: boolean | null;
     /** Carnets que se sortean (0 o vacío = el evento no sortea carnets). */
     plazasCarnet?: number;
     /** Momento en que se celebra el sorteo de carnets. */

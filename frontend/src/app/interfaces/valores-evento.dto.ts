@@ -13,6 +13,8 @@ export interface ValoresEvento {
   carnets?: number | null;
   /** Lo que paga quien se lleva un carnet. */
   costeCarnet?: number | null;
+  /** Si el sorteo de carnets admite también a quien no es socio. */
+  sorteoAbiertoATodos?: boolean | null;
   /** Coste total estimado del evento, para las cuentas de la peña. */
   costeTotalEstimado?: number | null;
   /**

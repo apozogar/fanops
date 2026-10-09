@@ -14,6 +14,9 @@ public class ParticipanteSorteoDTO {
 
   private UUID socioUid;
   private Integer numeroSocio;
+
+  /** true si entró sin ser socio. Entonces {@code socioUid} es el uid de su solicitud. */
+  private boolean invitado;
   private String nombre;
 
   /** Papeletas con las que entra o entró al bombo, extra incluidas. */

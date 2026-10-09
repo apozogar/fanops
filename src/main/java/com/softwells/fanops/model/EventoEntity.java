@@ -54,6 +54,16 @@ public class EventoEntity {
   private LocalDateTime fechaSorteoCarnet;
 
   /**
+   * true si también pueden entrar en el bombo quienes no son socios (los del enlace público).
+   * Null o false: solo socios. Entran siempre con una papeleta, sin historial ni extras.
+   */
+  private Boolean sorteoAbiertoATodos;
+
+  public boolean sorteoAbierto() {
+    return Boolean.TRUE.equals(sorteoAbiertoATodos);
+  }
+
+  /**
    * Lo que paga cada persona por la plaza del evento (el autobús, normalmente). Null significa
    * "sin indicar", que no es lo mismo que 0: un evento gratis se marca con 0 y se dice.
    */

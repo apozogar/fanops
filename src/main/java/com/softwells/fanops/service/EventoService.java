@@ -143,6 +143,8 @@ public class EventoService {
     EventoInscripcionDTO dto = EventoMapper.toInscripcionDTO(evento);
     // Los eventos todavía no cuelgan de una peña: se usa la de la instalación (ver AGENTS.md).
     penaService.penaPrincipal().map(PenaEntity::getSlug).ifPresent(dto::setSlugPena);
+    // Sin fichas: la página pública solo necesita saber si hay sorteo y si admite entradas.
+    dto.setSorteo(sorteoCarnetService.resumen(evento, List.of()));
     return dto;
   }
 
@@ -195,6 +197,7 @@ public class EventoService {
     eventoExistente.setCostePlaza(eventoDetails.getCostePlaza());
     eventoExistente.setCostePlazaNoSocio(eventoDetails.getCostePlazaNoSocio());
     eventoExistente.setCosteCarnet(eventoDetails.getCosteCarnet());
+    eventoExistente.setSorteoAbiertoATodos(eventoDetails.getSorteoAbiertoATodos());
     eventoExistente.setCosteTotalEstimado(eventoDetails.getCosteTotalEstimado());
     eventoExistente.setCosteTotalReal(eventoDetails.getCosteTotalReal());
     eventoExistente.setPlazasCarnet(eventoDetails.getPlazasCarnet());
@@ -421,6 +424,15 @@ public class EventoService {
     }
 
     SocioEntity socio = socioPorCorreo(email, request.getNombre());
+    if (request.isIncluirSorteo() && socio != null) {
+      // Entrar en el bombo ya apunta al evento; si ya estaba inscrito, solo entra en el bombo.
+      List<SocioInscripcionDTO> plazas = apuntarAlSorteo(evento, List.of(socio), false)
+          .inscripciones();
+      return plazas.isEmpty()
+          ? inscripcionRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
+              .map(EventoInscripcionEntity::getEstado).orElse(EstadoInscripcion.EN_ESPERA)
+          : plazas.get(0).getEstado();
+    }
     if (socio != null) {
       if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
         throw new IllegalStateException(socio.getNombre() + " ya está inscrito en este evento.");
@@ -428,7 +440,16 @@ public class EventoService {
       return inscribir(evento, List.of(socio), false).get(0).getEstado();
     }
 
-    if (inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(eventoId, email)) {
+    boolean yaInscrito = inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(eventoId, email);
+    if (request.isIncluirSorteo()) {
+      // Falla si el evento no admite no socios: antes de dejar nada guardado.
+      sorteoCarnetService.solicitarInvitado(eventoId, request.getNombre().trim(), email,
+          request.getTelefono());
+    }
+    if (yaInscrito) {
+      if (request.isIncluirSorteo()) {
+        return EstadoInscripcion.EN_ESPERA; // ya estaba apuntado: solo ha entrado en el bombo
+      }
       throw new IllegalStateException("Ya existe una inscripción para ese email.");
     }
 

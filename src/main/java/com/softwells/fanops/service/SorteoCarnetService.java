@@ -163,6 +163,31 @@ public class SorteoCarnetService {
     return construirDto(evento);
   }
 
+  /**
+   * Mete en el bombo a alguien que no es socio (enlace público). Solo si el evento lo permite.
+   * No lleva historial ni papeletas extra: entra siempre con una.
+   */
+  public void solicitarInvitado(UUID eventoId, String nombre, String email, String telefono) {
+    EventoEntity evento = findEvento(eventoId);
+    sorteoAbierto(eventoId);
+    if (!evento.sorteoAbierto()) {
+      throw new IllegalStateException("El sorteo de carnets de este evento es solo para socios. "
+          + "Usa el email de tu ficha o apúntate solo al evento.");
+    }
+    if (solicitudRepository.existsByEventoUidAndEmailInvitadoIgnoreCase(eventoId, email)) {
+      throw new IllegalStateException("Ya estás apuntado al sorteo con ese email.");
+    }
+    SolicitudCarnetEntity solicitud = new SolicitudCarnetEntity();
+    solicitud.setEvento(evento);
+    solicitud.setNombreInvitado(nombre);
+    solicitud.setEmailInvitado(email);
+    solicitud.setTelefonoInvitado(telefono);
+    solicitud.setFechaSolicitud(LocalDateTime.now());
+    solicitud.setEstado(EstadoSolicitudCarnet.PENDIENTE);
+    solicitudRepository.save(solicitud);
+    log.info("Invitado apuntado al sorteo de carnets del evento {}", eventoId);
+  }
+
   /** Saca del bombo una ficha del usuario. Solo antes de celebrarse el sorteo. */
   public SorteoCarnetDTO anularSolicitud(UUID eventoId, UUID socioUid) {
     EventoEntity evento = findEvento(eventoId);
@@ -399,7 +424,9 @@ public class SorteoCarnetService {
 
   /** Papeletas con las que entra una solicitud: las del historial más las extra que cuenten. */
   private int papeletasTotales(SolicitudCarnetEntity solicitud) {
-    return papeletasDe(solicitud.getSocio().getUid()) + papeletasExtraEfectivas(solicitud);
+    return solicitud.esInvitado()
+        ? 1
+        : papeletasDe(solicitud.getSocio().getUid()) + papeletasExtraEfectivas(solicitud);
   }
 
   /**
@@ -407,6 +434,9 @@ public class SorteoCarnetService {
    * puesto dejan de sumar sin necesidad de ir borrándolas una a una.
    */
   private int papeletasExtraEfectivas(SolicitudCarnetEntity solicitud) {
+    if (solicitud.esInvitado()) {
+      return 0;
+    }
     PenaEntity pena = solicitud.getSocio().getPena();
     Integer extra = solicitud.getPapeletasExtra();
     return pena != null && pena.permitePapeletasExtraSorteo() && extra != null ? extra : 0;
@@ -448,7 +478,8 @@ public class SorteoCarnetService {
     }
 
     Map<UUID, SolicitudCarnetEntity> porSocio = new LinkedHashMap<>();
-    solicitudes.forEach(solicitud -> porSocio.put(solicitud.getSocio().getUid(), solicitud));
+    solicitudes.stream().filter(solicitud -> !solicitud.esInvitado())
+        .forEach(solicitud -> porSocio.put(solicitud.getSocio().getUid(), solicitud));
 
     List<SocioEntity> misFichas = fichasUsuarioService.misFichasOVacio();
     List<UUID> uidsPropios = misFichas.stream().map(SocioEntity::getUid).collect(
@@ -456,16 +487,19 @@ public class SorteoCarnetService {
 
     List<ParticipanteSorteoDTO> participantes = solicitudes.stream()
         .map(solicitud -> ParticipanteSorteoDTO.builder()
-            .socioUid(solicitud.getSocio().getUid())
-            .numeroSocio(solicitud.getSocio().getNumeroSocio())
-            .nombre(solicitud.getSocio().getNombre())
+            // Un invitado no tiene ficha: su uid de solicitud hace de clave en la lista.
+            .socioUid(solicitud.esInvitado() ? solicitud.getUid() : solicitud.getSocio().getUid())
+            .invitado(solicitud.esInvitado())
+            .numeroSocio(solicitud.esInvitado() ? null : solicitud.getSocio().getNumeroSocio())
+            .nombre(solicitud.nombreParticipante())
             .papeletas(solicitud.getPesoSorteo() != null
                 ? solicitud.getPesoSorteo()
                 : papeletasTotales(solicitud))
             .papeletasExtra(papeletasExtraEfectivas(solicitud))
             .posicion(solicitud.getPosicionSorteo())
             .estado(solicitud.getEstado())
-            .propio(uidsPropios.contains(solicitud.getSocio().getUid()))
+            .propio(!solicitud.esInvitado()
+                && uidsPropios.contains(solicitud.getSocio().getUid()))
             .build())
         .collect(Collectors.toList());
 
@@ -519,7 +553,8 @@ public class SorteoCarnetService {
     List<SolicitudCarnetEntity> solicitudes =
         solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(evento.getUid());
     Map<UUID, SolicitudCarnetEntity> porSocio = new LinkedHashMap<>();
-    solicitudes.forEach(solicitud -> porSocio.put(solicitud.getSocio().getUid(), solicitud));
+    solicitudes.stream().filter(solicitud -> !solicitud.esInvitado())
+        .forEach(solicitud -> porSocio.put(solicitud.getSocio().getUid(), solicitud));
 
     List<SocioSolicitudCarnetDTO> misSocios = misFichas.stream()
         .map(socio -> {
@@ -544,6 +579,7 @@ public class SorteoCarnetService {
         .fechaProgramada(sorteo.getFechaProgramada())
         .estado(sorteo.getEstado())
         .admiteSolicitudes(admiteSolicitudes(evento, sorteo))
+        .abiertoATodos(evento.sorteoAbierto())
         .participantes(solicitudes.size())
         .misSocios(misSocios)
         .build();

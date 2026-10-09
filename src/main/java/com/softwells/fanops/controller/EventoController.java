@@ -127,6 +127,9 @@ public class EventoController {
     String mensaje = estado == EstadoInscripcion.CONFIRMADA
         ? "Te has apuntado y tienes plaza confirmada. ¡Nos vemos allí!"
         : "Te has apuntado. Estás en lista de espera, te avisaremos cuando haya hueco.";
+    if (request.isIncluirSorteo()) {
+      mensaje += " Ya estás en el sorteo del carnet: te avisaremos del resultado por email.";
+    }
     return ResponseEntity.ok(new ApiResponse<>(true, mensaje, estado));
   }
 

@@ -370,6 +370,7 @@ export class EventosComponent implements OnInit {
             costePlazaNoSocio: porDefecto.costePlazaNoSocio ?? undefined,
             plazasCarnet: porDefecto.carnets ?? undefined,
             costeCarnet: porDefecto.costeCarnet ?? undefined,
+            sorteoAbiertoATodos: porDefecto.sorteoAbiertoATodos ?? undefined,
             costeTotalEstimado: porDefecto.costeTotalEstimado ?? undefined
         };
         this.eventoDialog = true;

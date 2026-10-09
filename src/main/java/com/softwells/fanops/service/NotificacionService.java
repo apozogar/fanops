@@ -280,13 +280,12 @@ public class NotificacionService {
   public void enviarResultadoSorteoCarnet(List<SolicitudCarnetEntity> extraidos,
       EventoEntity evento, int numeroCarnets) {
     for (SolicitudCarnetEntity solicitud : extraidos) {
-      SocioEntity socio = solicitud.getSocio();
       boolean premiado = solicitud.getEstado() == EstadoSolicitudCarnet.GANADORA;
       int puestoSuplente = solicitud.getPosicionSorteo() - numeroCarnets;
 
       String asunto = (premiado ? "¡Te ha tocado carnet para " : "Sorteo de carnets de ")
           + evento.getNombreEvento() + (premiado ? "!" : "");
-      StringBuilder cuerpo = new StringBuilder("Hola " + socio.getNombre() + ",\n\n");
+      StringBuilder cuerpo = new StringBuilder("Hola " + solicitud.nombreParticipante() + ",\n\n");
       if (premiado) {
         cuerpo.append("¡Enhorabuena! En el sorteo de carnets de '")
             .append(evento.getNombreEvento()).append("' (").append(evento.getFechaEvento())
@@ -304,18 +303,18 @@ public class NotificacionService {
       cuerpo.append("\n\nPuedes ver el sorteo completo aquí: ")
           .append(publicBaseUrl).append("/inscripcion/").append(evento.getUid());
 
-      enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono(),
-          null);
+      enviar(solicitud.emailParticipante(), solicitud.nombreParticipante(), asunto,
+          cuerpo.toString(), solicitud.telefonoParticipante(), null);
     }
 
     // WhatsApp: un solo mensaje por teléfono con el resultado de todas las fichas que lo
     // comparten (multicarnet), porque cada plantilla se cobra.
     extraidos.stream()
         .collect(Collectors.groupingBy(
-            s -> s.getSocio().getTelefono() != null ? s.getSocio().getTelefono() : "",
+            s -> s.telefonoParticipante() != null ? s.telefonoParticipante() : "",
             LinkedHashMap::new, Collectors.toList()))
         .forEach((telefono, grupo) -> {
-          String nombres = grupo.stream().map(s -> s.getSocio().getNombre())
+          String nombres = grupo.stream().map(SolicitudCarnetEntity::nombreParticipante)
               .collect(Collectors.joining(", "));
           enviarWhatsApp(telefono, nombres,
               novedadSorteo(grupo, evento, numeroCarnets));
@@ -335,7 +334,7 @@ public class NotificacionService {
               + (s.getPosicionSorteo() - numeroCarnets) + " (" + suplente + ").");
     } else {
       texto.append(grupo.stream()
-          .map(s -> s.getSocio().getNombre() + ": "
+          .map(s -> s.nombreParticipante() + ": "
               + (s.getEstado() == EstadoSolicitudCarnet.GANADORA ? "carnet conseguido"
                   : "suplente número " + (s.getPosicionSorteo() - numeroCarnets)))
           .collect(Collectors.joining("; ")))
@@ -346,9 +345,8 @@ public class NotificacionService {
 
   /** Aviso al suplente que hereda el carnet de un ganador que ha renunciado. */
   public void enviarCarnetPorRenuncia(SolicitudCarnetEntity solicitud, EventoEntity evento) {
-    SocioEntity socio = solicitud.getSocio();
     String asunto = "¡Tienes carnet para " + evento.getNombreEvento() + "!";
-    String cuerpo = "Hola " + socio.getNombre() + ",\n\n"
+    String cuerpo = "Hola " + solicitud.nombreParticipante() + ",\n\n"
         + "Uno de los ganadores del sorteo ha devuelto su carnet para '"
         + evento.getNombreEvento() + "' (" + evento.getFechaEvento() + ") y, como eras el "
         + "primer suplente, pasa a ser tuyo.\n\n"
@@ -356,7 +354,8 @@ public class NotificacionService {
     String novedad = "Uno de los ganadores del sorteo ha devuelto su carnet para "
         + detalleEvento(evento) + " y, como eras el primer suplente, pasa a ser tuyo."
         + enlaceEvento(evento);
-    enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo, socio.getTelefono(), novedad);
+    enviar(solicitud.emailParticipante(), solicitud.nombreParticipante(), asunto, cuerpo,
+        solicitud.telefonoParticipante(), novedad);
   }
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,

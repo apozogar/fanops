@@ -54,6 +54,17 @@ Frontend (desde `frontend/`):
     como las plazas libres, porque las apps guardan la vista previa en caché. Las URLs de la
     vista previa salen del dominio por el que llega la petición (Caddy pasa `X-Forwarded-Proto`),
     no de `PUBLIC_BASE_URL`: así funcionan aunque falte esa variable.
+  - El formulario público ofrece, si el evento sortea carnets y el bombo admite entradas, la casilla
+    "Incluirme en el sorteo del carnet" (`incluirSorteo`). Un socio reconocido por el correo entra
+    con sus papeletas. Un no socio solo entra si el evento tiene `sorteoAbiertoATodos` (por
+    evento, con valor por defecto en `pena_valores_evento`): se guarda en la solicitud con
+    `socio` a null y sus datos en `nombreInvitado/emailInvitado/telefonoInvitado`, siempre con
+    1 papeleta (sin historial ni extras) y sin poder renunciar por sí mismo. Si el evento no lo
+    permite se le rechaza antes de inscribirle. Entrar en el bombo ya apunta al evento, y quien
+    ya estaba inscrito solo entra en el bombo. Cualquier código que recorra solicitudes debe
+    usar `nombreParticipante()/emailParticipante()` y `esInvitado()`, no `getSocio()`. El
+    resultado le llega por correo (`NotificacionService.enviarResultadoSorteoCarnet`); no hay
+    consulta pública del resultado.
   - Desde el **listado de socios** (modal de eventos del socio) la gestión puede apuntar a un
     socio que no usa la app, al evento o al sorteo del carnet
     (`POST /api/eventos/{id}/socios/{socioUid}/inscribir?sorteoCarnet=`). Sigue exactamente las

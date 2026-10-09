@@ -15,4 +15,7 @@ public class InscripcionPublicaRequest {
   private String email;
 
   private String telefono;
+
+  /** true para entrar también en el sorteo de carnets; solo vale para socios. */
+  private boolean incluirSorteo;
 }

@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.softwells.fanops.controller.dto.InscripcionPublicaRequest;
+import com.softwells.fanops.controller.dto.SorteoCarnetDTO;
 import com.softwells.fanops.enums.EstadoInscripcion;
+import com.softwells.fanops.enums.EstadoSolicitudCarnet;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.PenaEntity;
@@ -13,8 +15,10 @@ import com.softwells.fanops.model.UsuarioEntity;
 import com.softwells.fanops.repository.EventoInscripcionRepository;
 import com.softwells.fanops.repository.PenaRepository;
 import com.softwells.fanops.repository.SocioRepository;
+import com.softwells.fanops.repository.SolicitudCarnetRepository;
 import com.softwells.fanops.repository.UsuarioRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +43,10 @@ class InscripcionPublicaFlowTest {
   private EventoInscripcionRepository inscripcionRepository;
   @Autowired
   private SocioRepository socioRepository;
+  @Autowired
+  private SolicitudCarnetRepository solicitudRepository;
+  @Autowired
+  private SorteoCarnetService sorteoCarnetService;
   @Autowired
   private UsuarioRepository usuarioRepository;
   @Autowired
@@ -143,6 +151,108 @@ class InscripcionPublicaFlowTest {
         peticion("Invitado", "test.publica.invitado@fanops.local"));
 
     assertThat(estado).isEqualTo(EstadoInscripcion.EN_ESPERA);
+  }
+
+  @Test
+  @DisplayName("Un socio que marca el sorteo entra en el bombo y queda apuntado al evento")
+  void socioConSorteoEntraEnElBombo() {
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+    EventoEntity evento = eventoConSorteo();
+    InscripcionPublicaRequest request = peticion("Juan Pérez", EMAIL_FICHA);
+    request.setIncluirSorteo(true);
+
+    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(), request);
+
+    assertThat(estado).isEqualTo(EstadoInscripcion.CONFIRMADA);
+    assertThat(solicitudRepository.existsByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
+        .isTrue();
+    assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
+        socio.getUid())).isTrue();
+  }
+
+  @Test
+  @DisplayName("Quien ya estaba inscrito puede entrar después solo en el bombo")
+  void yaInscritoEntraSoloEnElBombo() {
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+    EventoEntity evento = eventoConSorteo();
+    eventoService.inscribirPublico(evento.getUid(), peticion("Juan Pérez", EMAIL_FICHA));
+    InscripcionPublicaRequest request = peticion("Juan Pérez", EMAIL_FICHA);
+    request.setIncluirSorteo(true);
+
+    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(), request);
+
+    assertThat(estado).isEqualTo(EstadoInscripcion.CONFIRMADA);
+    assertThat(solicitudRepository.existsByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
+        .isTrue();
+  }
+
+  @Test
+  @DisplayName("Un no socio no puede marcar el sorteo y no queda inscrito a medias")
+  void noSocioNoEntraEnElSorteo() {
+    EventoEntity evento = eventoConSorteo();
+    InscripcionPublicaRequest request =
+        peticion("Invitado", "test.publica.invitado@fanops.local");
+    request.setIncluirSorteo(true);
+
+    assertThatThrownBy(() -> eventoService.inscribirPublico(evento.getUid(), request))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("solo para socios");
+    assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(),
+        "test.publica.invitado@fanops.local")).isFalse();
+  }
+
+  @Test
+  @DisplayName("Con el sorteo abierto a todos, un no socio entra en el bombo y puede ganar")
+  void noSocioEntraSiElSorteoEstaAbierto() {
+    EventoEntity evento = eventoConSorteo();
+    evento.setSorteoAbiertoATodos(true);
+    eventoService.save(evento);
+    String email = "test.publica.invitado@fanops.local";
+    InscripcionPublicaRequest request = peticion("Invitado", email);
+    request.setIncluirSorteo(true);
+
+    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(), request);
+
+    assertThat(estado).isEqualTo(EstadoInscripcion.EN_ESPERA);
+    assertThat(solicitudRepository.existsByEventoUidAndEmailInvitadoIgnoreCase(evento.getUid(),
+        email.toUpperCase())).isTrue();
+    assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(), email))
+        .as("entrar en el bombo también le apunta al evento").isTrue();
+
+    // Es el único participante y hay 2 carnets: tiene que salir ganador, sin romper nada por no
+    // tener ficha.
+    SorteoCarnetDTO sorteo = sorteoCarnetService.celebrarAhora(evento.getUid());
+    assertThat(sorteo.getParticipantes()).singleElement().satisfies(p -> {
+      assertThat(p.isInvitado()).isTrue();
+      assertThat(p.getNombre()).isEqualTo("Invitado");
+      assertThat(p.getPapeletas()).isEqualTo(1);
+      assertThat(p.getEstado()).isEqualTo(EstadoSolicitudCarnet.GANADORA);
+    });
+  }
+
+  @Test
+  @DisplayName("Un no socio no puede entrar dos veces en el bombo con el mismo email")
+  void noSocioNoRepiteEnElBombo() {
+    EventoEntity evento = eventoConSorteo();
+    evento.setSorteoAbiertoATodos(true);
+    eventoService.save(evento);
+    InscripcionPublicaRequest request =
+        peticion("Invitado", "test.publica.invitado@fanops.local");
+    request.setIncluirSorteo(true);
+    eventoService.inscribirPublico(evento.getUid(), request);
+
+    assertThatThrownBy(() -> eventoService.inscribirPublico(evento.getUid(), request))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  private EventoEntity eventoConSorteo() {
+    EventoEntity evento = new EventoEntity();
+    evento.setNombreEvento("Partido con sorteo");
+    evento.setFechaEvento(LocalDate.now().plusDays(7));
+    evento.setNumeroPlazas(50);
+    evento.setPlazasCarnet(2);
+    evento.setFechaSorteoCarnet(LocalDateTime.now().plusDays(2));
+    return eventoService.save(evento);
   }
 
   private InscripcionPublicaRequest peticion(String nombre, String email) {

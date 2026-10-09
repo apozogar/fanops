@@ -41,8 +41,13 @@ public class SolicitudCarnetEntity {
 
   @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "socio_uid", nullable = false)
+  @JoinColumn(name = "socio_uid")
   private SocioEntity socio;
+
+  /** Datos de quien entra sin ser socio (socio == null); el resultado se le avisa por email. */
+  private String nombreInvitado;
+  private String emailInvitado;
+  private String telefonoInvitado;
 
   @Column(nullable = false)
   private LocalDateTime fechaSolicitud;
@@ -66,6 +71,30 @@ public class SolicitudCarnetEntity {
    * si la peña del socio tiene activada la opción; null equivale a ninguna.
    */
   private Integer papeletasExtra;
+
+  /** true si quien participa no es socio. */
+  public boolean esInvitado() {
+    return socio == null;
+  }
+
+  public String nombreParticipante() {
+    return socio != null ? socio.getNombre() : nombreInvitado;
+  }
+
+  /** Email al que avisar: el de la ficha o, si no tiene, el de su cuenta. */
+  public String emailParticipante() {
+    if (socio == null) {
+      return emailInvitado;
+    }
+    if (socio.getEmail() != null && !socio.getEmail().isBlank()) {
+      return socio.getEmail();
+    }
+    return socio.getUsuario() != null ? socio.getUsuario().getEmail() : null;
+  }
+
+  public String telefonoParticipante() {
+    return socio != null ? socio.getTelefono() : telefonoInvitado;
+  }
 
   /** true si llegó a tener el carnet, aunque después renunciara. */
   public boolean fuePremiada() {

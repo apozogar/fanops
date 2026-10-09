@@ -259,6 +259,13 @@
                                        mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
                         <span class="text-xs text-ink-muted">Lo que paga a quien le toque.</span>
                     </div>
+                    <label class="sm:col-span-12 flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" class="mt-1" [(ngModel)]="evento.sorteoAbiertoATodos" name="sorteoAbiertoATodos"/>
+                        <span>
+                            <span class="text-sm font-medium">Abierto también a no socios</span>
+                            <span class="block text-xs text-ink-muted">Pueden entrar desde el enlace público, siempre con una papeleta.</span>
+                        </span>
+                    </label>
                 </div>
             </section>
 
@@ -338,11 +345,11 @@
                 </ng-template>
                 <ng-template pTemplate="body" let-p>
                     <tr>
-                        <td>{{ p.numeroSocio ?? '—' }}</td>
+                        <td>{{ p.numeroSocio ?? (p.invitado ? 'No socio' : '—') }}</td>
                         <td>{{ p.nombre }}</td>
                         <td class="text-center">{{ p.papeletas - (p.papeletasExtra ?? 0) }}</td>
                         <td *ngIf="bombo.ajustePapeletasPermitido">
-                            <div class="flex items-center justify-center gap-1">
+                            <div *ngIf="!p.invitado" class="flex items-center justify-center gap-1">
                                 <p-inputNumber [(ngModel)]="papeletasEnEdicion[p.socioUid]" [min]="0" [max]="100"
                                                [disabled]="ajustandoPapeletas === p.socioUid"
                                                inputStyleClass="w-14 text-center" />
@@ -648,7 +655,10 @@
                                        [(ngModel)]="valoresEnEdicion.costeCarnet"
                                        mode="currency" currency="EUR" locale="es-ES"></p-inputNumber>
                     </div>
-                    <div class="sm:col-span-4 min-w-0"></div>
+                    <label class="sm:col-span-4 min-w-0 flex items-start gap-2 cursor-pointer sm:pt-7">
+                        <input type="checkbox" class="mt-1" [(ngModel)]="valoresEnEdicion.sorteoAbiertoATodos" name="valoresSorteoAbiertoATodos"/>
+                        <span class="text-sm font-medium">Abierto también a no socios</span>
+                    </label>
                     <div class="sm:col-span-4 min-w-0 flex flex-col gap-1.5">
                         <label for="valoresDiasSorteo" class="text-sm font-medium">Días antes</label>
                         <p-inputNumber id="valoresDiasSorteo" class="w-full" styleClass="w-full"
