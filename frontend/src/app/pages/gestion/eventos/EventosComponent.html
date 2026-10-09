@@ -260,6 +260,13 @@
                         <span class="text-xs text-ink-muted">Lo que paga a quien le toque.</span>
                     </div>
                     <label class="sm:col-span-12 flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" class="mt-1" [(ngModel)]="evento.plazasCarnetReservadas" name="plazasCarnetReservadas"/>
+                        <span>
+                            <span class="text-sm font-medium">Reservar plazas de autobús para los carnets</span>
+                            <span class="block text-xs text-ink-muted">Entrar al sorteo no ocupa plaza: se reservan tantas como carnets y solo las tiene quien gane. Las que sobren pasan a la lista de espera.</span>
+                        </span>
+                    </label>
+                    <label class="sm:col-span-12 flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" class="mt-1" [(ngModel)]="evento.sorteoAbiertoATodos" name="sorteoAbiertoATodos"/>
                         <span>
                             <span class="text-sm font-medium">Abierto también a no socios</span>

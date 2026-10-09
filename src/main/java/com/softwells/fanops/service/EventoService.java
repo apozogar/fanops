@@ -85,7 +85,7 @@ public class EventoService {
         EstadoInscripcion.EN_ESPERA);
     evento.setNumInscritos((int) confirmadas);
     evento.setNumEnEspera((int) espera);
-    evento.setPlazasLibres(calcularPlazasLibres(evento, (int) confirmadas));
+    evento.setPlazasLibres(calcularPlazasLibres(evento, (int) confirmadasQueOcupan(evento)));
     evento.setInscripcionCerrada(inscripcionCerrada(evento));
     evento.setSorteoCelebrado(sorteoCarnetService.estaCelebrado(evento.getUid()));
   }
@@ -132,7 +132,7 @@ public class EventoService {
         .filter(i -> i.getEstado() == EstadoInscripcion.CONFIRMADA).count());
     evento.setNumEnEspera((int) inscripciones.stream()
         .filter(i -> i.getEstado() == EstadoInscripcion.EN_ESPERA).count());
-    evento.setPlazasLibres(calcularPlazasLibres(evento, evento.getNumInscritos()));
+    evento.setPlazasLibres(calcularPlazasLibres(evento, (int) confirmadasQueOcupan(evento)));
     evento.setInscripcionCerrada(inscripcionCerrada(evento));
     return estadoMisSocios;
   }
@@ -207,10 +207,18 @@ public class EventoService {
     eventoExistente.setPlazasCarnet(eventoDetails.getPlazasCarnet());
     eventoExistente.setFechaSorteoCarnet(eventoDetails.getFechaSorteoCarnet());
 
+    boolean empiezaAReservar = !eventoExistente.reservaCarnet()
+        && Boolean.TRUE.equals(eventoDetails.getPlazasCarnetReservadas());
+    eventoExistente.setPlazasCarnetReservadas(eventoDetails.getPlazasCarnetReservadas());
+
     EventoEntity guardado = eventoRepository.save(eventoExistente);
     sorteoCarnetService.sincronizar(guardado);
+    if (empiezaAReservar) {
+      // Los que ya estaban en el bombo con plaza siguen apuntados, pero dejan de ocupar sitio.
+      sorteoCarnetService.liberarPlazasDeQuienEstaEnElBombo(guardado);
+    }
 
-    if (seAmplioElAforo(plazasAnteriores, guardado.getNumeroPlazas())) {
+    if (empiezaAReservar || seAmplioElAforo(plazasAnteriores, guardado.getNumeroPlazas())) {
       promoverListaEspera(id);
     }
     return guardado;
@@ -271,8 +279,7 @@ public class EventoService {
   private List<SocioInscripcionDTO> inscribir(EventoEntity evento, List<SocioEntity> aInscribir,
       boolean soloSiEntranTodos) {
     UUID eventoId = evento.getUid();
-    long confirmadas = inscripcionRepository.countByEventoUidAndEstado(eventoId,
-        EstadoInscripcion.CONFIRMADA);
+    long confirmadas = confirmadasQueOcupan(evento);
     // Con "solo si entramos todos" el grupo no se parte: si no caben todos, ninguno coge plaza.
     boolean entranTodos = plazasLibresPara(evento, confirmadas) >= aInscribir.size();
     boolean confirmarAlguno = !(soloSiEntranTodos && !entranTodos);
@@ -638,8 +645,7 @@ public class EventoService {
 
   private int promoverListaEspera(UUID eventoId) {
     EventoEntity evento = findEvento(eventoId);
-    long confirmadas = inscripcionRepository.countByEventoUidAndEstado(eventoId,
-        EstadoInscripcion.CONFIRMADA);
+    long confirmadas = confirmadasQueOcupan(evento);
 
     List<EventoInscripcionEntity> enEspera =
         inscripcionRepository.findByEventoUidAndEstadoOrderByFechaInscripcionAsc(eventoId,
@@ -923,6 +929,21 @@ public class EventoService {
       return -1; // sin límite
     }
     return (int) Math.max(0, capacidad(evento) - confirmadas);
+  }
+
+  /**
+   * Confirmadas que ocupan plaza ahora mismo. Con el sorteo sin celebrar no cuentan las de quien
+   * entró por él y sigue en el bombo (marcadas con {@code origenSorteo}): están aceptadas pero
+   * solo ocuparán plaza si ganan el carnet, y esa plaza ya está en la reserva.
+   */
+  private long confirmadasQueOcupan(EventoEntity evento) {
+    long confirmadas = inscripcionRepository.countByEventoUidAndEstado(evento.getUid(),
+        EstadoInscripcion.CONFIRMADA);
+    if (!evento.reservaCarnet() || sorteoCarnetService.estaCelebrado(evento.getUid())) {
+      return confirmadas;
+    }
+    return confirmadas - inscripcionRepository.countByEventoUidAndEstadoAndOrigenSorteoTrue(
+        evento.getUid(), EstadoInscripcion.CONFIRMADA);
   }
 
   /**

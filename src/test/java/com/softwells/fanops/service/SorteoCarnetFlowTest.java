@@ -252,6 +252,46 @@ class SorteoCarnetFlowTest {
   }
 
   @Test
+  @DisplayName("Al pasar un evento a plazas reservadas, los del bombo siguen apuntados pero no ocupan; los que no ganan salen")
+  void pasarUnEventoYaEnMarchaALasPlazasReservadas() {
+    List<SocioEntity> fichas = cuentaConFichas(4);
+    // Evento anterior a la reserva: 3 plazas, y los 3 primeros entran al bombo con plaza.
+    EventoEntity evento = eventoSinReserva(LocalDateTime.now().plusDays(2), 3);
+    apuntar(evento.getUid(), fichas.subList(0, 3));
+    assertThat(eventoService.infoPublica(evento.getUid()).getPlazasLibres()).isZero();
+
+    EventoEntity cambios = new EventoEntity();
+    cambios.setNombreEvento(evento.getNombreEvento());
+    cambios.setFechaEvento(evento.getFechaEvento());
+    cambios.setNumeroPlazas(3);
+    cambios.setPlazasCarnet(CARNETS);
+    cambios.setFechaSorteoCarnet(evento.getFechaSorteoCarnet());
+    cambios.setPlazasCarnetReservadas(true);
+    eventoService.update(evento.getUid(), cambios);
+
+    assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
+        .as("siguen apuntados").hasSize(3);
+    assertThat(eventoService.infoPublica(evento.getUid()).getPlazasLibres())
+        .as("solo queda reservada la de los carnets: 3 plazas menos 2 de carnets")
+        .isEqualTo(1);
+
+    // El cuarto socio ya cabe en el autobús sin pasar por el sorteo.
+    InscripcionSocioRequest inscripcion = new InscripcionSocioRequest();
+    inscripcion.setSocioUids(List.of(fichas.get(3).getUid()));
+    eventoService.inscribirSocios(evento.getUid(), inscripcion);
+    assertThat(inscripcionRepository.findByEventoUidAndSocioUid(evento.getUid(),
+        fichas.get(3).getUid()).orElseThrow().getEstado()).isEqualTo(EstadoInscripcion.CONFIRMADA);
+
+    sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    long conPlaza = inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(
+        evento.getUid()).stream().filter(i -> i.getEstado() == EstadoInscripcion.CONFIRMADA)
+        .count();
+    assertThat(conPlaza)
+        .as("los 2 ganadores del bombo más el socio que solo quería autobús").isEqualTo(3);
+  }
+
+  @Test
   @DisplayName("Quien ya tenía plaza de autobús la conserva aunque no gane el carnet")
   void quienYaTeniaPlazaLaConserva() {
     List<SocioEntity> fichas = cuentaConFichas(6);

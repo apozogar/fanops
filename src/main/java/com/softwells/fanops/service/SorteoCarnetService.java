@@ -203,6 +203,13 @@ public class SorteoCarnetService {
         solicitudRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
             .orElseThrow(() -> new EntityNotFoundException(
                 socio.getNombre() + " no está apuntado al sorteo."));
+    // Si estaba aceptado a la espera del sorteo, al salir se queda con su plaza como una
+    // inscripción normal (deja de ser "del sorteo"): no se le quita en silencio.
+    inscripcionDe(eventoId, solicitud).filter(i -> Boolean.TRUE.equals(i.getOrigenSorteo()))
+        .ifPresent(i -> {
+          i.setOrigenSorteo(null);
+          inscripcionRepository.save(i);
+        });
     solicitudRepository.delete(solicitud);
     return construirDto(evento);
   }
@@ -413,6 +420,11 @@ public class SorteoCarnetService {
     if (evento.reservaCarnet()) {
       extraidos.stream().filter(s -> s.getEstado() == EstadoSolicitudCarnet.GANADORA)
           .forEach(ganadora -> darPlazaDeAutobus(evento, ganadora));
+      // Quien estaba aceptado a la espera del sorteo y no ha ganado se queda sin plaza.
+      extraidos.stream().filter(s -> s.getEstado() != EstadoSolicitudCarnet.GANADORA)
+          .forEach(perdedora -> inscripcionDe(eventoId, perdedora)
+              .filter(i -> Boolean.TRUE.equals(i.getOrigenSorteo()))
+              .ifPresent(inscripcionRepository::delete));
       // Las reservadas que no hacen falta (menos participantes que carnets, o ganadores que ya
       // tenían plaza) pasan a la lista de espera.
       eventos.publishEvent(new SorteoCelebradoEvent(eventoId));
@@ -423,17 +435,42 @@ public class SorteoCarnetService {
   }
 
   /**
+   * Un evento con gente ya en el bombo pasa a reservar las plazas de los carnets: quien está
+   * dentro y tiene inscripción se queda apuntado, pero esa inscripción se marca como del sorteo,
+   * así que deja de ocupar plaza hasta que gane y desaparece si no gana. No se puede saber quién
+   * se apuntó al autobús antes por su cuenta, así que también a esos les alcanza. Solo vale con el
+   * sorteo sin celebrar.
+   */
+  public void liberarPlazasDeQuienEstaEnElBombo(EventoEntity evento) {
+    if (estaCelebrado(evento.getUid())) {
+      return;
+    }
+    for (SolicitudCarnetEntity solicitud :
+        solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(evento.getUid())) {
+      inscripcionDe(evento.getUid(), solicitud).ifPresent(inscripcion -> {
+        inscripcion.setOrigenSorteo(true);
+        inscripcionRepository.save(inscripcion);
+      });
+    }
+  }
+
+  private Optional<EventoInscripcionEntity> inscripcionDe(UUID eventoId,
+      SolicitudCarnetEntity solicitud) {
+    return solicitud.esInvitado()
+        ? inscripcionRepository.findFirstByEventoUidAndEmailIgnoreCaseAndSocioIsNull(eventoId,
+            solicitud.getEmailInvitado())
+        : inscripcionRepository.findByEventoUidAndSocioUid(eventoId,
+            solicitud.getSocio().getUid());
+  }
+
+  /**
    * Plaza de autobús de quien consigue carnet en un evento que las reserva. Si ya estaba
    * inscrito se queda con lo que tenía (y pasa de lista de espera a confirmada); si no, se le crea
    * la inscripción, marcada para poder deshacerla al reiniciar el sorteo.
    */
   private void darPlazaDeAutobus(EventoEntity evento, SolicitudCarnetEntity solicitud) {
     UUID eventoId = evento.getUid();
-    Optional<EventoInscripcionEntity> existente = solicitud.esInvitado()
-        ? inscripcionRepository.findFirstByEventoUidAndEmailIgnoreCaseAndSocioIsNull(eventoId,
-            solicitud.getEmailInvitado())
-        : inscripcionRepository.findByEventoUidAndSocioUid(eventoId,
-            solicitud.getSocio().getUid());
+    Optional<EventoInscripcionEntity> existente = inscripcionDe(eventoId, solicitud);
     if (existente.isPresent()) {
       EventoInscripcionEntity inscripcion = existente.get();
       if (inscripcion.getEstado() != EstadoInscripcion.CONFIRMADA) {

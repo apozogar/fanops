@@ -29,6 +29,8 @@ public interface EventoInscripcionRepository
 
   List<EventoInscripcionEntity> findByEventoUidAndOrigenSorteoTrue(UUID eventoUid);
 
+  long countByEventoUidAndEstadoAndOrigenSorteoTrue(UUID eventoUid, EstadoInscripcion estado);
+
   boolean existsByEventoUidAndEmailIgnoreCase(UUID eventoUid, String email);
 
   long countByEventoUidAndEstado(UUID eventoUid, EstadoInscripcion estado);

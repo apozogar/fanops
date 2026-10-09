@@ -108,7 +108,13 @@ Frontend (desde `frontend/`):
     recibe su plaza confirmada (`SorteoCarnetService.darPlazaDeAutobus`, marcada con
     `origenSorteo` para poder deshacerla al reiniciar); quien no gana no tiene plaza, salvo que se
     hubiera apuntado al autobús antes por su cuenta: esa inscripción no depende del sorteo. Una
-    renuncia borra la plaza del que renuncia y se la da al suplente que hereda el carnet. La
+    renuncia borra la plaza del que renuncia y se la da al suplente que hereda el carnet. Al
+    marcar `plazasCarnetReservadas` en un evento que ya tiene gente en el bombo
+    (`liberarPlazasDeQuienEstaEnElBombo`), los que tenían inscripción se quedan apuntados pero esa
+    inscripción pasa a ser `origenSorteo`: no cuenta para la capacidad mientras el sorteo no se
+    celebre (`EventoService.confirmadasQueOcupan`), se conserva si ganan y se borra si no; si
+    salen del bombo antes, la conservan como una normal. No se puede saber quién se apuntó antes
+    al autobús por su cuenta, así que a esos también les alcanza. La
     reserva es `plazasCarnet` entera aunque algún ganador ya tuviera plaza o haya menos
     participantes que carnets: al celebrarse, `SorteoCelebradoEvent` hace que `EventoService`
     promocione la lista de espera con lo que sobra (con su aviso a quien entra).
