@@ -490,6 +490,12 @@
                         Fecha {{ ordenInscripciones === 'fecha' ? (ordenAscendente ? '↑' : '↓') : '' }}
                     </button>
                 </div>
+                <button *ngIf="pestanaInscripciones !== 'faltas'" foButton variant="secondary" size="sm"
+                        [loading]="sincronizandoFichas" [disabled]="sincronizandoFichas"
+                        pTooltip="Enlaza con su ficha a quien se apuntó como no socio y ya lo es, y copia los datos de la ficha"
+                        tooltipPosition="top" (click)="sincronizarFichas()">
+                    <fo-icon name="refrescar" [size]="14" /><span>Actualizar socios</span>
+                </button>
                 <button *ngIf="pestanaInscripciones === 'espera'" foButton variant="primary"
                         class="w-full sm:w-auto"
                         [loading]="asignandoPlazas"

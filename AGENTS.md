@@ -78,6 +78,9 @@ Frontend (desde `frontend/`):
     la peña de quien gestiona (`EventoService.inscribirSocioDesdeGestion`).
   - Cuando se anula una inscripción confirmada o el admin ejecuta `asignar-plazas`, se promocionan los de espera (prioridad: socios al día, luego por fecha de inscripción).
   - El plazo de inscripción por evento se guarda en `EventoEntity.fechaLimiteInscripcion`; fuera de plazo no se admiten inscripciones.
+- **DNI y fecha de nacimiento de una ficha son opcionales** (faltan en muchos socios antiguos):
+  un DNI vacío se guarda como null y no entra en la comprobación de duplicados. Solo son
+  obligatorios el nombre y el resto de campos que ya marca el formulario.
 - **Cuenta de acceso de un socio**: el camino normal es que la persona se registre y confirme el enlace de vinculación enviado a su correo (`VinculacionSocioService`). Desde el listado de socios, un admin puede además crearla a mano con una contraseña (`POST /api/socios/{id}/cuenta`), para socios que no van a registrarse; ahí los roles solo se fijan al crear la cuenta, nunca al cambiar una contraseña.
 - **Valores por defecto de los eventos**: tabla `pena_valores_evento` (una fila por peña,
   `ValoresEventoPenaEntity`) con plazas, coste por plaza, carnets, coste con carnet y coste

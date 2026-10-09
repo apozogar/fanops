@@ -124,6 +124,11 @@ export class EventoService {
     return this.http.get<ApiResponse<boolean>>(`${this.apiUrl}/${eventoId}/anular/aviso`, { params });
   }
 
+  /** Enlaza con su ficha a los no socios que hoy se reconocen por su correo; devuelve cuántos. */
+  sincronizarFichas(eventoId: string): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/sincronizar-fichas`, {});
+  }
+
   asignarPlazas(eventoId: string): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/asignar-plazas`, {});
   }

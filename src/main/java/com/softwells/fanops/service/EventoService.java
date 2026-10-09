@@ -693,10 +693,52 @@ public class EventoService {
     }
   }
 
+  /**
+   * Pone al día las inscripciones de un evento con las fichas de socio: las de quien se apuntó
+   * como no socio y hoy se reconoce por su correo pasan a ser de su ficha, y todas copian los
+   * datos actuales de la ficha. Es lo que arregla los eventos abiertos antes de que las fichas se
+   * enlazaran solas al guardarlas.
+   *
+   * @return cuántas inscripciones (y entradas al bombo) han pasado de no socio a socio
+   */
+  public int sincronizarConFichas(UUID eventoId) {
+    int enlazadas = 0;
+    for (EventoInscripcionEntity inscripcion :
+        inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(eventoId)) {
+      SocioEntity socio = inscripcion.getSocio();
+      if (socio == null) {
+        String correo = inscripcion.getEmail() != null ? inscripcion.getEmail().trim() : "";
+        SocioEntity candidata = correo.isEmpty() ? null
+            : socioPorCorreo(correo, inscripcion.getNombre());
+        if (candidata == null
+            || inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, candidata.getUid())) {
+          continue;
+        }
+        inscripcion.setSocio(candidata);
+        socio = candidata;
+        enlazadas++;
+      }
+      copiarFicha(inscripcion, socio, esSocioAlDia(socio));
+    }
+    for (SolicitudCarnetEntity solicitud : sorteoCarnetService.invitadosPendientesDe(eventoId)) {
+      SocioEntity candidata = socioPorCorreo(solicitud.getEmailInvitado(),
+          solicitud.getNombreInvitado());
+      if (candidata != null) {
+        sorteoCarnetService.vincularInvitado(solicitud, candidata);
+        enlazadas++;
+      }
+    }
+    return enlazadas;
+  }
+
   private void copiarFicha(EventoInscripcionEntity inscripcion, SocioEntity socio,
       boolean alDia) {
     inscripcion.setNombre(socio.getNombre());
-    inscripcion.setEmail(socio.getEmail());
+    // Si se reconoció por el correo de la cuenta, la ficha puede no tener el suyo: se conserva
+    // el que escribió quien se apuntó.
+    if (socio.getEmail() != null && !socio.getEmail().isBlank()) {
+      inscripcion.setEmail(socio.getEmail());
+    }
     inscripcion.setTelefono(socio.getTelefono());
     inscripcion.setSocioPrioritario(alDia);
     inscripcionRepository.save(inscripcion);

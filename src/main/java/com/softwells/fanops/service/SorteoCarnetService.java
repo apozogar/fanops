@@ -204,6 +204,16 @@ public class SorteoCarnetService {
         .collect(Collectors.toList());
   }
 
+  /** Entradas al bombo de no socios de un evento, si su sorteo todavía no se ha celebrado. */
+  public List<SolicitudCarnetEntity> invitadosPendientesDe(UUID eventoId) {
+    if (estaCelebrado(eventoId)) {
+      return List.of();
+    }
+    return solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(eventoId).stream()
+        .filter(SolicitudCarnetEntity::esInvitado)
+        .collect(Collectors.toList());
+  }
+
   /** Convierte la entrada de un invitado en la de su ficha de socio (con su historial). */
   public void vincularInvitado(SolicitudCarnetEntity solicitud, SocioEntity socio) {
     UUID eventoId = solicitud.getEvento().getUid();

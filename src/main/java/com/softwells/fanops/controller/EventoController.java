@@ -248,6 +248,19 @@ public class EventoController {
   }
 
   /**
+   * Enlaza con su ficha de socio a quien se apuntó como no socio y hoy se reconoce por su correo,
+   * y pone al día los datos de los inscritos con los de su ficha.
+   */
+  @PostMapping("/{id}/sincronizar-fichas")
+  public ResponseEntity<ApiResponse<Integer>> sincronizarFichas(@PathVariable UUID id) {
+    int enlazadas = eventoService.sincronizarConFichas(id);
+    String mensaje = enlazadas == 0
+        ? "Todo estaba al día: no hay nadie más que enlazar con su ficha."
+        : enlazadas + " inscripción(es) enlazada(s) con su ficha de socio";
+    return ResponseEntity.ok(new ApiResponse<>(true, mensaje, enlazadas));
+  }
+
+  /**
    * Asigna las plazas libres a la lista de espera. Se usa tras cerrar el plazo de inscripción.
    */
   @PostMapping("/{id}/asignar-plazas")

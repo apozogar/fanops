@@ -89,7 +89,13 @@ public class SocioService {
 
   @Transactional
   public SocioEntity crear(SocioEntity socio) {
-    if (socioRepository.existsByDni(socio.getDni())) {
+    // El DNI es opcional (faltan los de muchos socios antiguos): vacío se guarda como null y no
+    // se compara, porque con él "ya existe un socio con ese DNI" saltaría en cuanto otra ficha
+    // lo tuviera también sin rellenar.
+    if (socio.getDni() != null && socio.getDni().isBlank()) {
+      socio.setDni(null);
+    }
+    if (socio.getDni() != null && socioRepository.existsByDni(socio.getDni())) {
       throw new IllegalArgumentException("Ya existe un socio con ese DNI");
     }
     // El alta manual crea la ficha, nunca la cuenta de usuario. El formulario del panel manda
@@ -285,7 +291,8 @@ public class SocioService {
     // Actualizamos los datos del socio
     existente.setNumeroSocio(socioData.getNumeroSocio());
     existente.setNombre(socioData.getNombre());
-    existente.setDni(socioData.getDni());
+    existente.setDni(socioData.getDni() != null && socioData.getDni().isBlank() ? null
+        : socioData.getDni());
     existente.setFechaNacimiento(socioData.getFechaNacimiento());
     existente.setEmail(socioData.getEmail());
     existente.setTelefono(socioData.getTelefono());

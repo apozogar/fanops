@@ -270,15 +270,12 @@
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-6">
                     <div class="flex-auto">
-                        <label for="dni" class="block font-semibold mb-2">DNI*</label>
-                        <input type="text" pInputText id="dni" [(ngModel)]="socio.dni" class="w-full" required />
-                        @if (submitted && !socio.dni) {
-                        <small class="text-red-500">DNI es requerido.</small>
-                        }
+                        <label for="dni" class="block font-semibold mb-2">DNI</label>
+                        <input type="text" pInputText id="dni" [(ngModel)]="socio.dni" class="w-full" />
                     </div>
                     <div class="flex-auto">
-                        <label for="fechaNacimiento" class="block font-semibold mb-2">Fecha Nacimiento*</label>
-                        <p-datepicker appendTo="body" id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento" class="w-full" [dateFormat]="'yy-mm-dd'" required></p-datepicker>
+                        <label for="fechaNacimiento" class="block font-semibold mb-2">Fecha Nacimiento</label>
+                        <p-datepicker appendTo="body" id="fechaNacimiento" [(ngModel)]="socio.fechaNacimiento" class="w-full" [dateFormat]="'yy-mm-dd'"></p-datepicker>
                     </div>
                 </div>
             </div>

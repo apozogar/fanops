@@ -302,6 +302,25 @@ class InscripcionPublicaFlowTest {
         EMAIL_FICHA)).isFalse();
   }
 
+  @Test
+  @DisplayName("Actualizar socios enlaza con su ficha a quien ya estaba apuntado como no socio")
+  void sincronizarUnEventoYaAbierto() {
+    EventoEntity evento = evento();
+    eventoService.inscribirPublico(evento.getUid(), peticion("Juan Pérez", EMAIL_FICHA));
+    eventoService.inscribirPublico(evento.getUid(),
+        peticion("Invitado", "test.publica.invitado@fanops.local"));
+    // La ficha se creó "antes" de que existiera el enlazado automático: nadie avisó al evento.
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+
+    int enlazadas = eventoService.sincronizarConFichas(evento.getUid());
+
+    assertThat(enlazadas).isEqualTo(1);
+    assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
+        socio.getUid())).isTrue();
+    assertThat(eventoService.sincronizarConFichas(evento.getUid()))
+        .as("volver a pasarlo no cambia nada").isZero();
+  }
+
   private EventoEntity eventoConSorteo() {
     EventoEntity evento = new EventoEntity();
     evento.setNombreEvento("Partido con sorteo");

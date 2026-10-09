@@ -593,6 +593,34 @@ export class EventosComponent implements OnInit {
         });
     }
 
+    sincronizandoFichas = false;
+
+    /** Pone al día los inscritos con su ficha: los que se apuntaron como no socios y ya lo son. */
+    sincronizarFichas() {
+        if (!this.eventoSeleccionado?.uid) return;
+        this.sincronizandoFichas = true;
+        this.eventoService.sincronizarFichas(this.eventoSeleccionado.uid).subscribe({
+            next: (resp) => {
+                this.sincronizandoFichas = false;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Socios actualizados',
+                    detail: resp.message || 'Inscritos puestos al día con sus fichas.'
+                });
+                this.mostrarInscripciones(this.eventoSeleccionado!);
+                this.cargarEventos();
+            },
+            error: (err) => {
+                this.sincronizandoFichas = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err.error?.message || 'No se pudo actualizar.'
+                });
+            }
+        });
+    }
+
     asignarPlazas() {
         if (!this.eventoSeleccionado?.uid) return;
         this.asignandoPlazas = true;
