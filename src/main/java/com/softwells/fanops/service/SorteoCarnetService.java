@@ -6,11 +6,14 @@ import com.softwells.fanops.controller.dto.SorteoCarnetDTO;
 import com.softwells.fanops.controller.dto.SorteoResumenDTO;
 import com.softwells.fanops.enums.EstadoSolicitudCarnet;
 import com.softwells.fanops.enums.EstadoSorteo;
+import com.softwells.fanops.enums.EstadoInscripcion;
 import com.softwells.fanops.model.EventoEntity;
+import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.PenaEntity;
 import com.softwells.fanops.model.SocioEntity;
 import com.softwells.fanops.model.SolicitudCarnetEntity;
 import com.softwells.fanops.model.SorteoCarnetEntity;
+import com.softwells.fanops.repository.EventoInscripcionRepository;
 import com.softwells.fanops.repository.EventoRepository;
 import com.softwells.fanops.repository.SolicitudCarnetRepository;
 import com.softwells.fanops.repository.SorteoCarnetRepository;
@@ -26,6 +29,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +61,8 @@ public class SorteoCarnetService {
   private final FichasUsuarioService fichasUsuarioService;
   private final NotificacionService notificacionService;
   private final UsuarioService usuarioService;
+  private final EventoInscripcionRepository inscripcionRepository;
+  private final ApplicationEventPublisher eventos;
 
   // ----------------------------------------------------------------
   // Programación del sorteo
@@ -218,6 +224,11 @@ public class SorteoCarnetService {
 
     solicitud.setEstado(EstadoSolicitudCarnet.RENUNCIADA);
     solicitudRepository.save(solicitud);
+    if (evento.reservaCarnet()) {
+      // Sin carnet no hay autobús: su plaza pasa al suplente, no se queda libre para la espera.
+      inscripcionRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
+          .ifPresent(inscripcionRepository::delete);
+    }
 
     solicitudRepository
         .findByEventoUidAndEstadoOrderByPosicionSorteoAsc(eventoId, EstadoSolicitudCarnet.SUPLENTE)
@@ -226,6 +237,9 @@ public class SorteoCarnetService {
         .ifPresent(suplente -> {
           suplente.setEstado(EstadoSolicitudCarnet.GANADORA);
           solicitudRepository.save(suplente);
+          if (evento.reservaCarnet()) {
+            darPlazaDeAutobus(evento, suplente);
+          }
           notificacionService.enviarCarnetPorRenuncia(suplente, evento);
         });
 
@@ -329,6 +343,11 @@ public class SorteoCarnetService {
       solicitudRepository.save(solicitud);
     }
 
+    if (evento.reservaCarnet()) {
+      // Las plazas que dio el sorteo vuelven a quedar reservadas hasta que se repita.
+      inscripcionRepository.deleteAll(inscripcionRepository.findByEventoUidAndOrigenSorteoTrue(eventoId));
+    }
+
     sorteo.setEstado(EstadoSorteo.PROGRAMADO);
     sorteo.setFechaEjecucion(null);
     sorteo.setFechaProgramada(evento.getFechaSorteoCarnet());
@@ -391,9 +410,49 @@ public class SorteoCarnetService {
     sorteoRepository.save(sorteo);
 
     EventoEntity evento = findEvento(eventoId);
+    if (evento.reservaCarnet()) {
+      extraidos.stream().filter(s -> s.getEstado() == EstadoSolicitudCarnet.GANADORA)
+          .forEach(ganadora -> darPlazaDeAutobus(evento, ganadora));
+      // Las reservadas que no hacen falta (menos participantes que carnets, o ganadores que ya
+      // tenían plaza) pasan a la lista de espera.
+      eventos.publishEvent(new SorteoCelebradoEvent(eventoId));
+    }
     log.info("Sorteo de carnets celebrado para el evento {} ({} participantes, {} carnets)",
         eventoId, extraidos.size(), sorteo.getNumeroCarnets());
     notificacionService.enviarResultadoSorteoCarnet(extraidos, evento, sorteo.getNumeroCarnets());
+  }
+
+  /**
+   * Plaza de autobús de quien consigue carnet en un evento que las reserva. Si ya estaba
+   * inscrito se queda con lo que tenía (y pasa de lista de espera a confirmada); si no, se le crea
+   * la inscripción, marcada para poder deshacerla al reiniciar el sorteo.
+   */
+  private void darPlazaDeAutobus(EventoEntity evento, SolicitudCarnetEntity solicitud) {
+    UUID eventoId = evento.getUid();
+    Optional<EventoInscripcionEntity> existente = solicitud.esInvitado()
+        ? inscripcionRepository.findFirstByEventoUidAndEmailIgnoreCaseAndSocioIsNull(eventoId,
+            solicitud.getEmailInvitado())
+        : inscripcionRepository.findByEventoUidAndSocioUid(eventoId,
+            solicitud.getSocio().getUid());
+    if (existente.isPresent()) {
+      EventoInscripcionEntity inscripcion = existente.get();
+      if (inscripcion.getEstado() != EstadoInscripcion.CONFIRMADA) {
+        inscripcion.setEstado(EstadoInscripcion.CONFIRMADA);
+        inscripcionRepository.save(inscripcion);
+      }
+      return;
+    }
+    EventoInscripcionEntity inscripcion = new EventoInscripcionEntity();
+    inscripcion.setEvento(evento);
+    inscripcion.setSocio(solicitud.getSocio());
+    inscripcion.setNombre(solicitud.nombreParticipante());
+    inscripcion.setEmail(solicitud.emailParticipante());
+    inscripcion.setTelefono(solicitud.telefonoParticipante());
+    inscripcion.setFechaInscripcion(LocalDateTime.now());
+    inscripcion.setEstado(EstadoInscripcion.CONFIRMADA);
+    inscripcion.setSocioPrioritario(false);
+    inscripcion.setOrigenSorteo(true);
+    inscripcionRepository.save(inscripcion);
   }
 
   /**
@@ -527,6 +586,7 @@ public class SorteoCarnetService {
         .estado(sorteo.getEstado())
         .abierto(!sorteo.estaEjecutado())
         .admiteSolicitudes(admiteSolicitudes(evento, sorteo))
+        .plazaSoloSiGana(evento.reservaCarnet())
         .ajustePapeletasPermitido(ajustePapeletasPermitido(sorteo))
         // La semilla y su huella no salen de aquí: la peña prefirió no publicarlas. Con la semilla
         // a la vista, sobre todo tras reiniciar un sorteo, se podría calcular el resultado según
@@ -580,6 +640,7 @@ public class SorteoCarnetService {
         .estado(sorteo.getEstado())
         .admiteSolicitudes(admiteSolicitudes(evento, sorteo))
         .abiertoATodos(evento.sorteoAbierto())
+        .plazaSoloSiGana(evento.reservaCarnet())
         .participantes(solicitudes.size())
         .misSocios(misSocios)
         .build();

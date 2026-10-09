@@ -154,20 +154,19 @@ class InscripcionPublicaFlowTest {
   }
 
   @Test
-  @DisplayName("Un socio que marca el sorteo entra en el bombo y queda apuntado al evento")
+  @DisplayName("Un socio que marca el sorteo entra en el bombo, sin plaza hasta que gane")
   void socioConSorteoEntraEnElBombo() {
     SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
     EventoEntity evento = eventoConSorteo();
     InscripcionPublicaRequest request = peticion("Juan Pérez", EMAIL_FICHA);
     request.setIncluirSorteo(true);
 
-    EstadoInscripcion estado = eventoService.inscribirPublico(evento.getUid(), request);
+    eventoService.inscribirPublico(evento.getUid(), request);
 
-    assertThat(estado).isEqualTo(EstadoInscripcion.CONFIRMADA);
     assertThat(solicitudRepository.existsByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
         .isTrue();
     assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
-        socio.getUid())).isTrue();
+        socio.getUid())).as("sin plaza de autobús hasta que gane el carnet").isFalse();
   }
 
   @Test
@@ -217,7 +216,7 @@ class InscripcionPublicaFlowTest {
     assertThat(solicitudRepository.existsByEventoUidAndEmailInvitadoIgnoreCase(evento.getUid(),
         email.toUpperCase())).isTrue();
     assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(), email))
-        .as("entrar en el bombo también le apunta al evento").isTrue();
+        .as("sin plaza de autobús hasta que gane el carnet").isFalse();
 
     // Es el único participante y hay 2 carnets: tiene que salir ganador, sin romper nada por no
     // tener ficha.
@@ -228,6 +227,8 @@ class InscripcionPublicaFlowTest {
       assertThat(p.getPapeletas()).isEqualTo(1);
       assertThat(p.getEstado()).isEqualTo(EstadoSolicitudCarnet.GANADORA);
     });
+    assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(), email))
+        .as("al ganar, el invitado recibe su plaza de autobús").isTrue();
   }
 
   @Test

@@ -14,6 +14,7 @@ import {ToastModule} from 'primeng/toast';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {DialogModule} from 'primeng/dialog';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
+import {ToggleSwitchModule} from 'primeng/toggleswitch';
 import {TagModule} from 'primeng/tag';
 
 import { IconComponent } from '@/ui/icon/icon.component';
@@ -23,7 +24,7 @@ import { SorteoBomboComponent } from '@/components/sorteo-bombo/sorteo-bombo.com
 @Component({
     selector: 'app-inscripcion-eventos',
     standalone: true,
-    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, FormsModule, CardModule, ButtonModule, CheckboxModule, ConfirmDialogModule, DialogModule, ToastModule, ProgressSpinnerModule, TagModule, SorteoBomboComponent],
+    imports: [UiButtonDirective, UiTagComponent, IconComponent, CommonModule, FormsModule, CardModule, ButtonModule, CheckboxModule, ToggleSwitchModule, ConfirmDialogModule, DialogModule, ToastModule, ProgressSpinnerModule, TagModule, SorteoBomboComponent],
     templateUrl: './inscripcion-eventos.component.html',
     styleUrls: ['./inscripcion-eventos.component.scss'],
     providers: [MessageService, ConfirmationService]
@@ -34,6 +35,9 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
 
     eventos: EventoInscripcionDTO[] = [];
     loading = true;
+
+    /** Los eventos que ya han pasado no salen de primera: hay que pedirlos con el interruptor. */
+    verPasados = false;
 
     /** Evento cuyo bombo se está mirando; null con el diálogo cerrado. */
     eventoDelSorteo: EventoInscripcionDTO | null = null;
@@ -113,6 +117,29 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
         });
     }
 
+    private static hoy(): string {
+        const ahora = new Date();
+        const dos = (n: number) => String(n).padStart(2, '0');
+        return `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
+    }
+
+    /** Un evento es pasado si su día ya terminó. La fecha llega como 'yyyy-MM-dd'. */
+    private esPasado(evento: EventoInscripcionDTO): boolean {
+        return String(evento.fechaEvento).slice(0, 10) < InscripcionEventosComponent.hoy();
+    }
+
+    get numPasados(): number {
+        return this.eventos.filter(evento => this.esPasado(evento)).length;
+    }
+
+    /** Los próximos por orden de fecha y, si se piden, los pasados detrás, el más reciente primero. */
+    get eventosVisibles(): EventoInscripcionDTO[] {
+        const proximos = this.eventos.filter(evento => !this.esPasado(evento));
+        if (!this.verPasados) return proximos;
+        const pasados = this.eventos.filter(evento => this.esPasado(evento)).reverse();
+        return [...proximos, ...pasados];
+    }
+
     // ----------------------------------------------------------------
     // Estado del multicarnet
     // ----------------------------------------------------------------
@@ -122,9 +149,22 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
         return evento.misSocios.length > 1;
     }
 
-    /** Fichas todavía sin inscribir en este evento. */
+    /**
+     * Fichas todavía sin inscribir en este evento. Si el sorteo reserva la plaza para quien gane,
+     * quien ya está en el bombo no cuenta: su plaza depende del resultado, no de apuntarse otra vez.
+     */
     pendientes(evento: EventoInscripcionDTO): SocioInscripcion[] {
-        return evento.misSocios.filter(socio => !socio.estado);
+        return evento.misSocios.filter(socio => !socio.estado && !this.enBomboSinPlaza(evento, socio));
+    }
+
+    /** true si la ficha está en el bombo y su plaza de autobús depende de ganar el carnet. */
+    private enBomboSinPlaza(evento: EventoInscripcionDTO, socio: SocioInscripcion): boolean {
+        return !!evento.sorteo?.plazaSoloSiGana && this.enBombo(evento, socio);
+    }
+
+    /** true si la ficha ya está en el bombo de este evento. */
+    enBombo(evento: EventoInscripcionDTO, socio: SocioInscripcion): boolean {
+        return !!evento.sorteo && this.fichasEnSorteo(evento.sorteo).some(f => f.socioUid === socio.socioUid);
     }
 
     /** Fichas ya inscritas, con plaza o en espera. */
@@ -185,10 +225,10 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
 
     /** Texto del botón principal, para que se vea a cuántas personas se va a apuntar. */
     textoBotonInscribir(evento: EventoInscripcionDTO): string {
-        if (!this.esMulticarnet(evento)) return 'Inscribir';
+        if (!this.esMulticarnet(evento)) return 'Apuntarme';
         const seleccionados = this.numSeleccionados(evento);
-        if (seleccionados === 0) return 'Selecciona a quién inscribir';
-        return seleccionados === 1 ? 'Inscribir a 1 persona' : `Inscribir a ${seleccionados} personas`;
+        if (seleccionados === 0) return 'Marca a quién quieres apuntar';
+        return seleccionados === 1 ? 'Apuntar a 1 persona' : `Apuntar a ${seleccionados} personas`;
     }
 
     // ----------------------------------------------------------------
@@ -421,7 +461,7 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
         if (evento.plazasLibres < 0) {
             return 'Plazas ilimitadas';
         }
-        return `${evento.plazasLibres} plazas libres de ${evento.plazasOcupadas + evento.plazasLibres}`;
+        return `${evento.plazasLibres} plazas libres`;
     }
 
     etiquetaSocio(socio: SocioInscripcion): string {

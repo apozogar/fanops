@@ -3,6 +3,7 @@ package com.softwells.fanops.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.softwells.fanops.controller.dto.EventoInscripcionDTO;
 import com.softwells.fanops.controller.dto.InscripcionSocioRequest;
 import com.softwells.fanops.controller.dto.SolicitudCarnetRequest;
 import com.softwells.fanops.controller.dto.SorteoCarnetDTO;
@@ -171,7 +172,7 @@ class SorteoCarnetFlowTest {
   @DisplayName("Entrar en el bombo apunta también al evento, sin una segunda acción")
   void entrarEnElBomboApuntaAlEvento() {
     List<SocioEntity> fichas = cuentaConFichas(2);
-    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2));
+    EventoEntity evento = eventoSinReserva(LocalDateTime.now().plusDays(2), 50);
 
     apuntar(evento.getUid(), fichas);
 
@@ -186,10 +187,94 @@ class SorteoCarnetFlowTest {
   }
 
   @Test
+  @DisplayName("Entrar en el bombo no ocupa plaza de autobús: se reservan las de los carnets")
+  void entrarEnElBomboNoOcupaPlaza() {
+    // 10 plazas y CARNETS reservadas para el sorteo; 6 fichas entran en el bombo.
+    List<SocioEntity> fichas = cuentaConFichas(6);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2), 10);
+
+    apuntar(evento.getUid(), fichas);
+
+    assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
+        .as("entrar en el bombo no crea inscripción").isEmpty();
+    EventoInscripcionDTO info = eventoService.infoPublica(evento.getUid());
+    assertThat(info.getPlazasLibres())
+        .as("a las inscripciones normales solo les quedan las no reservadas")
+        .isEqualTo(10 - CARNETS);
+  }
+
+  @Test
+  @DisplayName("Al celebrar, solo los ganadores tienen plaza; reiniciar se la quita")
+  void soloLosGanadoresTienenPlaza() {
+    List<SocioEntity> fichas = cuentaConFichas(6);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2), 10);
+    apuntar(evento.getUid(), fichas);
+
+    sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
+        .as("una plaza por carnet, confirmada")
+        .hasSize(CARNETS)
+        .extracting(EventoInscripcionEntity::getEstado)
+        .containsOnly(EstadoInscripcion.CONFIRMADA);
+    assertThat(eventoService.infoPublica(evento.getUid()).getPlazasLibres())
+        .isEqualTo(10 - CARNETS);
+
+    sorteoCarnetService.reiniciar(evento.getUid());
+
+    assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
+        .as("al reiniciar vuelven a quedar reservadas, sin inscripciones").isEmpty();
+  }
+
+  @Test
+  @DisplayName("Las plazas reservadas que no hacen falta pasan a la lista de espera al sortear")
+  void lasReservadasSobrantesPasanALaEspera() {
+    // 3 plazas y 2 reservadas: a las normales solo les cabe 1. Solo una ficha entra en el bombo,
+    // así que sobra una de las dos reservadas.
+    List<SocioEntity> fichas = cuentaConFichas(3);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2), 3);
+    for (int i = 0; i < 2; i++) {
+      InscripcionSocioRequest inscripcion = new InscripcionSocioRequest();
+      inscripcion.setSocioUids(List.of(fichas.get(i).getUid()));
+      eventoService.inscribirSocios(evento.getUid(), inscripcion);
+    }
+    assertThat(inscripcionRepository.findByEventoUidAndSocioUid(evento.getUid(),
+        fichas.get(1).getUid()).orElseThrow().getEstado())
+        .as("solo cabe una plaza normal").isEqualTo(EstadoInscripcion.EN_ESPERA);
+    apuntar(evento.getUid(), List.of(fichas.get(2)));
+
+    sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    assertThat(inscripcionRepository.findByEventoUidAndSocioUid(evento.getUid(),
+        fichas.get(1).getUid()).orElseThrow().getEstado())
+        .as("la plaza reservada que sobra pasa al de la espera")
+        .isEqualTo(EstadoInscripcion.CONFIRMADA);
+  }
+
+  @Test
+  @DisplayName("Quien ya tenía plaza de autobús la conserva aunque no gane el carnet")
+  void quienYaTeniaPlazaLaConserva() {
+    List<SocioEntity> fichas = cuentaConFichas(6);
+    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2), 10);
+    SocioEntity conPlaza = fichas.get(0);
+    InscripcionSocioRequest inscripcion = new InscripcionSocioRequest();
+    inscripcion.setSocioUids(List.of(conPlaza.getUid()));
+    eventoService.inscribirSocios(evento.getUid(), inscripcion);
+    apuntar(evento.getUid(), fichas);
+
+    sorteoCarnetService.celebrarAhora(evento.getUid());
+
+    assertThat(inscripcionRepository.findByEventoUidAndSocioUid(evento.getUid(),
+        conPlaza.getUid()))
+        .as("su inscripción no depende del resultado")
+        .isPresent();
+  }
+
+  @Test
   @DisplayName("Entrando por el sorteo, 'solo si entramos todos' sigue valiendo para la plaza")
   void elGrupoNoSeParteAlEntrarPorElSorteo() {
     List<SocioEntity> fichas = cuentaConFichas(2);
-    EventoEntity evento = eventoConSorteo(LocalDateTime.now().plusDays(2), 1);
+    EventoEntity evento = eventoSinReserva(LocalDateTime.now().plusDays(2), 1);
 
     SolicitudCarnetRequest request = new SolicitudCarnetRequest();
     request.setSocioUids(fichas.stream().map(SocioEntity::getUid).toList());
@@ -331,6 +416,13 @@ class SorteoCarnetFlowTest {
 
   private EventoEntity eventoConSorteo(LocalDateTime fechaSorteo) {
     return eventoConSorteo(fechaSorteo, 50);
+  }
+
+  /** Evento anterior a la reserva de plazas: entrar en el bombo apunta al autobús. */
+  private EventoEntity eventoSinReserva(LocalDateTime fechaSorteo, int plazas) {
+    EventoEntity evento = eventoConSorteo(fechaSorteo, plazas);
+    evento.setPlazasCarnetReservadas(false);
+    return eventoService.save(evento);
   }
 
   private EventoEntity eventoConSorteo(LocalDateTime fechaSorteo, int plazas) {

@@ -37,6 +37,9 @@ public class SorteoCarnetDTO {
    */
   private boolean admiteSolicitudes;
 
+  /** true si entrar en el bombo no da plaza de autobús: solo la consigue quien gana el carnet. */
+  private boolean plazaSoloSiGana;
+
   /**
    * true si la gestión puede ajustar papeletas extra: la peña de quien consulta tiene la opción
    * activada y el sorteo no se ha celebrado. Con el sorteo celebrado ya no se toca nada.

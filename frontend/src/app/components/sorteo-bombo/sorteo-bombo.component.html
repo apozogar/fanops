@@ -48,10 +48,17 @@
                     <span class="font-semibold">Tus fichas</span>
                     <!-- Es una sola acción: no tiene sentido pedir apuntarse al evento y al
                          bombo por separado, quien quiere el carnet va al partido. -->
-                    <p class="text-xs text-ink-muted">
-                        Entrar en el bombo te apunta también al evento, no hace falta hacer las dos
-                        cosas.
-                    </p>
+                    @if (s.plazaSoloSiGana) {
+                        <p class="text-xs text-ink-muted">
+                            Si te toca el carnet, tienes también plaza en el autobús. Si no te toca,
+                            no hay plaza (salvo que ya te hubieras apuntado al autobús por tu cuenta).
+                        </p>
+                    } @else {
+                        <p class="text-xs text-ink-muted">
+                            Entrar en el bombo te apunta también al evento, no hace falta hacer las dos
+                            cosas.
+                        </p>
+                    }
                     @for (socio of s.misSocios; track socio.socioUid) {
                         <div class="flex items-center justify-between gap-2 min-h-9">
                             <div class="flex flex-col">
@@ -120,10 +127,12 @@
                         Cuantos más sorteos seguidos te quedas sin carnet, más papeletas llevas al
                         siguiente. Al que le toca vuelve a empezar con una.
                     </p>
-                    <p class="text-xs text-ink-muted">
-                        Salir del bombo no te da de baja del evento: si te quedas sin carnet pero
-                        quieres ir, no tienes que hacer nada.
-                    </p>
+                    @if (!s.plazaSoloSiGana) {
+                        <p class="text-xs text-ink-muted">
+                            Salir del bombo no te da de baja del evento: si te quedas sin carnet pero
+                            quieres ir, no tienes que hacer nada.
+                        </p>
+                    }
                 </div>
             }
             @else {

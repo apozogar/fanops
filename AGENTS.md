@@ -100,6 +100,18 @@ Frontend (desde `frontend/`):
     plaza queda en espera aunque el carnet le acabe tocando. A quien ya estaba inscrito no se le
     toca la plaza: solo entra en el bombo. Salir del bombo **no** da de baja del evento, porque
     cancelar una plaza puede costar una falta.
+  - **Plaza de autobús de los carnets** (eventos con `plazasCarnetReservadas`, que es lo que son
+    todos los creados desde que existe el campo; los anteriores, null, siguen con la regla de
+    arriba): entrar en el bombo **no crea inscripción ni ocupa plaza**. Mientras el sorteo no se
+    celebra se reservan `plazasCarnet` plazas (`EventoService.capacidad`), así que las libres que
+    se enseñan y las que se confirman a los demás ya las descuentan. Al celebrarse, cada ganador
+    recibe su plaza confirmada (`SorteoCarnetService.darPlazaDeAutobus`, marcada con
+    `origenSorteo` para poder deshacerla al reiniciar); quien no gana no tiene plaza, salvo que se
+    hubiera apuntado al autobús antes por su cuenta: esa inscripción no depende del sorteo. Una
+    renuncia borra la plaza del que renuncia y se la da al suplente que hereda el carnet. La
+    reserva es `plazasCarnet` entera aunque algún ganador ya tuviera plaza o haya menos
+    participantes que carnets: al celebrarse, `SorteoCelebradoEvent` hace que `EventoService`
+    promocione la lista de espera con lo que sobra (con su aviso a quien entra).
   - Por eso el bombo solo admite entradas si el plazo del evento sigue abierto
     (`admiteSolicitudes`), aunque su propia fecha no haya llegado.
   - El reparto es **ponderado**: cada socio entra con 1 papeleta más otra por cada sorteo en el

@@ -42,6 +42,9 @@ public class EventoInscripcionEntity {
 
   private String telefono;
 
+  /** true si la plaza se creó al celebrar el sorteo de carnets (o al heredar un carnet). */
+  private Boolean origenSorteo;
+
   @Column(nullable = false)
   private LocalDateTime fechaInscripcion;
 

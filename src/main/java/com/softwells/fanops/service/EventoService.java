@@ -43,6 +43,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -175,6 +176,9 @@ public class EventoService {
   // ----------------------------------------------------------------
 
   public EventoEntity save(EventoEntity evento) {
+    if (evento.getUid() == null && evento.getPlazasCarnetReservadas() == null) {
+      evento.setPlazasCarnetReservadas(true); // los eventos nuevos reservan plaza para los carnets
+    }
     EventoEntity guardado = eventoRepository.save(evento);
     sorteoCarnetService.sincronizar(guardado);
     return guardado;
@@ -342,6 +346,10 @@ public class EventoService {
     validarInscripcionAbierta(evento);
 
     SorteoCarnetDTO sorteo = sorteoCarnetService.solicitar(eventoId, fichas);
+    if (evento.reservaCarnet()) {
+      // La plaza de autobús es la que se reservó para los carnets: solo la tiene quien gane.
+      return new ApuntarSorteoResultado(sorteo, List.of());
+    }
 
     // A quien ya estuviera inscrito no se le toca la plaza: volver a inscribirle gastaría otra
     // penalización y, si el evento se ha llenado desde entonces, le mandaría a la lista de espera
@@ -445,6 +453,9 @@ public class EventoService {
       // Falla si el evento no admite no socios: antes de dejar nada guardado.
       sorteoCarnetService.solicitarInvitado(eventoId, request.getNombre().trim(), email,
           request.getTelefono());
+    }
+    if (request.isIncluirSorteo() && evento.reservaCarnet()) {
+      return EstadoInscripcion.EN_ESPERA; // sin plaza de autobús hasta que gane el carnet
     }
     if (yaInscrito) {
       if (request.isIncluirSorteo()) {
@@ -617,6 +628,12 @@ public class EventoService {
    */
   public int asignarPlazas(UUID eventoId) {
     return promoverListaEspera(eventoId);
+  }
+
+  /** Tras celebrarse un sorteo con plazas reservadas, las que sobran pasan a la lista de espera. */
+  @EventListener
+  void alCelebrarseElSorteo(SorteoCelebradoEvent celebrado) {
+    promoverListaEspera(celebrado.eventoUid());
   }
 
   private int promoverListaEspera(UUID eventoId) {
@@ -890,7 +907,7 @@ public class EventoService {
   }
 
   private boolean hayHueco(EventoEntity evento, long confirmadas) {
-    return evento.getNumeroPlazas() == null || confirmadas < evento.getNumeroPlazas();
+    return evento.getNumeroPlazas() == null || confirmadas < capacidad(evento);
   }
 
   /** Plazas libres restantes; {@link Long#MAX_VALUE} si el evento no tiene límite de aforo. */
@@ -898,14 +915,26 @@ public class EventoService {
     if (evento.getNumeroPlazas() == null) {
       return Long.MAX_VALUE;
     }
-    return Math.max(0, evento.getNumeroPlazas() - confirmadas);
+    return Math.max(0, capacidad(evento) - confirmadas);
   }
 
   private int calcularPlazasLibres(EventoEntity evento, int confirmadas) {
     if (evento.getNumeroPlazas() == null) {
       return -1; // sin límite
     }
-    return Math.max(0, evento.getNumeroPlazas() - confirmadas);
+    return (int) Math.max(0, capacidad(evento) - confirmadas);
+  }
+
+  /**
+   * Plazas que se pueden dar a las inscripciones normales: las del evento menos las reservadas
+   * para los ganadores del sorteo de carnets mientras este no se haya celebrado. Tras el sorteo
+   * los ganadores ya tienen su inscripción y la reserva desaparece.
+   */
+  private long capacidad(EventoEntity evento) {
+    long reservadas = evento.reservaCarnet() && evento.getPlazasCarnet() != null
+        && !sorteoCarnetService.estaCelebrado(evento.getUid())
+        ? evento.getPlazasCarnet() : 0;
+    return Math.max(0, evento.getNumeroPlazas() - reservadas);
   }
 
   /** Un socio es prioritario si está activo y tiene la cuota al día (o está exento de pago). */

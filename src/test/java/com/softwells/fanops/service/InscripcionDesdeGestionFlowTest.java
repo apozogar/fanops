@@ -138,6 +138,7 @@ class InscripcionDesdeGestionFlowTest {
     if (conSorteo) {
       evento.setPlazasCarnet(2);
       evento.setFechaSorteoCarnet(LocalDateTime.now().plusDays(2));
+      evento.setPlazasCarnetReservadas(false); // evento anterior a la reserva de plazas
     }
     return eventoService.save(evento);
   }

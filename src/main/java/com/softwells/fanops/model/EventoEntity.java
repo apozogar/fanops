@@ -59,6 +59,18 @@ public class EventoEntity {
    */
   private Boolean sorteoAbiertoATodos;
 
+  /**
+   * true si los carnets sorteados llevan plaza de autobús reservada: entrar en el bombo no ocupa
+   * plaza, se reservan {@code plazasCarnet} hasta que se celebra el sorteo y solo los ganadores
+   * se quedan con ellas. Null o false en los eventos anteriores, donde entrar al sorteo apunta
+   * al autobús como cualquier inscripción.
+   */
+  private Boolean plazasCarnetReservadas;
+
+  public boolean reservaCarnet() {
+    return Boolean.TRUE.equals(plazasCarnetReservadas);
+  }
+
   public boolean sorteoAbierto() {
     return Boolean.TRUE.equals(sorteoAbiertoATodos);
   }

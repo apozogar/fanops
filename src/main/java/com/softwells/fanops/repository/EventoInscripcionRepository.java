@@ -24,6 +24,11 @@ public interface EventoInscripcionRepository
 
   boolean existsByEventoUidAndSocioUid(UUID eventoUid, UUID socioUid);
 
+  Optional<EventoInscripcionEntity> findFirstByEventoUidAndEmailIgnoreCaseAndSocioIsNull(
+      UUID eventoUid, String email);
+
+  List<EventoInscripcionEntity> findByEventoUidAndOrigenSorteoTrue(UUID eventoUid);
+
   boolean existsByEventoUidAndEmailIgnoreCase(UUID eventoUid, String email);
 
   long countByEventoUidAndEstado(UUID eventoUid, EstadoInscripcion estado);

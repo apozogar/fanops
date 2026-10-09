@@ -22,6 +22,9 @@ public class SorteoResumenDTO {
   /** true si todavía se puede entrar (sorteo sin celebrar y plazo del evento abierto). */
   private boolean admiteSolicitudes;
 
+  /** true si la plaza de autobús solo se consigue ganando el carnet. */
+  private boolean plazaSoloSiGana;
+
   /** true si el bombo admite también a quien no es socio. */
   private boolean abiertoATodos;
 

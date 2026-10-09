@@ -43,6 +43,8 @@ export interface SorteoResumen {
   admiteSolicitudes: boolean;
   /** true si el bombo admite también a quien no es socio. */
   abiertoATodos: boolean;
+  /** true si la plaza de autobús solo la consigue quien gana el carnet. */
+  plazaSoloSiGana: boolean;
   participantes: number;
   misSocios: SocioSolicitudCarnet[];
 }
@@ -60,6 +62,8 @@ export interface SorteoCarnet {
   estado: EstadoSorteo;
   /** true mientras el sorteo no se ha celebrado. */
   abierto: boolean;
+  /** true si entrar en el bombo no da plaza de autobús: solo la consigue quien gana el carnet. */
+  plazaSoloSiGana: boolean;
   /**
    * true si todavía se puede entrar en el bombo. Más estricto que `abierto`: entrar al sorteo
    * apunta también al evento, así que el plazo de inscripción tiene que estar abierto.

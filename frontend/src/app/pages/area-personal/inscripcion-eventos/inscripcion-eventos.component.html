@@ -2,8 +2,15 @@
 <p-confirmDialog [style]="{width: '460px'}"></p-confirmDialog>
 
 <div class="card">
-    <h2>Próximos Eventos</h2>
-    <p>Explora los próximos eventos y apúntate. Si quedan plazas libres tu plaza queda confirmada al instante; si el evento está completo entrarás en la lista de espera y te avisaremos si se libera un hueco.</p>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h2>Eventos</h2>
+        @if (numPasados > 0) {
+            <label class="flex items-center gap-2 cursor-pointer">
+                <p-toggleswitch [(ngModel)]="verPasados" />
+                <span>Ver también los que ya han pasado ({{ numPasados }})</span>
+            </label>
+        }
+    </div>
 
     @if (loading) {
         <div class="flex justify-center items-center h-64">
@@ -11,175 +18,162 @@
         </div>
     }
 
-    @if (!loading && eventos.length === 0) {
+    @if (!loading && eventosVisibles.length === 0) {
         <div class="text-center p-4">
-            <p>No hay eventos programados por el momento.</p>
+            <p>No hay eventos próximos por el momento.</p>
         </div>
     }
 
     @if (!loading) {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            @for (evento of eventos; track evento) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+            @for (evento of eventosVisibles; track evento.uid) {
                 <p-card [header]="evento.nombreEvento">
-                    <div class="flex flex-col gap-2 mb-4">
-                        <div class="flex items-center gap-2">
+                    <!-- Lo que hay que saber del evento, en frases cortas y con letra normal. Sin
+                         totales de plazas ni precio de no socios: al socio solo le sirve saber
+                         cuándo, dónde y cuánto paga él. -->
+                    <div class="flex flex-col gap-3 mb-4 text-base">
+                        <div class="flex items-center gap-3">
                             <fo-icon name="calendario" />
-                            <span>{{ evento.fechaEvento | date: 'dd/MM/yyyy' }}</span>
+                            <span class="first-letter:uppercase">{{ evento.fechaEvento | date: "EEEE d 'de' MMMM" }}</span>
                         </div>
-                        @if (evento.fechaLimiteInscripcion) {
-                            <div class="flex items-center gap-2">
-                                <fo-icon name="hora" />
-                                <span>Inscripción hasta el {{ evento.fechaLimiteInscripcion | date: 'dd/MM/yyyy HH:mm' }}</span>
-                            </div>
-                        }
                         @if (evento.ubicacion) {
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-3">
                                 <fo-icon name="ubicacion" />
                                 <span>{{ evento.ubicacion }}</span>
                             </div>
                         }
-                        <div class="flex items-center gap-2" [class.text-danger]="evento.plazasLibres === 0">
-                            <fo-icon name="socios" />
-                            <span>{{ plazasTexto(evento) }}</span>
-                        </div>
                         @if (evento.costePlaza != null) {
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-3">
                                 <fo-icon name="euro" />
-                                <span>{{ evento.costePlaza | currency: 'EUR' }} por plaza</span>
-                            </div>
-                        }
-                        @if (evento.costePlazaNoSocio != null && evento.costePlazaNoSocio !== evento.costePlaza) {
-                            <div class="flex items-center gap-2 text-ink-muted">
-                                <fo-icon name="euro" />
-                                <span>{{ evento.costePlazaNoSocio | currency: 'EUR' }} para no socios</span>
-                            </div>
-                        }
-                        @if (evento.enListaEspera > 0) {
-                            <div class="flex items-center gap-2 text-warning">
-                                <fo-icon name="espera" />
-                                <span>{{ evento.enListaEspera }} en lista de espera</span>
+                                <span>Autobús: <strong>{{ evento.costePlaza | currency: 'EUR':'symbol':'1.0-2' }}</strong> por persona</span>
                             </div>
                         }
                         @if (evento.inscripcionCerrada) {
-                            <div class="flex items-center gap-2 text-danger">
+                            <div class="flex items-center gap-3 text-danger font-medium">
                                 <fo-icon name="no-permitido" />
-                                <span>Plazo de inscripción cerrado</span>
+                                <span>Ya no se puede apuntar nadie: el plazo ha terminado</span>
+                            </div>
+                        } @else if (evento.fechaLimiteInscripcion) {
+                            <div class="flex items-center gap-3">
+                                <fo-icon name="hora" />
+                                <span>Puedes apuntarte hasta el {{ evento.fechaLimiteInscripcion | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}</span>
                             </div>
                         }
                     </div>
                     @if (evento.plazasLibres === 0 && !evento.inscripcionCerrada) {
                         <div role="alert"
-                             class="flex items-start gap-2 rounded-lg p-3 text-sm bg-warn-soft text-warn-soft-fg">
+                             class="flex items-start gap-2 rounded-lg p-3 bg-warn-soft text-warn-soft-fg">
                             <fo-icon name="aviso" class="mt-0.5" />
-                            <span><strong>No quedan plazas en el bus.</strong> Si te apuntas entrarás en lista
-                                de espera: el sistema o alguien de la peña te informará por WhatsApp si se
-                                libera una plaza.</span>
+                            <span><strong>El autobús está completo.</strong> Si te apuntas quedarás en lista
+                                de espera y te avisaremos si queda un hueco.</span>
                         </div>
                     }
+
                     <!-- Una fila por ficha de socio de la cuenta: en un multicarnet deja ver
                          a quién se está apuntando en vez de operar sobre un socio indeterminado. -->
-                    <div class="flex flex-col gap-2 border-t border-token pt-3"
+                    <div class="flex flex-col gap-3 border-t border-token pt-4"
                          [class.hidden]="evento.misSocios.length === 0">
                         @for (socio of evento.misSocios; track socio.socioUid) {
-                            <div class="flex items-center justify-between gap-2 min-h-8">
-                                @if (socio.estado) {
-                                    <span class="truncate">{{ etiquetaSocio(socio) }}</span>
-                                    <div class="flex items-center gap-2 shrink-0">
-                                        @if (socio.estado === 'EN_ESPERA') {
-                                            <fo-tag tone="warn">
-                                                <fo-icon name="espera" [size]="14" />
-                                                <span>En lista de espera</span>
-                                            </fo-tag>
-                                        } @else {
-                                            <fo-tag tone="success">
-                                                <fo-icon name="check" [size]="14" />
-                                                <span>Plaza confirmada</span>
-                                            </fo-tag>
-                                        }
-                                        <button
-                                            foButton
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            class="rounded-full text-danger"
-                                            [loading]="enCurso(evento, socio)"
-                                            [disabled]="eventoOcupado(evento)"
-                                            [attr.aria-label]="'Anular la inscripción de ' + socio.nombre"
-                                            (click)="anularInscripcion(evento, socio)"
-                                        >
-                                            <fo-icon name="cerrar" [size]="16" />
-                                        </button>
+                            @if (socio.estado) {
+                                <div class="flex flex-col gap-2 rounded-lg p-3"
+                                     [class]="socio.estado === 'EN_ESPERA' ? 'bg-warn-soft text-warn-soft-fg' : 'bg-success-soft text-success-soft-fg'">
+                                    <div class="flex items-center gap-2 font-semibold text-base">
+                                        <fo-icon [name]="socio.estado === 'EN_ESPERA' ? 'espera' : 'check'" />
+                                        <span>{{ etiquetaSocio(socio) }}</span>
                                     </div>
-                                } @else if (esMulticarnet(evento)) {
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <p-checkbox
-                                            [binary]="true"
-                                            [ngModel]="estaSeleccionado(evento, socio)"
-                                            [disabled]="evento.inscripcionCerrada || eventoOcupado(evento)"
-                                            (onChange)="alternarSeleccion(evento, socio)"
-                                        ></p-checkbox>
-                                        <span class="truncate">{{ etiquetaSocio(socio) }}</span>
-                                    </label>
-                                    <span class="text-ink-muted text-xs shrink-0">Sin inscribir</span>
-                                } @else {
+                                    <span>
+                                        {{ socio.estado === 'EN_ESPERA'
+                                            ? 'Estás en lista de espera. Te avisaremos si queda un hueco.'
+                                            : 'Tienes plaza en el autobús.' }}
+                                    </span>
+                                    <button
+                                        foButton
+                                        variant="secondary"
+                                        class="self-start text-danger"
+                                        [loading]="enCurso(evento, socio)"
+                                        [disabled]="eventoOcupado(evento)"
+                                        [attr.aria-label]="'Dar de baja a ' + socio.nombre"
+                                        (click)="anularInscripcion(evento, socio)"
+                                    >
+                                        <fo-icon name="cerrar" [size]="16" />
+                                        <span>{{ esMulticarnet(evento) ? 'Dar de baja' : 'Darme de baja' }}</span>
+                                    </button>
+                                </div>
+                            } @else if (enBombo(evento, socio)) {
+                                <div class="flex items-center gap-2 font-medium text-base">
                                     <span class="truncate">{{ etiquetaSocio(socio) }}</span>
-                                    <span class="text-ink-muted text-xs shrink-0">Sin inscribir</span>
-                                }
-                            </div>
+                                </div>
+                            } @else if (esMulticarnet(evento)) {
+                                <label class="flex items-center gap-3 cursor-pointer text-base">
+                                    <p-checkbox
+                                        [binary]="true"
+                                        [ngModel]="estaSeleccionado(evento, socio)"
+                                        [disabled]="evento.inscripcionCerrada || eventoOcupado(evento)"
+                                        (onChange)="alternarSeleccion(evento, socio)"
+                                    ></p-checkbox>
+                                    <span>{{ etiquetaSocio(socio) }}</span>
+                                </label>
+                            }
                         }
 
                         @if (puedeElegirGrupoIndivisible(evento)) {
-                            <label class="flex items-center gap-2 cursor-pointer text-sm text-ink-muted">
+                            <label class="flex items-center gap-3 cursor-pointer text-ink-muted">
                                 <p-checkbox
                                     [binary]="true"
                                     [ngModel]="soloSiEntranTodos(evento)"
                                     [disabled]="eventoOcupado(evento)"
                                     (onChange)="alternarSoloSiEntranTodos(evento)"
                                 ></p-checkbox>
-                                <span>Solo si entramos todos (si no hay plazas para el grupo, todos a la lista de espera)</span>
+                                <span>Solo si entramos todos (si no hay plazas para todos, nadie entra)</span>
                             </label>
                         }
                     </div>
-                    <!-- Sorteo de carnets. Va aparte de la plaza de bus a propósito: son dos
-                         cosas distintas y apuntarse a una no condiciona la otra. -->
-                    @if (evento.sorteo; as sorteo) {
-                        <div class="flex flex-col gap-2 border-t border-line pt-3 mt-3">
-                            <div class="flex items-center justify-between gap-2 flex-wrap">
-                                <div class="flex items-center gap-2">
-                                    <fo-icon name="entrada" />
-                                    <span>{{ sorteo.plazasCarnet }} {{ sorteo.plazasCarnet === 1 ? 'carnet' : 'carnets' }} a sorteo</span>
-                                </div>
-                                @if (sorteo.estado === 'EJECUTADO') {
-                                    <fo-tag tone="success">
-                                        <fo-icon name="check" [size]="14" />
-                                        <span>Sorteo celebrado</span>
-                                    </fo-tag>
-                                } @else {
-                                    <fo-tag tone="info">
-                                        <fo-icon name="hora" [size]="14" />
-                                        <span>{{ sorteo.fechaProgramada | date: 'dd/MM/yyyy HH:mm' }}</span>
-                                    </fo-tag>
-                                }
-                            </div>
 
-                            <div class="flex items-center gap-1 flex-wrap text-xs text-ink-muted">
-                                <span>{{ sorteo.participantes }} en el bombo</span>
-                                @if (evento.costeCarnet != null) {
-                                    <span>· {{ evento.costeCarnet | currency: 'EUR' }} si te toca carnet</span>
-                                }
+                    <!-- Sorteo de carnets. -->
+                    @if (evento.sorteo; as sorteo) {
+                        <div class="flex flex-col gap-3 border-t border-line pt-4 mt-4">
+                            <div class="flex items-center gap-3 text-base font-semibold">
+                                <fo-icon name="entrada" />
+                                <span>Sorteo de carnets</span>
                             </div>
+                            <p>
+                                @if (sorteo.estado === 'EJECUTADO') {
+                                    El sorteo ya se ha celebrado.
+                                } @else {
+                                    Hay <strong>{{ sorteo.plazasCarnet }} {{ sorteo.plazasCarnet === 1 ? 'carnet' : 'carnets' }}</strong>
+                                    para sortear. El sorteo es el
+                                    <strong>{{ sorteo.fechaProgramada | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}</strong>.
+                                }
+                                @if (evento.costeCarnet != null) {
+                                    El carnet cuesta {{ evento.costeCarnet | currency: 'EUR':'symbol':'1.0-2' }}.
+                                }
+                            </p>
+                            @if (sorteo.estado !== 'EJECUTADO') {
+                                <p class="text-ink-muted">
+                                    @if (sorteo.plazaSoloSiGana) {
+                                        Si te apuntas al sorteo y te toca, tienes carnet y plaza en el
+                                        autobús. Si no te toca, no vas. Si quieres ir sin carnet, apúntate
+                                        solo al autobús.
+                                    } @else {
+                                        Apuntarte al sorteo también te apunta al autobús.
+                                    }
+                                </p>
+                            }
 
                             @for (socio of fichasEnSorteo(sorteo); track socio.socioUid) {
-                                <fo-tag [tone]="tonoSorteo(socio)">
+                                <fo-tag [tone]="tonoSorteo(socio)" class="self-start text-base">
                                     <fo-icon name="entrada" [size]="14" />
                                     <span>{{ textoSorteo(socio, sorteo) }}</span>
                                 </fo-tag>
                             }
 
-                            <button foButton variant="secondary" size="sm"
-                                    (click)="abrirSorteo(evento)">
-                                <fo-icon name="ver" [size]="16" />
-                                <span>{{ puedeEntrarSoloAlSorteo(evento) ? 'Entrar en el sorteo' : 'Ver el bombo' }}</span>
-                            </button>
+                            @if (sorteo.estado === 'EJECUTADO' || fichasEnSorteo(sorteo).length > 0 || puedeEntrarSoloAlSorteo(evento)) {
+                                <button foButton variant="secondary" size="lg"
+                                        (click)="abrirSorteo(evento)">
+                                    <fo-icon name="ver" [size]="16" />
+                                    <span>{{ puedeEntrarSoloAlSorteo(evento) ? 'Apuntarme al sorteo' : 'Ver el sorteo' }}</span>
+                                </button>
+                            }
                         </div>
                     }
                     <ng-template pTemplate="footer">
@@ -190,39 +184,40 @@
                             </fo-tag>
                         } @else if (pendientes(evento).length > 0) {
                             @if (puedeElegirComoApuntarse(evento)) {
-                                <!-- Dos formas de apuntarse, no dos altas que se sumen: la del
-                                     sorteo ya incluye la plaza del evento. -->
-                                <div class="flex flex-col items-end gap-2">
-                                    <span class="text-xs text-ink-muted text-right">
-                                        Elige una: entrar en el sorteo del carnet ya te apunta al evento.
-                                    </span>
-                                    <div class="flex gap-2 flex-wrap justify-end">
-                                        <button
-                                            foButton
-                                            variant="secondary"
-                                            [loading]="enCurso(evento)"
-                                            [disabled]="!puedeInscribir(evento)"
-                                            (click)="inscribir(evento)"
-                                        >
-                                            <fo-icon name="check" />
-                                            <span>Solo al evento</span>
-                                        </button>
-                                        <button
-                                            foButton
-                                            variant="primary"
-                                            [loading]="enCurso(evento)"
-                                            [disabled]="!puedeInscribir(evento)"
-                                            (click)="apuntarAlSorteo(evento)"
-                                        >
-                                            <fo-icon name="entrada" />
-                                            <span>Al sorteo del carnet</span>
-                                        </button>
-                                    </div>
+                                <!-- Dos formas de apuntarse, no dos altas que se sumen. -->
+                                <div class="flex flex-col gap-3">
+                                    <span class="font-semibold">¿Cómo quieres apuntarte?</span>
+                                    <button
+                                        foButton
+                                        variant="primary"
+                                        size="lg"
+                                        class="w-full justify-center"
+                                        [loading]="enCurso(evento)"
+                                        [disabled]="!puedeInscribir(evento)"
+                                        (click)="inscribir(evento)"
+                                    >
+                                        <fo-icon name="check" />
+                                        <span>Solo al autobús</span>
+                                    </button>
+                                    <button
+                                        foButton
+                                        variant="secondary"
+                                        size="lg"
+                                        class="w-full justify-center"
+                                        [loading]="enCurso(evento)"
+                                        [disabled]="!puedeInscribir(evento)"
+                                        (click)="apuntarAlSorteo(evento)"
+                                    >
+                                        <fo-icon name="entrada" />
+                                        <span>Al sorteo del carnet</span>
+                                    </button>
                                 </div>
                             } @else {
                                 <button
                                     foButton
                                     variant="primary"
+                                    size="lg"
+                                    class="w-full justify-center"
                                     [loading]="enCurso(evento)"
                                     [disabled]="!puedeInscribir(evento)"
                                     (click)="inscribir(evento)"
@@ -231,11 +226,6 @@
                                     <span>{{ textoBotonInscribir(evento) }}</span>
                                 </button>
                             }
-                        } @else {
-                            <fo-tag tone="neutral">
-                                <fo-icon name="check" [size]="14" />
-                                <span>Ya estáis todos apuntados</span>
-                            </fo-tag>
                         }
                     </ng-template>
                 </p-card>
