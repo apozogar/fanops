@@ -81,6 +81,8 @@ export interface InscripcionAdmin {
   numeroSocio?: number | null;
   /** Lo que le toca pagar por la plaza (precio de socio o de no socio). */
   importe?: number | null;
+  /** Aceptado a la espera del sorteo: no ocupa plaza de autobús hasta que gane. */
+  enSorteo?: boolean;
   nombre: string;
   email: string;
   telefono?: string;

@@ -32,6 +32,12 @@
                 <span class="hidden md:inline">Valores por defecto</span>
             </button>
         </div>
+        @if (numHistoricos > 0) {
+            <label class="flex items-center gap-2 cursor-pointer">
+                <p-toggleswitch [(ngModel)]="verHistoricos" (ngModelChange)="actualizarVisibles()" />
+                <span class="text-sm">Ver históricos ({{ numHistoricos }})</span>
+            </label>
+        }
         <p-iconfield iconPosition="left" class="w-full md:w-auto">
             <p-inputicon>
                 <fo-icon name="buscar" />
@@ -84,16 +90,16 @@
         ><fo-icon name="eliminar" [size]="grande ? 20 : 16" /></button>
     </ng-template>
 
-    <p-table #dt [value]="eventos" [rows]="10" [paginator]="true" [loading]="loading"
+    <p-table #dt [value]="eventosVisibles" [rows]="10" [paginator]="true" [loading]="loading"
              [rowHover]="true" dataKey="uid" [globalFilterFields]="['nombreEvento', 'ubicacion']"
              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} eventos"
              [showCurrentPageReport]="true">
         <ng-template pTemplate="header">
             <tr class="hidden md:table-row">
                 <th>Nombre</th>
-                <th>Fecha</th>
+                <th pSortableColumn="fechaEvento">Fecha <p-sortIcon field="fechaEvento" /></th>
                 <th>Fin inscripción</th>
-                <th>Confirmados</th>
+                <th>Plazas bus</th>
                 <th>En espera</th>
                 <th>Acciones</th>
             </tr>
@@ -112,7 +118,7 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5">
                             <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
-                                   [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—') + ' plazas'"></p-tag>
+                                   [value]="(plazasBusTomadas(evento) ?? evento.numInscritos) + ' / ' + (evento.numeroPlazas ?? '—') + ' plazas' + (plazasBusTomadas(evento) != null ? ' · ' + evento.plazasLibres + ' libres' : '')"></p-tag>
                             @if (evento.numEnEspera > 0) {
                             <p-tag severity="warn" [value]="evento.numEnEspera + ' en espera'"></p-tag>
                             }
@@ -142,7 +148,11 @@
                 </td>
                 <td class="hidden md:table-cell">
                     <p-tag [severity]="plazasDisponibles(evento) ? 'success' : 'danger'"
-                           [value]="evento.numInscritos + ' / ' + (evento.numeroPlazas ?? '—')"></p-tag>
+                           [value]="(plazasBusTomadas(evento) ?? evento.numInscritos) + ' / ' + (evento.numeroPlazas ?? '—')"></p-tag>
+                    <div *ngIf="plazasBusTomadas(evento) != null" class="text-xs text-muted-color mt-1">
+                        {{ evento.plazasLibres }} libres<ng-container
+                            *ngIf="plazasReservadas(evento) > 0"> · incluye {{ plazasReservadas(evento) }} del sorteo</ng-container>
+                    </div>
                 </td>
                 <td class="hidden md:table-cell">
                     <p-tag *ngIf="evento.numEnEspera > 0" severity="warn"
@@ -419,6 +429,14 @@
                             *ngIf="eventoSeleccionado?.numeroPlazas != null"
                             class="text-base font-medium opacity-70">/{{ eventoSeleccionado?.numeroPlazas }}</span></span>
                     <span class="text-sm">Confirmados</span>
+                    <span *ngIf="inscritosEnSorteo > 0" class="text-xs opacity-70">
+                        {{ inscritos.length - inscritosEnSorteo }} ocupan plaza · {{ inscritosEnSorteo }} en sorteo
+                    </span>
+                    <span *ngIf="plazasBusTomadas(eventoSeleccionado) != null" class="text-xs font-semibold">
+                        Plazas de bus: {{ plazasBusTomadas(eventoSeleccionado) }}/{{ eventoSeleccionado?.numeroPlazas }}
+                        · {{ eventoSeleccionado?.plazasLibres }} libres<ng-container
+                            *ngIf="plazasReservadas(eventoSeleccionado) > 0"> (incluye {{ plazasReservadas(eventoSeleccionado) }} del sorteo)</ng-container>
+                    </span>
                 </button>
                 <button type="button" role="tab" class="fo-tab"
                         [class.fo-tab-activa]="pestanaInscripciones === 'espera'"
@@ -474,6 +492,7 @@
                                 <fo-tag *ngIf="inscripcion.numeroSocio != null" tone="neutral">Nº {{ inscripcion.numeroSocio }}</fo-tag>
                                 <fo-tag *ngIf="inscripcion.numeroSocio == null" tone="info">No socio</fo-tag>
                                 <fo-tag *ngIf="inscripcion.socioPrioritario" tone="success">Al día</fo-tag>
+                                <fo-tag *ngIf="inscripcion.enSorteo" tone="info">En sorteo</fo-tag>
                                 <!-- Lo que tiene que pagar, para validarlo en la puerta. -->
                                 <fo-tag *ngIf="inscripcion.importe != null" tone="accent">
                                     <fo-icon name="euro" [size]="14" />

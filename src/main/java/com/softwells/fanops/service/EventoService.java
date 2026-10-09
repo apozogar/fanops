@@ -156,9 +156,11 @@ public class EventoService {
       faltasDelEvento.putIfAbsent(falta.getSocio().getUid(), falta);
     }
 
+    boolean sorteoCelebrado = sorteoCarnetService.estaCelebrado(eventoId);
     return inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(eventoId).stream()
         .map(inscripcion -> {
           InscripcionAdminDTO dto = EventoMapper.toInscripcionAdminDTO(inscripcion);
+          dto.setEnSorteo(!sorteoCelebrado && Boolean.TRUE.equals(inscripcion.getOrigenSorteo()));
           SocioEntity socio = inscripcion.getSocio();
           if (socio != null) {
             dto.setFaltasAcumuladas(faltasDe(socio));

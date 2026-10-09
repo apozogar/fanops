@@ -5,6 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {EventoInscripcionDTO, SocioInscripcion} from "@/interfaces/evento-inscripcion.dto";
 import {SocioSolicitudCarnet, SorteoResumen} from '@/interfaces/sorteo-carnet.dto';
 import {EventoService} from '@/services/evento.service';
+import {esHistorico} from '@/core/eventos/historico';
 import {SorteoCarnetService} from '@/services/sorteo-carnet.service';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {CardModule} from 'primeng/card';
@@ -117,15 +118,9 @@ export class InscripcionEventosComponent implements OnInit, OnDestroy {
         });
     }
 
-    private static hoy(): string {
-        const ahora = new Date();
-        const dos = (n: number) => String(n).padStart(2, '0');
-        return `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
-    }
-
-    /** Un evento es pasado si su día ya terminó. La fecha llega como 'yyyy-MM-dd'. */
+    /** Pasado = histórico: su día terminó hace más de uno (ver {@link esHistorico}). */
     private esPasado(evento: EventoInscripcionDTO): boolean {
-        return String(evento.fechaEvento).slice(0, 10) < InscripcionEventosComponent.hoy();
+        return esHistorico(String(evento.fechaEvento).slice(0, 10));
     }
 
     get numPasados(): number {

@@ -26,6 +26,12 @@ public class InscripcionAdminDTO {
   /** Lo que le toca pagar por la plaza (precio de socio o de no socio). Null si no hay precio. */
   private BigDecimal importe;
 
+  /**
+   * true si está aceptado a la espera del sorteo de carnets: no ocupa plaza de autobús hasta que
+   * gane, y si no gana se borra al celebrarse.
+   */
+  private boolean enSorteo;
+
   /** Resultado de pasar lista. PENDIENTE mientras no se haya pasado. */
   private AsistenciaEvento asistencia;
 

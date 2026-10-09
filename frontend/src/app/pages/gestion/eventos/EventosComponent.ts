@@ -24,6 +24,8 @@ import {ParticipanteSorteo, SorteoCarnet} from '@/interfaces/sorteo-carnet.dto';
 import {ValoresEventoService} from '@/services/valores-evento.service';
 import {ValoresEvento} from '@/interfaces/valores-evento.dto';
 import {fechaRelativaAlEvento} from '@/core/eventos/fechas-por-defecto';
+import {esHistorico} from '@/core/eventos/historico';
+import {ToggleSwitchModule} from 'primeng/toggleswitch';
 import {deFechaLocal} from '@/core/fechas/fechas-locales';
 
 import { IconComponent } from '@/ui/icon/icon.component';
@@ -36,6 +38,7 @@ import { UiTagComponent } from '@/ui/ui-tag.component';
         CommonModule,
         FormsModule,
         TableModule,
+        ToggleSwitchModule,
         InputTextModule,
         InputNumberModule,
         ToastModule,
@@ -57,6 +60,11 @@ import { UiTagComponent } from '@/ui/ui-tag.component';
 
 export class EventosComponent implements OnInit {
     eventos: Evento[] = [];
+    /** Lo que se pinta en la tabla: los vigentes y, si se piden, los históricos detrás. */
+    eventosVisibles: Evento[] = [];
+    /** Los eventos ya pasados (con un día de margen) no salen de primera. */
+    verHistoricos = false;
+    numHistoricos = 0;
     evento: Partial<Evento> = {};
     eventoDialog: boolean = false;
     /** Valores con los que se propone un evento nuevo, configurables por la peña. */
@@ -198,6 +206,7 @@ export class EventosComponent implements OnInit {
                             this.numEventosPendientes += 1;
                         }
                     });
+                    this.actualizarVisibles();
                 }
                 this.loading = false;
             },
@@ -205,6 +214,20 @@ export class EventosComponent implements OnInit {
                 this.loading = false;
             }
         });
+    }
+
+    /**
+     * Ordena por fecha: los vigentes del más próximo al más lejano y, si se piden, los históricos
+     * detrás con el más reciente primero. Se guarda en una propiedad y no en un getter para que la
+     * tabla no reciba un array nuevo en cada ciclo y pierda la página o la ordenación elegida.
+     */
+    actualizarVisibles() {
+        const porFecha = (a: Evento, b: Evento) =>
+            new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime();
+        const vigentes = this.eventos.filter(e => !esHistorico(e.fechaEvento)).sort(porFecha);
+        const historicos = this.eventos.filter(e => esHistorico(e.fechaEvento)).sort((a, b) => porFecha(b, a));
+        this.numHistoricos = historicos.length;
+        this.eventosVisibles = this.verHistoricos ? [...vigentes, ...historicos] : vigentes;
     }
 
     /** Solo tiene sentido adelantar un sorteo que existe y todavía no se ha celebrado. */
@@ -447,6 +470,27 @@ export class EventosComponent implements OnInit {
         });
     }
 
+    /**
+     * Plazas de autobús tomadas, con las reservadas para el sorteo ya dentro (se ocuparán cuando
+     * se sepa quién gana). Sale de lo que queda libre; null si el evento no tiene límite.
+     */
+    plazasBusTomadas(evento: Evento | null | undefined): number | null {
+        if (!evento || evento.numeroPlazas == null || evento.plazasLibres == null || evento.plazasLibres < 0) {
+            return null;
+        }
+        return evento.numeroPlazas - evento.plazasLibres;
+    }
+
+    /** Plazas de autobús apartadas para los ganadores del sorteo; 0 si no hay reserva o ya se celebró. */
+    plazasReservadas(evento: Evento | null | undefined): number {
+        return evento?.plazasCarnetReservadas && !evento.sorteoCelebrado ? (evento.plazasCarnet ?? 0) : 0;
+    }
+
+    /** Confirmados que están a la espera del sorteo: no ocupan plaza hasta que ganen. */
+    get inscritosEnSorteo(): number {
+        return this.inscritos.filter(i => i.enSorteo).length;
+    }
+
     get inscritos(): InscripcionAdmin[] {
         return this.inscripciones.filter(i => i.estado === 'CONFIRMADA');
     }
@@ -482,6 +526,7 @@ export class EventosComponent implements OnInit {
 
     plazasDisponibles(evento: Evento): boolean {
         if (evento.numeroPlazas == null) return true; // sin límite de plazas
+        if (evento.plazasLibres != null && evento.plazasLibres >= 0) return evento.plazasLibres > 0;
         return (evento.numInscritos ?? 0) < evento.numeroPlazas;
     }
 
