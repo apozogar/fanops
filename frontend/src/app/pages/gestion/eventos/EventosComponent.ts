@@ -433,6 +433,9 @@ export class EventosComponent implements OnInit {
     abrirInscripciones(evento: Evento) {
         this.pestanaInscripciones = 'confirmados';
         this.filtroInscripciones = '';
+        this.ordenInscripciones = 'fecha';
+        this.ordenAscendente = true;
+        this.filtroTipoInscripciones = 'todos';
         this.mostrarInscripciones(evento);
     }
 
@@ -499,10 +502,47 @@ export class EventosComponent implements OnInit {
         return this.inscripciones.filter(i => i.estado === 'EN_ESPERA');
     }
 
-    /** Inscripciones de la pestaña activa que casan con la búsqueda. */
+    /** Qué personas se enseñan: todas, solo socios o solo quienes no tienen ficha de socio. */
+    filtroTipoInscripciones: 'todos' | 'socios' | 'nosocios' = 'todos';
+
+    /** Cuántos de la pestaña activa son socios y cuántos no, para los botones del filtro. */
+    get contadorTipo(): { socios: number; noSocios: number } {
+        const lista = this.pestanaInscripciones === 'espera' ? this.enEspera : this.inscritos;
+        const noSocios = lista.filter(i => i.numeroSocio == null).length;
+        return {socios: lista.length - noSocios, noSocios};
+    }
+
+    /** Criterio de orden del listado de inscritos y sentido: por defecto, por fecha de inscripción. */
+    ordenInscripciones: 'fecha' | 'nombre' = 'fecha';
+    ordenAscendente = true;
+
+    /**
+     * Pulsar el criterio activo invierte el sentido; pulsar el otro lo activa en sentido natural
+     * (A-Z o del más antiguo al más reciente).
+     */
+    ordenarInscripciones(criterio: 'fecha' | 'nombre') {
+        if (this.ordenInscripciones === criterio) {
+            this.ordenAscendente = !this.ordenAscendente;
+        } else {
+            this.ordenInscripciones = criterio;
+            this.ordenAscendente = true;
+        }
+    }
+
+    /** Inscripciones de la pestaña activa que casan con la búsqueda, en el orden elegido. */
     get inscripcionesVisibles(): InscripcionAdmin[] {
         const lista = this.pestanaInscripciones === 'espera' ? this.enEspera : this.inscritos;
-        return lista.filter(i => this.coincideBusqueda(i.nombre, i.numeroSocio, i.email, i.telefono));
+        const sentido = this.ordenAscendente ? 1 : -1;
+        const comparar = this.ordenInscripciones === 'nombre'
+            ? (a: InscripcionAdmin, b: InscripcionAdmin) =>
+                (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es', {sensitivity: 'base'})
+            : (a: InscripcionAdmin, b: InscripcionAdmin) =>
+                new Date(a.fechaInscripcion).getTime() - new Date(b.fechaInscripcion).getTime();
+        return lista
+            .filter(i => this.filtroTipoInscripciones === 'todos'
+                || (this.filtroTipoInscripciones === 'nosocios') === (i.numeroSocio == null))
+            .filter(i => this.coincideBusqueda(i.nombre, i.numeroSocio, i.email, i.telefono))
+            .sort((a, b) => sentido * comparar(a, b));
     }
 
     get faltasVisibles(): FaltaEvento[] {

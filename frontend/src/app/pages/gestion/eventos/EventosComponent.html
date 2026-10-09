@@ -452,13 +452,44 @@
                 </button>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <p-iconfield class="flex-1">
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
+                <p-iconfield class="flex-1 sm:min-w-64">
                     <p-inputicon><fo-icon name="buscar" [size]="16" /></p-inputicon>
                     <input pInputText type="search" class="w-full" [(ngModel)]="filtroInscripciones"
                            placeholder="Buscar por nombre, nº socio, email o teléfono"
                            aria-label="Buscar inscripciones" />
                 </p-iconfield>
+                <div *ngIf="pestanaInscripciones !== 'faltas'" class="flex items-center gap-2"
+                     role="group" aria-label="Filtrar por tipo de persona">
+                    <button type="button" foButton size="sm"
+                            [variant]="filtroTipoInscripciones === 'todos' ? 'primary' : 'secondary'"
+                            [attr.aria-pressed]="filtroTipoInscripciones === 'todos'"
+                            (click)="filtroTipoInscripciones = 'todos'">Todos</button>
+                    <button type="button" foButton size="sm"
+                            [variant]="filtroTipoInscripciones === 'socios' ? 'primary' : 'secondary'"
+                            [attr.aria-pressed]="filtroTipoInscripciones === 'socios'"
+                            (click)="filtroTipoInscripciones = 'socios'">Socios ({{ contadorTipo.socios }})</button>
+                    <button type="button" foButton size="sm"
+                            [variant]="filtroTipoInscripciones === 'nosocios' ? 'primary' : 'secondary'"
+                            [attr.aria-pressed]="filtroTipoInscripciones === 'nosocios'"
+                            (click)="filtroTipoInscripciones = 'nosocios'">No socios ({{ contadorTipo.noSocios }})</button>
+                </div>
+                <div *ngIf="pestanaInscripciones !== 'faltas'" class="flex items-center gap-2"
+                     role="group" aria-label="Ordenar el listado">
+                    <span class="text-sm text-ink-muted">Ordenar:</span>
+                    <button type="button" foButton size="sm"
+                            [variant]="ordenInscripciones === 'nombre' ? 'primary' : 'secondary'"
+                            [attr.aria-pressed]="ordenInscripciones === 'nombre'"
+                            (click)="ordenarInscripciones('nombre')">
+                        Nombre {{ ordenInscripciones === 'nombre' ? (ordenAscendente ? '↑' : '↓') : '' }}
+                    </button>
+                    <button type="button" foButton size="sm"
+                            [variant]="ordenInscripciones === 'fecha' ? 'primary' : 'secondary'"
+                            [attr.aria-pressed]="ordenInscripciones === 'fecha'"
+                            (click)="ordenarInscripciones('fecha')">
+                        Fecha {{ ordenInscripciones === 'fecha' ? (ordenAscendente ? '↑' : '↓') : '' }}
+                    </button>
+                </div>
                 <button *ngIf="pestanaInscripciones === 'espera'" foButton variant="primary"
                         class="w-full sm:w-auto"
                         [loading]="asignandoPlazas"
@@ -549,7 +580,7 @@
                     </div>
                 </li>
                 <li *ngIf="inscripcionesVisibles.length === 0" class="fo-vacio">
-                    {{ filtroInscripciones.trim() ? 'Nadie coincide con la búsqueda.'
+                    {{ filtroInscripciones.trim() || filtroTipoInscripciones !== 'todos' ? 'Nadie coincide con la búsqueda.'
                         : pestanaInscripciones === 'confirmados' ? 'No hay inscritos confirmados.'
                         : 'No hay nadie en lista de espera.' }}
                 </li>
