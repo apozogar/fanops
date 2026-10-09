@@ -425,9 +425,7 @@
                         [class.fo-tab-activa]="pestanaInscripciones === 'confirmados'"
                         [attr.aria-selected]="pestanaInscripciones === 'confirmados'"
                         (click)="pestanaInscripciones = 'confirmados'">
-                    <span class="text-2xl font-bold leading-none">{{ inscritos.length }}<span
-                            *ngIf="eventoSeleccionado?.numeroPlazas != null"
-                            class="text-base font-medium opacity-70">/{{ eventoSeleccionado?.numeroPlazas }}</span></span>
+                    <span class="text-2xl font-bold leading-none">{{ inscritos.length }}</span>
                     <span class="text-sm">Confirmados</span>
                     <span *ngIf="inscritosEnSorteo > 0" class="text-xs opacity-70">
                         {{ inscritos.length - inscritosEnSorteo }} ocupan plaza · {{ inscritosEnSorteo }} en sorteo
