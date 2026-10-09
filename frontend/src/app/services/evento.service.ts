@@ -124,6 +124,12 @@ export class EventoService {
     return this.http.get<ApiResponse<boolean>>(`${this.apiUrl}/${eventoId}/anular/aviso`, { params });
   }
 
+  /** Da plaza a una persona concreta de la lista de espera y le avisa. */
+  darPlaza(eventoId: string, inscripcionId: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/${eventoId}/inscripciones/${inscripcionId}/confirmar`, {});
+  }
+
   /** Enlaza con su ficha a los no socios que hoy se reconocen por su correo; devuelve cuántos. */
   sincronizarFichas(eventoId: string): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.apiUrl}/${eventoId}/sincronizar-fichas`, {});

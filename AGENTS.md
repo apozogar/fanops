@@ -77,6 +77,11 @@ Frontend (desde `frontend/`):
     mismas reglas que si se apuntara él (plazo, hueco, penalizaciones) y solo alcanza a socios de
     la peña de quien gestiona (`EventoService.inscribirSocioDesdeGestion`).
   - Cuando se anula una inscripción confirmada o el admin ejecuta `asignar-plazas`, se promocionan los de espera (prioridad: socios al día, luego por fecha de inscripción).
+    Desde la pantalla de inscritos la gestión da plaza **una a una** (botón "Dar plaza" en cada
+    persona de la espera, `POST /api/eventos/{id}/inscripciones/{inscripcionId}/confirmar`,
+    `EventoService.darPlazaDeLaEspera`): decide a quién, porque el orden automático no distingue
+    a un no socio de un socio con la cuota sin pagar. Ya no hay botón que asigne a todos; el
+    endpoint `asignar-plazas` sigue existiendo.
   - El plazo de inscripción por evento se guarda en `EventoEntity.fechaLimiteInscripcion`; fuera de plazo no se admiten inscripciones.
 - **DNI y fecha de nacimiento de una ficha son opcionales** (faltan en muchos socios antiguos):
   un DNI vacío se guarda como null y no entra en la comprobación de duplicados. Solo son

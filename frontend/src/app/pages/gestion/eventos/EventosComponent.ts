@@ -594,6 +594,34 @@ export class EventosComponent implements OnInit {
     }
 
     sincronizandoFichas = false;
+    /** Inscripción a la que se está dando plaza ahora mismo. */
+    dandoPlaza: string | null = null;
+
+    /** Da plaza a una persona de la lista de espera: se reparte una a una, a criterio de la gestión. */
+    darPlaza(inscripcion: InscripcionAdmin) {
+        if (!this.eventoSeleccionado?.uid || this.dandoPlaza) return;
+        this.dandoPlaza = inscripcion.uid;
+        this.eventoService.darPlaza(this.eventoSeleccionado.uid, inscripcion.uid).subscribe({
+            next: (resp) => {
+                this.dandoPlaza = null;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Plaza confirmada',
+                    detail: inscripcion.nombre + ': ' + (resp.message || 'plaza confirmada.')
+                });
+                this.mostrarInscripciones(this.eventoSeleccionado!);
+                this.cargarEventos();
+            },
+            error: (err) => {
+                this.dandoPlaza = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'No se pudo dar la plaza',
+                    detail: err.error?.message || 'Inténtalo de nuevo.'
+                });
+            }
+        });
+    }
 
     /** Pone al día los inscritos con su ficha: los que se apuntaron como no socios y ya lo son. */
     sincronizarFichas() {

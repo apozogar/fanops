@@ -496,14 +496,6 @@
                         tooltipPosition="top" (click)="sincronizarFichas()">
                     <fo-icon name="refrescar" [size]="14" /><span>Actualizar socios</span>
                 </button>
-                <button *ngIf="pestanaInscripciones === 'espera'" foButton variant="primary"
-                        class="w-full sm:w-auto"
-                        [loading]="asignandoPlazas"
-                        [disabled]="enEspera.length === 0 || asignandoPlazas"
-                        (click)="asignarPlazas()">
-                    <fo-icon name="usuario-nuevo" />
-                    <span>Asignar plazas de espera</span>
-                </button>
             </div>
 
             <p *ngIf="pestanaInscripciones === 'confirmados' && inscritos.length > 0"
@@ -576,6 +568,16 @@
                                 <fo-icon name="cerrar" [size]="16" /><span>No vino</span>
                             </button>
                         </ng-container>
+                        <button *ngIf="pestanaInscripciones === 'espera'" foButton variant="primary"
+                                size="md" class="flex-1 sm:flex-none"
+                                [loading]="dandoPlaza === inscripcion.uid"
+                                [disabled]="dandoPlaza !== null || eventoSeleccionado?.plazasLibres === 0"
+                                [pTooltip]="eventoSeleccionado?.plazasLibres === 0 ? 'No queda ninguna plaza libre' : 'Confirmarle la plaza y avisarle'"
+                                tooltipPosition="top"
+                                [attr.aria-label]="'Dar plaza a ' + inscripcion.nombre"
+                                (click)="darPlaza(inscripcion)">
+                            <fo-icon name="check" [size]="16" /><span>Dar plaza</span>
+                        </button>
                         <button foButton variant="ghost" size="icon" class="rounded-full text-danger ml-auto"
                                 [disabled]="eliminandoInscripcion === inscripcion.uid"
                                 (click)="eliminarInscripcion(inscripcion)"

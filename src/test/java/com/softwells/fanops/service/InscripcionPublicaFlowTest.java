@@ -321,6 +321,45 @@ class InscripcionPublicaFlowTest {
         .as("volver a pasarlo no cambia nada").isZero();
   }
 
+  @Test
+  @DisplayName("Dar plaza de la espera es una a una: solo a quien se elige, y solo si hay hueco")
+  void darPlazaUnoAUno() {
+    SocioEntity titular = ficha("Titular Uno", "test.publica.titular@fanops.local", null);
+    SocioEntity socio = ficha("Juan Pérez", EMAIL_FICHA, null);
+    EventoEntity evento = evento();
+    evento.setNumeroPlazas(1);
+    eventoService.save(evento);
+    eventoService.inscribirPublico(evento.getUid(),
+        peticion("Titular Uno", "test.publica.titular@fanops.local"));
+    EventoInscripcionEntity delante = inscripcionRepository.findAll().stream()
+        .filter(i -> i.getEvento().getUid().equals(evento.getUid())).findFirst().orElseThrow();
+    eventoService.inscribirPublico(evento.getUid(),
+        peticion("Invitado", "test.publica.invitado@fanops.local"));
+    eventoService.inscribirPublico(evento.getUid(), peticion("Juan Pérez", EMAIL_FICHA));
+    EventoInscripcionEntity delSocio = inscripcionRepository
+        .findByEventoUidAndSocioUid(evento.getUid(), socio.getUid()).orElseThrow();
+    assertThat(delSocio.getEstado()).isEqualTo(EstadoInscripcion.EN_ESPERA);
+
+    assertThatThrownBy(() -> eventoService.darPlazaDeLaEspera(evento.getUid(), delSocio.getUid()))
+        .as("con el autobús lleno no se puede dar plaza")
+        .isInstanceOf(IllegalStateException.class);
+
+    evento.setNumeroPlazas(2);
+    eventoService.save(evento);
+    eventoService.darPlazaDeLaEspera(evento.getUid(), delSocio.getUid());
+
+    assertThat(inscripcionRepository.findById(delSocio.getUid()).orElseThrow().getEstado())
+        .isEqualTo(EstadoInscripcion.CONFIRMADA);
+    assertThat(inscripcionRepository.findAll().stream()
+        .filter(i -> i.getEvento().getUid().equals(evento.getUid()))
+        .filter(i -> i.getEstado() == EstadoInscripcion.EN_ESPERA).count())
+        .as("el invitado que estaba delante sigue esperando: no se reparte solo")
+        .isEqualTo(1);
+    assertThatThrownBy(() -> eventoService.darPlazaDeLaEspera(evento.getUid(), delSocio.getUid()))
+        .as("quien ya tiene plaza no está en espera")
+        .isInstanceOf(IllegalStateException.class);
+  }
+
   private EventoEntity eventoConSorteo() {
     EventoEntity evento = new EventoEntity();
     evento.setNombreEvento("Partido con sorteo");

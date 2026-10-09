@@ -744,6 +744,30 @@ public class EventoService {
     inscripcionRepository.save(inscripcion);
   }
 
+  /**
+   * Da plaza a una persona concreta de la lista de espera. Es la forma de repartir una a una: la
+   * gestión decide a quién, en vez de que el reparto automático siga un orden fijo (que no
+   * distingue, por ejemplo, entre un no socio y un socio con la cuota sin pagar).
+   *
+   * @throws IllegalStateException si no queda plaza libre o esa inscripción no está en espera
+   */
+  public void darPlazaDeLaEspera(UUID eventoId, UUID inscripcionId) {
+    EventoEntity evento = findEvento(eventoId);
+    EventoInscripcionEntity inscripcion = inscripcionRepository.findById(inscripcionId)
+        .filter(i -> i.getEvento().getUid().equals(eventoId))
+        .orElseThrow(() -> new EntityNotFoundException("Inscripción no encontrada en este evento."));
+    if (inscripcion.getEstado() != EstadoInscripcion.EN_ESPERA) {
+      throw new IllegalStateException(inscripcion.getNombre() + " no está en lista de espera.");
+    }
+    if (!hayHueco(evento, confirmadasQueOcupan(evento))) {
+      throw new IllegalStateException("No queda ninguna plaza libre en el autobús.");
+    }
+    inscripcion.setEstado(EstadoInscripcion.CONFIRMADA);
+    inscripcionRepository.save(inscripcion);
+    notificacionService.enviarPromocionEspera(List.of(inscripcion), evento);
+    perdonarCancelacionesTardiasCubiertas(eventoId, 1);
+  }
+
   /** Tras celebrarse un sorteo con plazas reservadas, las que sobran pasan a la lista de espera. */
   @EventListener
   void alCelebrarseElSorteo(SorteoCelebradoEvent celebrado) {

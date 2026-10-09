@@ -247,6 +247,14 @@ public class EventoController {
         : "Anular ahora no supone falta", costariaFalta));
   }
 
+  /** Da plaza a una persona concreta de la lista de espera. */
+  @PostMapping("/{id}/inscripciones/{inscripcionId}/confirmar")
+  public ResponseEntity<ApiResponse<Void>> darPlaza(@PathVariable UUID id,
+      @PathVariable UUID inscripcionId) {
+    eventoService.darPlazaDeLaEspera(id, inscripcionId);
+    return ResponseEntity.ok(new ApiResponse<>(true, "Plaza confirmada. Se le ha avisado.", null));
+  }
+
   /**
    * Enlaza con su ficha de socio a quien se apuntó como no socio y hoy se reconoce por su correo,
    * y pone al día los datos de los inscritos con los de su ficha.
