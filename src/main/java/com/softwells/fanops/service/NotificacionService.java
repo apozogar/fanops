@@ -6,6 +6,8 @@ import com.softwells.fanops.enums.MotivoFalta;
 import com.softwells.fanops.model.EventoEntity;
 import com.softwells.fanops.model.EventoInscripcionEntity;
 import com.softwells.fanops.model.SocioEntity;
+import com.softwells.fanops.service.EmailTemplateService.Estado;
+import com.softwells.fanops.service.EmailTemplateService.Tono;
 import com.softwells.fanops.model.SolicitudCarnetEntity;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -36,6 +38,8 @@ public class NotificacionService {
 
   private final EmailSender emailSender;
   private final RestClient.Builder restClientBuilder;
+  private final EmailTemplateService plantillas;
+  private final PenaService penaService;
 
   @Value("${app.public-base-url:http://localhost:5300}")
   private String publicBaseUrl;
@@ -97,6 +101,29 @@ public class NotificacionService {
         + lugar + ")";
   }
 
+  /**
+   * HTML de un correo sobre un evento. Los párrafos salen del propio texto plano (partiendo por
+   * las líneas en blanco), menos los que solo traen el enlace, que ya lleva el botón. Las listas
+   * "- persona: estado" se enseñan como etiquetas de estado y no se repiten en el texto.
+   */
+  private String htmlEvento(String titulo, String cuerpo, EventoEntity evento,
+      List<Estado> estados) {
+    List<String> parrafos = java.util.Arrays.stream(cuerpo.split("\n\\s*\n"))
+        .map(String::strip)
+        .filter(p -> !p.isEmpty())
+        .filter(p -> !p.startsWith("Más información") && !p.startsWith("Puedes ver el sorteo"))
+        .filter(p -> estados == null || !p.contains("\n- ") && !p.startsWith("- "))
+        .filter(p -> !p.startsWith("Inscripción a '"))
+        .collect(Collectors.toList());
+    EmailTemplateService.DatosEvento datos = new EmailTemplateService.DatosEvento(
+        evento.getNombreEvento(),
+        evento.getFechaEvento() != null ? TextosEvento.fecha(evento.getFechaEvento()) : null,
+        evento.getUbicacion(),
+        TextosEvento.precioPlaza(evento.getCostePlaza(), evento.getCostePlazaNoSocio()));
+    return plantillas.renderizarEvento(penaService.penaPrincipal().orElse(null), titulo,
+        parrafos, datos, estados, "Ver el evento", publicBaseUrl + "/inscripcion/" + evento.getUid());
+  }
+
   private String enlaceEvento(EventoEntity evento) {
     return " Más información: " + publicBaseUrl + "/inscripcion/" + evento.getUid();
   }
@@ -156,8 +183,13 @@ public class NotificacionService {
       EventoEntity evento) {
     String asunto = "Inscripción a " + evento.getNombreEvento();
     String cuerpo = cuerpoInscripcion(evento, inscripcion.getEstado(), publicBaseUrl);
+    boolean confirmada = inscripcion.getEstado() == EstadoInscripcion.CONFIRMADA;
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
-        inscripcion.getTelefono(), null);
+        inscripcion.getTelefono(), null,
+        confirmada ? "¡Plaza confirmada!" : "Estás en lista de espera", evento,
+        List.of(new Estado(inscripcion.getNombre() + ": "
+            + (confirmada ? "plaza confirmada" : "lista de espera"),
+            confirmada ? Tono.OK : Tono.AVISO)));
   }
 
   /**
@@ -188,7 +220,10 @@ public class NotificacionService {
           + enlaceEvento(evento);
       String cuerpo = "Hola " + nombres + ",\n\n¡Enhorabuena! " + novedad
           + "\n\nNos vemos allí. ¡Vamos mi Betis!";
-      enviar(contacto.getKey(), nombres, asunto, cuerpo, contacto.getValue(), novedad);
+      enviar(contacto.getKey(), nombres, asunto, cuerpo, contacto.getValue(), novedad,
+          "¡Tienes plaza!", evento,
+          grupo.stream().map(i -> new Estado(i.getNombre() + ": plaza confirmada", Tono.OK))
+              .collect(Collectors.toList()));
     });
   }
 
@@ -206,13 +241,13 @@ public class NotificacionService {
     StringBuilder cuerpo = new StringBuilder("Hola,\n\n")
         .append("Inscripción a '").append(evento.getNombreEvento()).append("' (")
         .append(evento.getFechaEvento()).append("):\n\n");
-    boolean algunoEnEspera = false;
     for (EventoInscripcionEntity inscripcion : inscripciones) {
       boolean confirmada = inscripcion.getEstado() == EstadoInscripcion.CONFIRMADA;
-      algunoEnEspera |= !confirmada;
       cuerpo.append("- ").append(inscripcion.getNombre()).append(": ")
           .append(confirmada ? "PLAZA CONFIRMADA" : "LISTA DE ESPERA").append("\n");
     }
+    final boolean algunoEnEspera = inscripciones.stream()
+        .anyMatch(i -> i.getEstado() != EstadoInscripcion.CONFIRMADA);
     if (algunoEnEspera) {
       cuerpo.append("\nAvisaremos por email o WhatsApp en cuanto se libere una plaza.");
     }
@@ -227,7 +262,13 @@ public class NotificacionService {
             i.getTelefono() != null ? i.getTelefono() : ""))
         .distinct()
         .forEach(contacto -> enviar(contacto.getKey(), inscripciones.get(0).getNombre(), asunto,
-            cuerpo.toString(), contacto.getValue(), null));
+            cuerpo.toString(), contacto.getValue(), null,
+            algunoEnEspera ? "Inscripción recibida" : "¡Plaza confirmada!", evento,
+            inscripciones.stream()
+                .map(i -> i.getEstado() == EstadoInscripcion.CONFIRMADA
+                    ? new Estado(i.getNombre() + ": plaza confirmada", Tono.OK)
+                    : new Estado(i.getNombre() + ": lista de espera", Tono.AVISO))
+                .collect(Collectors.toList())));
   }
 
   /** Aviso a quien un administrador da de baja de un evento. */
@@ -239,7 +280,7 @@ public class NotificacionService {
             + evento.getFechaEvento() + ") ha sido dada de baja por la organización.\n\n"
             + "Si crees que se trata de un error, ponte en contacto con nosotros.";
     enviar(inscripcion.getEmail(), inscripcion.getNombre(), asunto, cuerpo,
-        inscripcion.getTelefono(), null);
+        inscripcion.getTelefono(), null, "Baja en el evento", evento, null);
   }
 
   /**
@@ -269,7 +310,7 @@ public class NotificacionService {
     }
     cuerpo.append("\n\nSi crees que se trata de un error, ponte en contacto con nosotros.");
     enviar(socio.getEmail(), socio.getNombre(), asunto, cuerpo.toString(), socio.getTelefono(),
-        null);
+        null, "Falta registrada", evento, null);
   }
 
   /**
@@ -304,7 +345,11 @@ public class NotificacionService {
           .append(publicBaseUrl).append("/inscripcion/").append(evento.getUid());
 
       enviar(solicitud.emailParticipante(), solicitud.nombreParticipante(), asunto,
-          cuerpo.toString(), solicitud.telefonoParticipante(), null);
+          cuerpo.toString(), solicitud.telefonoParticipante(), null,
+          premiado ? "¡Te ha tocado carnet!" : "Resultado del sorteo de carnets", evento,
+          List.of(premiado
+              ? new Estado("Carnet conseguido", Tono.OK)
+              : new Estado("Suplente número " + puestoSuplente, Tono.AVISO)));
     }
 
     // WhatsApp: un solo mensaje por teléfono con el resultado de todas las fichas que lo
@@ -355,7 +400,8 @@ public class NotificacionService {
         + detalleEvento(evento) + " y, como eras el primer suplente, pasa a ser tuyo."
         + enlaceEvento(evento);
     enviar(solicitud.emailParticipante(), solicitud.nombreParticipante(), asunto, cuerpo,
-        solicitud.telefonoParticipante(), novedad);
+        solicitud.telefonoParticipante(), novedad, "¡Tienes carnet!", evento,
+        List.of(new Estado("Carnet conseguido", Tono.OK)));
   }
 
   private String cuerpoInscripcion(EventoEntity evento, EstadoInscripcion estado,
@@ -381,13 +427,25 @@ public class NotificacionService {
    */
   private void enviar(String email, String nombre, String asunto, String cuerpo,
       String telefono, String novedadWhatsApp) {
+    enviar(email, nombre, asunto, cuerpo, telefono, novedadWhatsApp, null, null, null);
+  }
+
+  /**
+   * Igual que el anterior, pero el correo lleva además una versión HTML con la identidad de la
+   * peña: título, tarjeta del evento, etiquetas de estado y un botón para abrirlo. El texto plano
+   * sigue yendo como alternativa. Sin {@code titulo} o sin {@code evento} se manda solo texto.
+   */
+  private void enviar(String email, String nombre, String asunto, String cuerpo,
+      String telefono, String novedadWhatsApp, String titulo, EventoEntity evento,
+      List<Estado> estados) {
     if (email != null && !email.isBlank()) {
       // Aquí el fallo sí se registra y sigue, al contrario que en los correos de acceso: estos
       // avisos salen dentro de operaciones que ya han cambiado datos (confirmar una plaza,
       // promocionar la lista de espera) y no tendría sentido deshacer la plaza de un socio
       // porque el proveedor de correo esté caído. Además se intenta también por WhatsApp.
       try {
-        emailSender.enviar(email, nombre, asunto, cuerpo);
+        emailSender.enviar(email, nombre, asunto, cuerpo,
+            titulo != null && evento != null ? htmlEvento(titulo, cuerpo, evento, estados) : null);
       } catch (Exception e) {
         log.error("Error enviando email a {} (asunto: {})", email, asunto, e);
       }

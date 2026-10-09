@@ -143,6 +143,11 @@ Frontend (desde `frontend/`):
     mismos participantes y papeletas sale el mismo reparto (no sirve para repetir hasta que salga
     otro). Quien renunció al carnet sale del bombo. Exige que la fecha de sorteo del evento sea
     futura; si no, el planificador lo volvería a celebrar al momento.
+- **Correos de eventos** (inscripción, lista de espera, baja, falta, sorteo y renuncia): además
+  del texto plano llevan HTML con la identidad de la peña (`EmailTemplateService.renderizarEvento`:
+  título, tarjeta del evento, etiquetas de estado y botón). `NotificacionService` saca los
+  párrafos del propio texto plano, así que al cambiar un texto no hay que tocar dos sitios; las
+  listas "- persona: estado" y los párrafos que solo traen el enlace no se repiten en el HTML.
 - La peña es **singleton** (ID 1), usado en cuotas, remesas SEPA y carnet.
 - El flujo SEPA genera cuotas y remesas `pain.008`; los retornos se procesan desde `/api/cobros`.
 
