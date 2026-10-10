@@ -82,6 +82,12 @@ public class SorteoCarnetService {
       existente.filter(sorteo -> !sorteo.estaEjecutado()).ifPresent(sorteo -> {
         solicitudRepository.deleteAll(
             solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(evento.getUid()));
+        // Sin sorteo, nadie puede ganar ni perder: las plazas que esperaban su resultado pasan a
+        // ser inscripciones normales (si no, seguirían sin contar para la capacidad).
+        inscripcionRepository.findByEventoUidAndOrigenSorteoTrue(evento.getUid()).forEach(i -> {
+          i.setOrigenSorteo(null);
+          inscripcionRepository.save(i);
+        });
         sorteoRepository.delete(sorteo);
       });
       return;
@@ -163,6 +169,7 @@ public class SorteoCarnetService {
       solicitud.setFechaSolicitud(LocalDateTime.now());
       solicitud.setEstado(EstadoSolicitudCarnet.PENDIENTE);
       solicitudRepository.save(solicitud);
+      asegurarInscripcionPendiente(evento, solicitud);
     }
     log.info("{} fichas apuntadas al sorteo de carnets del evento {}", fichas.size(), eventoId);
 
@@ -191,6 +198,7 @@ public class SorteoCarnetService {
     solicitud.setFechaSolicitud(LocalDateTime.now());
     solicitud.setEstado(EstadoSolicitudCarnet.PENDIENTE);
     solicitudRepository.save(solicitud);
+    asegurarInscripcionPendiente(evento, solicitud);
     log.info("Invitado apuntado al sorteo de carnets del evento {}", eventoId);
   }
 
@@ -217,14 +225,25 @@ public class SorteoCarnetService {
   /** Convierte la entrada de un invitado en la de su ficha de socio (con su historial). */
   public void vincularInvitado(SolicitudCarnetEntity solicitud, SocioEntity socio) {
     UUID eventoId = solicitud.getEvento().getUid();
+    Optional<EventoInscripcionEntity> deInvitado = solicitud.getEmailInvitado() == null
+        ? Optional.empty()
+        : inscripcionRepository.findFirstByEventoUidAndEmailIgnoreCaseAndSocioIsNull(eventoId,
+            solicitud.getEmailInvitado()).filter(i -> Boolean.TRUE.equals(i.getOrigenSorteo()));
     if (solicitudRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
-      return; // la ficha ya está en el bombo: no se duplica
+      // La ficha ya está en el bombo: la entrada de invitado era la misma persona dos veces, y
+      // con dos entradas tendría el doble de opciones. Se quita la de invitado.
+      deInvitado.ifPresent(inscripcionRepository::delete);
+      solicitudRepository.delete(solicitud);
+      return;
     }
     solicitud.setSocio(socio);
     solicitud.setNombreInvitado(null);
     solicitud.setEmailInvitado(null);
     solicitud.setTelefonoInvitado(null);
     solicitudRepository.save(solicitud);
+    if (inscripcionRepository.existsByEventoUidAndSocioUid(eventoId, socio.getUid())) {
+      deInvitado.ifPresent(inscripcionRepository::delete); // la ficha ya tenía la suya
+    }
   }
 
   /** Saca del bombo una ficha del usuario. Solo antes de celebrarse el sorteo. */
@@ -236,13 +255,9 @@ public class SorteoCarnetService {
         solicitudRepository.findByEventoUidAndSocioUid(eventoId, socio.getUid())
             .orElseThrow(() -> new EntityNotFoundException(
                 socio.getNombre() + " no está apuntado al sorteo."));
-    // Si estaba aceptado a la espera del sorteo, al salir se queda con su plaza como una
-    // inscripción normal (deja de ser "del sorteo"): no se le quita en silencio.
+    // Si solo estaba aceptado a la espera del sorteo, sin carnet no hay autobús: sale de los dos.
     inscripcionDe(eventoId, solicitud).filter(i -> Boolean.TRUE.equals(i.getOrigenSorteo()))
-        .ifPresent(i -> {
-          i.setOrigenSorteo(null);
-          inscripcionRepository.save(i);
-        });
+        .ifPresent(inscripcionRepository::delete);
     solicitudRepository.delete(solicitud);
     return construirDto(evento);
   }
@@ -383,9 +398,12 @@ public class SorteoCarnetService {
       solicitudRepository.save(solicitud);
     }
 
+
     if (evento.reservaCarnet()) {
-      // Las plazas que dio el sorteo vuelven a quedar reservadas hasta que se repita.
-      inscripcionRepository.deleteAll(inscripcionRepository.findByEventoUidAndOrigenSorteoTrue(eventoId));
+      // Todos vuelven a estar aceptados a la espera del sorteo, también los que no ganaron y se
+      // quedaron sin plaza al celebrarse.
+      solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(eventoId)
+          .forEach(solicitud -> asegurarInscripcionPendiente(evento, solicitud));
     }
 
     sorteo.setEstado(EstadoSorteo.PROGRAMADO);
@@ -475,15 +493,18 @@ public class SorteoCarnetService {
    * sorteo sin celebrar.
    */
   public void liberarPlazasDeQuienEstaEnElBombo(EventoEntity evento) {
-    if (estaCelebrado(evento.getUid())) {
+    if (!evento.reservaCarnet() || estaCelebrado(evento.getUid())) {
       return;
     }
     for (SolicitudCarnetEntity solicitud :
         solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(evento.getUid())) {
-      inscripcionDe(evento.getUid(), solicitud).ifPresent(inscripcion -> {
-        inscripcion.setOrigenSorteo(true);
-        inscripcionRepository.save(inscripcion);
-      });
+      Optional<EventoInscripcionEntity> existente = inscripcionDe(evento.getUid(), solicitud);
+      if (existente.isPresent()) {
+        existente.get().setOrigenSorteo(true);
+        inscripcionRepository.save(existente.get());
+      } else {
+        nuevaInscripcionDelSorteo(evento, solicitud);
+      }
     }
   }
 
@@ -512,6 +533,23 @@ public class SorteoCarnetService {
       }
       return;
     }
+    nuevaInscripcionDelSorteo(evento, solicitud);
+  }
+
+  /**
+   * En un evento que reserva las plazas de los carnets, quien entra en el bombo queda
+   * <b>aceptado</b> (sale en el listado de inscritos, con la etiqueta "En sorteo") pero sin
+   * ocupar plaza hasta que gane: esa inscripción va marcada con {@code origenSorteo} y no cuenta
+   * para la capacidad mientras el sorteo no se celebre. Si ya estaba inscrito por su cuenta no se
+   * toca nada. Al celebrarse, la de quien no gana se borra.
+   */
+  void asegurarInscripcionPendiente(EventoEntity evento, SolicitudCarnetEntity solicitud) {
+    if (evento.reservaCarnet() && inscripcionDe(evento.getUid(), solicitud).isEmpty()) {
+      nuevaInscripcionDelSorteo(evento, solicitud);
+    }
+  }
+
+  private void nuevaInscripcionDelSorteo(EventoEntity evento, SolicitudCarnetEntity solicitud) {
     EventoInscripcionEntity inscripcion = new EventoInscripcionEntity();
     inscripcion.setEvento(evento);
     inscripcion.setSocio(solicitud.getSocio());

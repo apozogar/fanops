@@ -490,6 +490,10 @@
                         Fecha {{ ordenInscripciones === 'fecha' ? (ordenAscendente ? '↑' : '↓') : '' }}
                     </button>
                 </div>
+                <button *ngIf="pestanaInscripciones !== 'faltas' && !eventoSeleccionado?.inscripcionCerrada"
+                        foButton variant="primary" size="sm" (click)="abrirApuntarSocio()">
+                    <fo-icon name="usuario-nuevo" [size]="14" /><span>Añadir socio</span>
+                </button>
                 <button *ngIf="pestanaInscripciones !== 'faltas'" foButton variant="secondary" size="sm"
                         [loading]="sincronizandoFichas" [disabled]="sincronizandoFichas"
                         pTooltip="Enlaza con su ficha a quien se apuntó como no socio y ya lo es, y copia los datos de la ficha"
@@ -765,5 +769,63 @@
             <fo-icon name="check" />
             <span>Guardar</span>
         </button>
+    </ng-template>
+</p-dialog>
+
+<!-- Apuntar a un socio desde la gestión, para quien no maneja la aplicación. Quien no es socio se
+     apunta desde el enlace público. -->
+<p-dialog [(visible)]="apuntarDialog" [style]="{ width: '560px' }" [modal]="true"
+          [draggable]="false" [dismissableMask]="true" header="Añadir un socio">
+    <ng-template #content>
+        <div class="flex flex-col gap-3">
+            <p class="text-sm text-ink-muted">
+                Busca al socio por nombre, número, teléfono o correo y elige cómo apuntarle. Se le
+                avisará por correo. Quien no es socio tiene que apuntarse desde el enlace público.
+            </p>
+            <p-iconfield>
+                <p-inputicon><fo-icon name="buscar" [size]="16" /></p-inputicon>
+                <input pInputText type="search" class="w-full" [(ngModel)]="filtroSocios"
+                       placeholder="Nombre, nº de socio, teléfono o correo" aria-label="Buscar socio" />
+            </p-iconfield>
+
+            <p *ngIf="cargandoSocios" class="text-ink-muted">Cargando socios…</p>
+            <p *ngIf="!cargandoSocios && !filtroSocios.trim()" class="text-ink-muted text-sm">
+                Escribe para buscar.
+            </p>
+            <p *ngIf="!cargandoSocios && filtroSocios.trim() && sociosParaApuntar.length === 0"
+               class="text-ink-muted text-sm">
+                Nadie coincide, o ya está en el listado de este evento.
+            </p>
+
+            <ul class="fo-lista" *ngIf="sociosParaApuntar.length > 0">
+                <li *ngFor="let socio of sociosParaApuntar" class="fo-fila">
+                    <div class="font-semibold text-ink break-words">
+                        {{ socio.nombre }}
+                        <span class="text-sm font-normal text-ink-muted">· nº {{ socio.numeroSocio }}</span>
+                    </div>
+                    <div class="text-sm text-ink-muted break-all" *ngIf="socio.telefono || socio.email">
+                        {{ socio.telefono }}<ng-container *ngIf="socio.telefono && socio.email"> · </ng-container>{{ socio.email }}
+                    </div>
+                    <div class="fo-acciones">
+                        <button foButton variant="primary" size="md" class="flex-1 sm:flex-none"
+                                [loading]="apuntandoSocio === socio.uid + ':bus'"
+                                [disabled]="apuntandoSocio !== null"
+                                (click)="apuntarSocio(socio, false)">
+                            <fo-icon name="check" [size]="16" /><span>Al autobús</span>
+                        </button>
+                        <button *ngIf="sorteoAbiertoSeleccionado" foButton variant="secondary" size="md"
+                                class="flex-1 sm:flex-none"
+                                [loading]="apuntandoSocio === socio.uid + ':sorteo'"
+                                [disabled]="apuntandoSocio !== null"
+                                (click)="apuntarSocio(socio, true)">
+                            <fo-icon name="entrada" [size]="16" /><span>Al sorteo del carnet</span>
+                        </button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </ng-template>
+    <ng-template #footer>
+        <button foButton variant="secondary" (click)="apuntarDialog = false">Cerrar</button>
     </ng-template>
 </p-dialog>

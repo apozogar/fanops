@@ -196,7 +196,9 @@ class SorteoCarnetFlowTest {
     apuntar(evento.getUid(), fichas);
 
     assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
-        .as("entrar en el bombo no crea inscripción").isEmpty();
+        .as("todos quedan aceptados en el listado, marcados como del sorteo")
+        .hasSize(6)
+        .extracting(EventoInscripcionEntity::getOrigenSorteo).containsOnly(true);
     EventoInscripcionDTO info = eventoService.infoPublica(evento.getUid());
     assertThat(info.getPlazasLibres())
         .as("a las inscripciones normales solo les quedan las no reservadas")
@@ -223,7 +225,10 @@ class SorteoCarnetFlowTest {
     sorteoCarnetService.reiniciar(evento.getUid());
 
     assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
-        .as("al reiniciar vuelven a quedar reservadas, sin inscripciones").isEmpty();
+        .as("al reiniciar todos vuelven a estar aceptados a la espera, sin ocupar plaza")
+        .hasSize(6).extracting(EventoInscripcionEntity::getOrigenSorteo).containsOnly(true);
+    assertThat(eventoService.infoPublica(evento.getUid()).getPlazasLibres())
+        .isEqualTo(10 - CARNETS);
   }
 
   @Test

@@ -728,6 +728,8 @@ public class EventoService {
         enlazadas++;
       }
     }
+    // Quien entró en el bombo cuando aún no salía en el listado de inscritos queda aceptado.
+    sorteoCarnetService.liberarPlazasDeQuienEstaEnElBombo(findEvento(eventoId));
     return enlazadas;
   }
 

@@ -19,6 +19,9 @@ import {InputIconModule} from 'primeng/inputicon';
 import {TagModule} from 'primeng/tag';
 import {TooltipModule} from 'primeng/tooltip';
 import {EventoService} from '@/services/evento.service';
+import {SocioService} from '@/services/SocioService';
+import {Socio} from '@/interfaces/socio.interface';
+import {coincideBusqueda as coincideConsulta} from '@/core/busqueda/busqueda-flexible';
 import {SorteoCarnetService} from '@/services/sorteo-carnet.service';
 import {ParticipanteSorteo, SorteoCarnet} from '@/interfaces/sorteo-carnet.dto';
 import {ValoresEventoService} from '@/services/valores-evento.service';
@@ -98,6 +101,7 @@ export class EventosComponent implements OnInit {
     marcandoAsistencia: string | null = null;
 
     private readonly eventoService = inject(EventoService);
+    private readonly socioService = inject(SocioService);
     private readonly sorteoCarnetService = inject(SorteoCarnetService);
     private readonly valoresEventoService = inject(ValoresEventoService);
     private readonly messageService = inject(MessageService);
@@ -590,6 +594,92 @@ export class EventosComponent implements OnInit {
                 summary: 'Enlace',
                 detail: enlace
             });
+        });
+    }
+
+    // ----------------------------------------------------------------
+    // Apuntar a un socio desde el listado de inscritos
+    // ----------------------------------------------------------------
+
+    apuntarDialog = false;
+    socios: Socio[] = [];
+    cargandoSocios = false;
+    filtroSocios = '';
+    /** Socio al que se está apuntando ahora mismo (uid:modo). */
+    apuntandoSocio: string | null = null;
+    /** Los apuntados en esta sesión del diálogo: en eventos con plaza reservada no tienen inscripción. */
+    private readonly apuntadosAhora = new Set<string>();
+
+    /** Abre el buscador de socios para apuntar a quien no maneja la aplicación. */
+    abrirApuntarSocio() {
+        this.apuntarDialog = true;
+        this.filtroSocios = '';
+        this.apuntadosAhora.clear();
+        if (this.socios.length > 0) return;
+        this.cargandoSocios = true;
+        this.socioService.getSocios().subscribe({
+            next: (resp) => {
+                this.socios = (resp.data ?? []).filter(s => s.activo !== false);
+                this.cargandoSocios = false;
+            },
+            error: () => (this.cargandoSocios = false)
+        });
+    }
+
+    /** Socios que casan con la búsqueda y todavía no están en el listado del evento. Máximo 15. */
+    get sociosParaApuntar(): Socio[] {
+        if (!this.filtroSocios.trim()) return [];
+        const yaInscritos = new Set(this.inscripciones.map(i => i.socioUid).filter(uid => !!uid));
+        return this.socios
+            .filter(s => s.uid && !yaInscritos.has(s.uid) && !this.apuntadosAhora.has(s.uid))
+            .filter(s => coincideConsulta([s.numeroSocio, s.nombre, s.email, s.telefono, s.dni], this.filtroSocios))
+            .slice(0, 15);
+    }
+
+    /** true si el sorteo del evento seleccionado existe y todavía admite entradas. */
+    get sorteoAbiertoSeleccionado(): boolean {
+        const e = this.eventoSeleccionado;
+        return !!e && (e.plazasCarnet ?? 0) > 0 && !e.sorteoCelebrado
+            && !!e.fechaSorteoCarnet && new Date(e.fechaSorteoCarnet) > new Date();
+    }
+
+    /** Apunta al socio al evento o a su sorteo (que ya le apunta al evento). Pide confirmación porque se le avisa por correo. */
+    apuntarSocio(socio: Socio, alSorteo: boolean) {
+        const evento = this.eventoSeleccionado;
+        if (!evento?.uid || !socio.uid || this.apuntandoSocio) return;
+        const eventoUid = evento.uid;
+        const socioUid = socio.uid;
+        this.confirmationService.confirm({
+            header: alSorteo ? 'Apuntar al sorteo del carnet' : 'Apuntar al autobús',
+            message: alSorteo
+                ? `¿Meter a ${socio.nombre} en el sorteo del carnet? Se le avisará del resultado por correo.`
+                : `¿Apuntar a ${socio.nombre} al autobús? Se le avisará por correo.`,
+            acceptLabel: 'Apuntar',
+            rejectLabel: 'Cancelar',
+            accept: () => {
+                this.apuntandoSocio = `${socioUid}:${alSorteo ? 'sorteo' : 'bus'}`;
+                this.eventoService.inscribirSocioDesdeGestion(eventoUid, socioUid, alSorteo).subscribe({
+                    next: (resp) => {
+                        this.apuntandoSocio = null;
+                        this.apuntadosAhora.add(socioUid);
+                        this.messageService.add({
+                            severity: resp.data === 'EN_ESPERA' ? 'warn' : 'success',
+                            summary: socio.nombre,
+                            detail: resp.message
+                        });
+                        this.mostrarInscripciones(evento);
+                        this.cargarEventos();
+                    },
+                    error: (err) => {
+                        this.apuntandoSocio = null;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'No se pudo apuntar',
+                            detail: err.error?.message || 'No se pudo completar la inscripción.'
+                        });
+                    }
+                });
+            }
         });
     }
 

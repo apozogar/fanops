@@ -215,7 +215,9 @@ public class EventoController {
         sorteoCarnet);
     String mensaje;
     if (estado == null) {
-      mensaje = "Ya estaba inscrito: ahora también entra en el sorteo del carnet.";
+      // Sin inscripción nueva: ya la tenía, o el evento reserva la plaza para quien gane.
+      mensaje = "Metido en el sorteo del carnet. Si ya tenía plaza en el autobús la conserva; "
+          + "si no, la tendrá solo si le toca.";
     } else if (estado == EstadoInscripcion.CONFIRMADA) {
       mensaje = sorteoCarnet ? "Apuntado con plaza y metido en el sorteo del carnet."
           : "Apuntado con plaza confirmada.";

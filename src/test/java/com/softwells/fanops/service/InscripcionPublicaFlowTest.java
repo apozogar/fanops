@@ -165,8 +165,9 @@ class InscripcionPublicaFlowTest {
 
     assertThat(solicitudRepository.existsByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
         .isTrue();
-    assertThat(inscripcionRepository.existsByEventoUidAndSocioUid(evento.getUid(),
-        socio.getUid())).as("sin plaza de autobús hasta que gane el carnet").isFalse();
+    assertThat(inscripcionRepository.findByEventoUidAndSocioUid(evento.getUid(), socio.getUid()))
+        .as("queda aceptado, pero sin ocupar plaza hasta que gane el carnet")
+        .isPresent().get().extracting(EventoInscripcionEntity::getOrigenSorteo).isEqualTo(true);
   }
 
   @Test
@@ -216,7 +217,7 @@ class InscripcionPublicaFlowTest {
     assertThat(solicitudRepository.existsByEventoUidAndEmailInvitadoIgnoreCase(evento.getUid(),
         email.toUpperCase())).isTrue();
     assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(), email))
-        .as("sin plaza de autobús hasta que gane el carnet").isFalse();
+        .as("queda aceptado a la espera del sorteo").isTrue();
 
     // Es el único participante y hay 2 carnets: tiene que salir ganador, sin romper nada por no
     // tener ficha.
@@ -229,6 +230,27 @@ class InscripcionPublicaFlowTest {
     });
     assertThat(inscripcionRepository.existsByEventoUidAndEmailIgnoreCase(evento.getUid(), email))
         .as("al ganar, el invitado recibe su plaza de autobús").isTrue();
+  }
+
+  @Test
+  @DisplayName("Si quien entró como invitado resulta ser una ficha que ya estaba en el bombo, no queda dos veces")
+  void elInvitadoQueEsUnaFichaYaEnElBomboNoSeDuplica() {
+    EventoEntity evento = eventoConSorteo();
+    evento.setSorteoAbiertoATodos(true);
+    eventoService.save(evento);
+    InscripcionPublicaRequest request = peticion("José David", EMAIL_FICHA);
+    request.setIncluirSorteo(true);
+    eventoService.inscribirPublico(evento.getUid(), request);
+
+    SocioEntity socio = ficha("Jesús David Angulo", EMAIL_FICHA, null);
+    sorteoCarnetService.solicitar(evento.getUid(), List.of(socio));
+    eventoService.alActualizarseUnaFicha(new FichaActualizadaEvent(socio.getUid()));
+
+    assertThat(solicitudRepository.findByEventoUidOrderByFechaSolicitudAsc(evento.getUid()))
+        .as("una sola entrada en el bombo para la misma persona").hasSize(1);
+    assertThat(inscripcionRepository.findByEventoUidOrderByFechaInscripcionAsc(evento.getUid()))
+        .as("y una sola inscripción, la de la ficha").hasSize(1)
+        .extracting(i -> i.getSocio() != null).containsOnly(true);
   }
 
   @Test
