@@ -133,14 +133,16 @@
         [loading]="loading"
         [rowHover]="true"
         dataKey="uid"
+        sortField="numeroSocio"
+        [sortOrder]="1"
         currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} socios"
         [showCurrentPageReport]="true"
         styleClass="fo-tabla-socios"
     >
         <ng-template pTemplate="header">
             <tr class="hidden md:table-row">
-                <th scope="col" style="width: 100px">Núm. Socio</th>
-                <th scope="col">Nombre</th>
+                <th scope="col" style="width: 130px" pSortableColumn="numeroSocio">Núm. Socio <p-sortIcon field="numeroSocio" /></th>
+                <th scope="col" pSortableColumn="nombre">Nombre <p-sortIcon field="nombre" /></th>
                 <th scope="col">Teléfono</th>
                 <th scope="col">Email</th>
                 <th scope="col">Estado</th>
